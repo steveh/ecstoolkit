@@ -1,5 +1,10 @@
 Latest
 ================
+- Add credential to OpenDataChannel request
+- Upgrade dependent packages testify-1.9.0 and objx-0.5.2
+
+1.2.677.0
+================
 - Support passing plugin version with OpenDataChannel request
 
 1.2.650.0
