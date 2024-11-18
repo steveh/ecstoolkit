@@ -45,7 +45,6 @@ func TestOpenDataChannel(t *testing.T) {
 
 	err := sessionMock.OpenDataChannel(logger)
 	assert.Nil(t, err)
-	assert.NotNil(t, sessionMock.Signer)
 }
 
 func TestOpenDataChannelWithError(t *testing.T) {

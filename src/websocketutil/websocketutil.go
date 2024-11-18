@@ -16,7 +16,6 @@ package websocketutil
 
 import (
 	"errors"
-	"net/http"
 
 	"github.com/aws/session-manager-plugin/src/log"
 	"github.com/gorilla/websocket"
@@ -24,7 +23,7 @@ import (
 
 // IWebsocketUtil is the interface for the websocketutil.
 type IWebsocketUtil interface {
-	OpenConnection(url string, header http.Header) (*websocket.Conn, error)
+	OpenConnection(url string) (*websocket.Conn, error)
 	CloseConnection(ws websocket.Conn) error
 }
 
@@ -55,21 +54,13 @@ func NewWebsocketUtil(logger log.T, dialerInput *websocket.Dialer) *WebsocketUti
 }
 
 // OpenConnection opens a websocket connection provided an input url.
-func (u *WebsocketUtil) OpenConnection(url string, header http.Header) (*websocket.Conn, error) {
+func (u *WebsocketUtil) OpenConnection(url string) (*websocket.Conn, error) {
 
-	if header != nil {
-		u.log.Infof("Opening websocket connection to: %s with auth header", url)
-	} else {
-		u.log.Infof("Opening websocket connection to: %s", url)
-	}
+	u.log.Infof("Opening websocket connection to: ", url)
 
-	conn, resp, err := u.dialer.Dial(url, header)
+	conn, _, err := u.dialer.Dial(url, nil)
 	if err != nil {
-		if resp != nil {
-			u.log.Errorf("Failed to dial websocket, status: %s, err: %s", resp.Status, err)
-		} else {
-			u.log.Errorf("Failed to dial websocket: %s", err)
-		}
+		u.log.Errorf("Failed to dial websocket: %s", err.Error())
 		return nil, err
 	}
 

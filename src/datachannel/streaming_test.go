@@ -24,8 +24,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/signer/v4"
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
 	communicatorMocks "github.com/aws/session-manager-plugin/src/communicator/mocks"
 	"github.com/aws/session-manager-plugin/src/config"
@@ -60,8 +58,6 @@ var (
 	payload                                     = []byte("testPayload")
 	streamDataSequenceNumber                    = int64(0)
 	expectedSequenceNumber                      = int64(0)
-	region                                      = "us-east-1"
-	mockSigner                                  = &v4.Signer{Credentials: credentials.NewStaticCredentials("AKID", "SECRET", "SESSION")}
 )
 
 func TestInitialize(t *testing.T) {
@@ -86,9 +82,9 @@ func TestSetWebsocket(t *testing.T) {
 
 	mockWsChannel.On("GetStreamUrl").Return(streamUrl)
 	mockWsChannel.On("GetChannelToken").Return(channelToken)
-	mockWsChannel.On("Initialize", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	mockWsChannel.On("Initialize", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	datachannel.SetWebsocket(mockLogger, streamUrl, channelToken, region, mockSigner)
+	datachannel.SetWebsocket(mockLogger, streamUrl, channelToken)
 
 	assert.Equal(t, streamUrl, datachannel.wsChannel.GetStreamUrl())
 	assert.Equal(t, channelToken, datachannel.wsChannel.GetChannelToken())
