@@ -1,5 +1,10 @@
 Latest
 ================
+- Update Readme for version configuration
+- Upgrade Go version to 1.23 in Dockerfile
+
+1.2.694.0
+================
 - Rollback change on adding credential to OpenDataChannel request
 
 1.2.688.0
