@@ -40,7 +40,6 @@ const (
 	LegacyArgumentLength  = 4
 	ArgumentLength        = 7
 	StartSessionOperation = "StartSession"
-	VersionFile           = "VERSION"
 )
 
 var SessionRegistry = map[string]ISessionPlugin{}
