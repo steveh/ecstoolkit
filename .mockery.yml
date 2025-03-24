@@ -1,0 +1,15 @@
+with-expecter: true
+outpkg: "mocks"
+dir: "{{.InterfaceDir}}/mocks"
+mockname: "{{.InterfaceName}}"
+filename: "{{.MockName}}.go"
+packages:
+    github.com/steveh/ecstoolkit/communicator:
+        interfaces:
+            IWebSocketChannel:
+    github.com/steveh/ecstoolkit/datachannel:
+        interfaces:
+            IDataChannel:
+    github.com/steveh/ecstoolkit/encryption:
+        interfaces:
+            IEncrypter:
