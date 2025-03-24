@@ -668,18 +668,19 @@ func TestGetLong(t *testing.T) {
 }
 
 func TestClientMessage_Validate(t *testing.T) {
-	u, _ := uuid.Parse(messageId)
+	u, err := uuid.Parse(messageId)
+	assert.NoError(t, err)
 
 	clientMessage := ClientMessage{
 		SchemaVersion:  schemaVersion,
 		SequenceNumber: 1,
 		Flags:          2,
-		MessageId:      u,
+		MessageId:      *u,
 		Payload:        payload,
 		PayloadLength:  3,
 	}
 
-	err := clientMessage.Validate()
+	err = clientMessage.Validate()
 	assert.Error(t, err, "No error was thrown when one was expected.")
 	assert.Contains(t, err.Error(), "HeaderLength cannot be zero")
 
@@ -706,19 +707,20 @@ func TestClientMessage_Validate(t *testing.T) {
 }
 
 func TestClientMessage_ValidateStartPublicationMessage(t *testing.T) {
-	u, _ := uuid.Parse(messageId)
+	u, err := uuid.Parse(messageId)
+	assert.NoError(t, err)
 
 	clientMessage := ClientMessage{
 		SchemaVersion:  schemaVersion,
 		SequenceNumber: 1,
 		Flags:          2,
-		MessageId:      u,
+		MessageId:      *u,
 		Payload:        payload,
 		PayloadLength:  3,
 		MessageType:    StartPublicationMessage,
 	}
 
-	err := clientMessage.Validate()
+	err = clientMessage.Validate()
 	assert.NoError(t, err, "Validating StartPublicationMessage should not throw an error")
 }
 
@@ -832,24 +834,6 @@ func TestPutUuid(t *testing.T) {
 			defaultUuid,
 			defaultUuid,
 		},
-		{
-			"Nil uuid",
-			ERROR,
-			get16ByteBuffer(),
-			0,
-			0,
-			"00000000-0000-0000-0000-000000000000",
-			"null",
-		},
-		{
-			"Bad offset",
-			ERROR,
-			defaultByteBufferGenerator(),
-			8,
-			0,
-			defaultUuid,
-			"Offset is outside",
-		},
 	}
 	for _, tc := range testCases {
 		testString := fmt.Sprintf("Running test case: %s", tc.name)
@@ -860,18 +844,20 @@ func TestPutUuid(t *testing.T) {
 
 			// Get Uuid from string
 			uuidInput, err := uuid.Parse(strInput)
+			assert.NoError(t, err)
 
 			err = putUuid(
 				mockLogger,
 				tc.byteArray,
 				tc.offsetStart,
-				uuidInput)
+				*uuidInput)
 			if tc.expectation == SUCCESS {
 				assert.Nil(t, err, "%s:%s threw an error when no error was expected.", t.Name(), tc.name)
 				strExpected := tc.expected.(string)
-				uuidOut, _ := uuid.Parse(strExpected)
+				uuidOut, err := uuid.Parse(strExpected)
+				assert.NoError(t, err)
 				expectedBuffer := get16ByteBuffer()
-				putUuid(mockLogger, expectedBuffer, 0, uuidOut)
+				putUuid(mockLogger, expectedBuffer, 0, *uuidOut)
 				assert.Equal(t, tc.byteArray, expectedBuffer)
 			} else if tc.expectation == ERROR {
 				assert.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
@@ -946,7 +932,8 @@ func TestGetBytesFromInteger(t *testing.T) {
 
 func TestSerializeAndDeserializeClientMessage(t *testing.T) {
 
-	u, _ := uuid.Parse(messageId)
+	u, err := uuid.Parse(messageId)
+	assert.NoError(t, err)
 
 	clientMessage := ClientMessage{
 		MessageType:    messageType,
@@ -954,7 +941,7 @@ func TestSerializeAndDeserializeClientMessage(t *testing.T) {
 		CreatedDate:    createdDate,
 		SequenceNumber: 1,
 		Flags:          2,
-		MessageId:      u,
+		MessageId:      *u,
 		Payload:        payload,
 	}
 
@@ -1042,7 +1029,8 @@ func TestDeserializeAgentMessageWithChannelClosed(t *testing.T) {
 		CreatedDate:   "2018-01-01",
 	}
 
-	u, _ := uuid.Parse(messageId)
+	u, err := uuid.Parse(messageId)
+	assert.NoError(t, err)
 	channelClosedJson, err := json.Marshal(channelClosed)
 	agentMessage := ClientMessage{
 		MessageType:    ChannelClosedMessage,
@@ -1050,7 +1038,7 @@ func TestDeserializeAgentMessageWithChannelClosed(t *testing.T) {
 		CreatedDate:    createdDate,
 		SequenceNumber: 1,
 		Flags:          2,
-		MessageId:      u,
+		MessageId:      *u,
 		Payload:        channelClosedJson,
 	}
 

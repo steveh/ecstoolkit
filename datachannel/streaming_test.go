@@ -592,14 +592,17 @@ func getDataChannel() *DataChannel {
 
 // GetClientMessage constructs and returns ClientMessage with given sequenceNumber, messageType & payload
 func getClientMessage(sequenceNumber int64, messageType string, payloadType uint32, payload []byte) message.ClientMessage {
-	messageUUID, _ := uuid.Parse(messageId)
+	messageUUID, err := uuid.Parse(messageId)
+	if err != nil {
+		panic(err)
+	}
 	clientMessage := message.ClientMessage{
 		MessageType:    messageType,
 		SchemaVersion:  schemaVersion,
 		CreatedDate:    createdDate,
 		SequenceNumber: sequenceNumber,
 		Flags:          2,
-		MessageId:      messageUUID,
+		MessageId:      *messageUUID,
 		PayloadType:    payloadType,
 		Payload:        payload,
 	}
