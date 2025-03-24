@@ -15,7 +15,7 @@
 package message
 
 import (
-	"github.com/aws/session-manager-plugin/src/log"
+	"github.com/steveh/ecstoolkit/log"
 	"github.com/twinj/uuid"
 )
 

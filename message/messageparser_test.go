@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/session-manager-plugin/src/log"
+	"github.com/steveh/ecstoolkit/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/twinj/uuid"
 )

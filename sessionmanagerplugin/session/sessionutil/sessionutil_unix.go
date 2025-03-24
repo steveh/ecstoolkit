@@ -23,8 +23,8 @@ import (
 	"net"
 	"os"
 
-	"github.com/aws/session-manager-plugin/src/log"
-	"github.com/aws/session-manager-plugin/src/message"
+	"github.com/steveh/ecstoolkit/log"
+	"github.com/steveh/ecstoolkit/message"
 )
 
 type DisplayMode struct {

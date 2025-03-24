@@ -29,14 +29,14 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
-	"github.com/aws/session-manager-plugin/src/communicator"
-	"github.com/aws/session-manager-plugin/src/config"
-	"github.com/aws/session-manager-plugin/src/encryption"
-	"github.com/aws/session-manager-plugin/src/log"
-	"github.com/aws/session-manager-plugin/src/message"
-	"github.com/aws/session-manager-plugin/src/service"
-	"github.com/aws/session-manager-plugin/src/version"
 	"github.com/gorilla/websocket"
+	"github.com/steveh/ecstoolkit/communicator"
+	"github.com/steveh/ecstoolkit/config"
+	"github.com/steveh/ecstoolkit/encryption"
+	"github.com/steveh/ecstoolkit/log"
+	"github.com/steveh/ecstoolkit/message"
+	"github.com/steveh/ecstoolkit/service"
+	"github.com/steveh/ecstoolkit/version"
 	"github.com/twinj/uuid"
 )
 

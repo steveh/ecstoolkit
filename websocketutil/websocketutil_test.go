@@ -21,8 +21,8 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/aws/session-manager-plugin/src/log"
 	"github.com/gorilla/websocket"
+	"github.com/steveh/ecstoolkit/log"
 	"github.com/stretchr/testify/assert"
 )
 

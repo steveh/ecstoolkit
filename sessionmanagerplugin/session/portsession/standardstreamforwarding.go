@@ -19,10 +19,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/aws/session-manager-plugin/src/config"
-	"github.com/aws/session-manager-plugin/src/log"
-	"github.com/aws/session-manager-plugin/src/message"
-	"github.com/aws/session-manager-plugin/src/sessionmanagerplugin/session"
+	"github.com/steveh/ecstoolkit/config"
+	"github.com/steveh/ecstoolkit/log"
+	"github.com/steveh/ecstoolkit/message"
+	"github.com/steveh/ecstoolkit/sessionmanagerplugin/session"
 )
 
 type StandardStreamForwarding struct {

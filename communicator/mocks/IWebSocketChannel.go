@@ -4,7 +4,7 @@
 package mocks
 
 import (
-	log "github.com/aws/session-manager-plugin/src/log"
+	log "github.com/steveh/ecstoolkit/log"
 	mock "github.com/stretchr/testify/mock"
 
 	time "time"

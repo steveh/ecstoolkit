@@ -18,11 +18,11 @@ import (
 	"fmt"
 	"testing"
 
-	wsChannelMock "github.com/aws/session-manager-plugin/src/communicator/mocks"
-	"github.com/aws/session-manager-plugin/src/config"
-	"github.com/aws/session-manager-plugin/src/datachannel"
-	dataChannelMock "github.com/aws/session-manager-plugin/src/datachannel/mocks"
-	"github.com/aws/session-manager-plugin/src/message"
+	wsChannelMock "github.com/steveh/ecstoolkit/communicator/mocks"
+	"github.com/steveh/ecstoolkit/config"
+	"github.com/steveh/ecstoolkit/datachannel"
+	dataChannelMock "github.com/steveh/ecstoolkit/datachannel/mocks"
+	"github.com/steveh/ecstoolkit/message"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/stretchr/testify/assert"

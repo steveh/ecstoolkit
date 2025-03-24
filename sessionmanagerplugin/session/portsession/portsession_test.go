@@ -20,10 +20,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/session-manager-plugin/src/datachannel"
-	"github.com/aws/session-manager-plugin/src/jsonutil"
-	"github.com/aws/session-manager-plugin/src/log"
-	"github.com/aws/session-manager-plugin/src/message"
+	"github.com/steveh/ecstoolkit/datachannel"
+	"github.com/steveh/ecstoolkit/jsonutil"
+	"github.com/steveh/ecstoolkit/log"
+	"github.com/steveh/ecstoolkit/message"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )

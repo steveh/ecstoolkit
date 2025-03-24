@@ -15,11 +15,11 @@
 package portsession
 
 import (
-	"github.com/aws/session-manager-plugin/src/communicator/mocks"
-	"github.com/aws/session-manager-plugin/src/datachannel"
-	"github.com/aws/session-manager-plugin/src/log"
-	"github.com/aws/session-manager-plugin/src/message"
-	"github.com/aws/session-manager-plugin/src/sessionmanagerplugin/session"
+	"github.com/steveh/ecstoolkit/communicator/mocks"
+	"github.com/steveh/ecstoolkit/datachannel"
+	"github.com/steveh/ecstoolkit/log"
+	"github.com/steveh/ecstoolkit/message"
+	"github.com/steveh/ecstoolkit/sessionmanagerplugin/session"
 )
 
 var (

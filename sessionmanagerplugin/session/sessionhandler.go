@@ -21,11 +21,11 @@ import (
 
 	sdkSession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/aws/session-manager-plugin/src/config"
-	"github.com/aws/session-manager-plugin/src/log"
-	"github.com/aws/session-manager-plugin/src/message"
-	"github.com/aws/session-manager-plugin/src/retry"
-	"github.com/aws/session-manager-plugin/src/sdkutil"
+	"github.com/steveh/ecstoolkit/config"
+	"github.com/steveh/ecstoolkit/log"
+	"github.com/steveh/ecstoolkit/message"
+	"github.com/steveh/ecstoolkit/retry"
+	"github.com/steveh/ecstoolkit/sdkutil"
 )
 
 // OpenDataChannel initializes datachannel

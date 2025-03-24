@@ -23,8 +23,8 @@ import (
 	"os"
 	"syscall"
 
-	"github.com/aws/session-manager-plugin/src/log"
-	"github.com/aws/session-manager-plugin/src/message"
+	"github.com/steveh/ecstoolkit/log"
+	"github.com/steveh/ecstoolkit/message"
 	"golang.org/x/sys/windows"
 )
 

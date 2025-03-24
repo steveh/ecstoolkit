@@ -17,7 +17,7 @@ package retry
 import (
 	"time"
 
-	"github.com/aws/session-manager-plugin/src/log"
+	"github.com/steveh/ecstoolkit/log"
 )
 
 const sleepConstant = 2

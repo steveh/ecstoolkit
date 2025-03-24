@@ -15,8 +15,8 @@
 package version
 
 import (
-	"github.com/aws/session-manager-plugin/src/config"
-	"github.com/aws/session-manager-plugin/src/log"
+	"github.com/steveh/ecstoolkit/config"
+	"github.com/steveh/ecstoolkit/log"
 )
 
 // DoesAgentSupportTCPMultiplexing returns true if given agentVersion supports TCP multiplexing in port plugin, false otherwise

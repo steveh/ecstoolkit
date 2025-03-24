@@ -21,7 +21,7 @@ import (
 	"io"
 
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
-	"github.com/aws/session-manager-plugin/src/log"
+	"github.com/steveh/ecstoolkit/log"
 )
 
 const (
