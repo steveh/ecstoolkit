@@ -25,7 +25,7 @@ import (
 // All the signals to handles interrupt
 // SIGINT captures Ctrl+C
 // SIGQUIT captures Ctrl+\
-// SIGTSTP captures Ctrl+Z
+// SIGTSTP captures Ctrl+Z.
 var SignalsByteMap = map[os.Signal]byte{
 	syscall.SIGINT:  '\003',
 	syscall.SIGQUIT: '\x1c',

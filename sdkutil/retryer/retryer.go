@@ -28,7 +28,7 @@ type SsmCliRetryer struct {
 	client.DefaultRetryer
 }
 
-// RetryRules returns the delay duration before retrying this request again
+// RetryRules returns the delay duration before retrying this request again.
 func (s SsmCliRetryer) RetryRules(r *request.Request) time.Duration {
 	// Handle GetMessages Client.Timeout error
 	if r.Operation.Name == "GetMessages" && r.Error != nil && strings.Contains(r.Error.Error(), "Client.Timeout") {
@@ -39,5 +39,6 @@ func (s SsmCliRetryer) RetryRules(r *request.Request) time.Duration {
 	// retry after a > 1 sec timeout, increasing exponentially with each retry
 	rand.Seed(time.Now().UnixNano())
 	delay := int(math.Pow(2, float64(r.RetryCount))) * (rand.Intn(500) + 1000)
+
 	return time.Duration(delay) * time.Millisecond
 }

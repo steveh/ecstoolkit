@@ -31,6 +31,7 @@ import (
 // This test passes ctrl+c signal which blocks running of all other tests.
 func TestSetSessionHandlers(t *testing.T) {
 	mockLog.Infof("TestStartSession!!!!!")
+
 	out, in := net.Pipe()
 	defer out.Close()
 	defer in.Close()
@@ -38,6 +39,7 @@ func TestSetSessionHandlers(t *testing.T) {
 	counter := 0
 	countTimes := func() error {
 		counter++
+
 		return nil
 	}
 	mockWebSocketChannel.On("SendMessage", mockLog, mock.Anything, mock.Anything).
@@ -53,8 +55,10 @@ func TestSetSessionHandlers(t *testing.T) {
 		},
 	}
 	signalCh := make(chan os.Signal, 1)
+
 	go func() {
 		time.Sleep(100 * time.Millisecond)
+
 		if _, err := out.Write([]byte("testing123")); err != nil {
 			mockLog.Infof("error: ", err)
 		}
@@ -64,15 +68,17 @@ func TestSetSessionHandlers(t *testing.T) {
 		acceptConnection = func(log log.T, listener net.Listener) (tcpConn net.Conn, err error) {
 			return in, nil
 		}
+
 		signal.Notify(signalCh, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTSTP)
+
 		process, _ := os.FindProcess(os.Getpid())
 		process.Signal(syscall.SIGINT)
 		portSession.SetSessionHandlers(mockLog)
 	}()
 
 	time.Sleep(time.Second)
-	assert.Equal(t, <-signalCh, syscall.SIGINT)
-	assert.Equal(t, counter, 1)
+	assert.Equal(t, syscall.SIGINT, <-signalCh)
+	assert.Equal(t, 1, counter)
 	mockWebSocketChannel.AssertExpectations(t)
 }
 

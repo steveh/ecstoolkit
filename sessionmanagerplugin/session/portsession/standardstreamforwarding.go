@@ -33,28 +33,31 @@ type StandardStreamForwarding struct {
 	session        session.Session
 }
 
-// IsStreamNotSet checks if streams are not set
+// IsStreamNotSet checks if streams are not set.
 func (p *StandardStreamForwarding) IsStreamNotSet() (status bool) {
 	return p.inputStream == nil || p.outputStream == nil
 }
 
-// Stop closes the streams
+// Stop closes the streams.
 func (p *StandardStreamForwarding) Stop() error {
 	p.inputStream.Close()
 	p.outputStream.Close()
+
 	return nil
 }
 
-// InitializeStreams initializes the streams with its file descriptors
+// InitializeStreams initializes the streams with its file descriptors.
 func (p *StandardStreamForwarding) InitializeStreams(log log.T, agentVersion string) (err error) {
 	p.inputStream = os.Stdin
 	p.outputStream = os.Stdout
+
 	return
 }
 
-// ReadStream reads data from the input stream
+// ReadStream reads data from the input stream.
 func (p *StandardStreamForwarding) ReadStream(log log.T) (err error) {
 	msg := make([]byte, config.StreamDataPayloadSize)
+
 	for {
 		numBytes, err := p.inputStream.Read(msg)
 		if err != nil {
@@ -62,8 +65,10 @@ func (p *StandardStreamForwarding) ReadStream(log log.T) (err error) {
 		}
 
 		log.Tracef("Received message of size %d from stdin.", numBytes)
+
 		if err = p.session.DataChannel.SendInputDataMessage(log, message.Output, msg[:numBytes]); err != nil {
 			log.Errorf("Failed to send packet: %v", err)
+
 			return err
 		}
 		// Sleep to process more data
@@ -71,19 +76,22 @@ func (p *StandardStreamForwarding) ReadStream(log log.T) (err error) {
 	}
 }
 
-// WriteStream writes data to output stream
+// WriteStream writes data to output stream.
 func (p *StandardStreamForwarding) WriteStream(outputMessage message.ClientMessage) error {
 	_, err := p.outputStream.Write(outputMessage.Payload)
+
 	return err
 }
 
-// handleReadError handles read error
+// handleReadError handles read error.
 func (p *StandardStreamForwarding) handleReadError(log log.T, err error) error {
 	if err == io.EOF {
 		log.Infof("Session to instance[%s] on port[%s] was closed.", p.session.TargetId, p.portParameters.PortNumber)
+
 		return nil
 	} else {
 		log.Errorf("Reading input failed with error: %v", err)
+
 		return err
 	}
 }

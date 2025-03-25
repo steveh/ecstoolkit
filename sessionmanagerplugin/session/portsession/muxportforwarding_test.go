@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// test readStream
+// test readStream.
 func TestReadStream(t *testing.T) {
 	out, in := net.Pipe()
 	defer out.Close()
@@ -40,14 +40,17 @@ func TestReadStream(t *testing.T) {
 			mgsConn:   &MgsConn{nil, out},
 		},
 	}
+
 	go func() {
 		in.Write(outputMessage.Payload)
 		in.Close()
 	}()
 
 	var actualPayload []byte
+
 	datachannel.SendMessageCall = func(log log.T, dataChannel *datachannel.DataChannel, input []byte, inputType int) error {
 		actualPayload = input
+
 		return nil
 	}
 
@@ -55,17 +58,15 @@ func TestReadStream(t *testing.T) {
 		portSession.portSessionType.ReadStream(mockLog)
 	}()
 
-	select {
-	case <-time.After(time.Second):
-	}
+	time.Sleep(time.Second)
 
 	deserializedMsg := &message.ClientMessage{}
 	err := deserializedMsg.DeserializeClientMessage(mockLog, actualPayload)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, outputMessage.Payload, deserializedMsg.Payload)
 }
 
-// test writeStream
+// test writeStream.
 func TestWriteStream(t *testing.T) {
 	out, in := net.Pipe()
 	defer in.Close()
@@ -89,13 +90,14 @@ func TestWriteStream(t *testing.T) {
 	assert.Equal(t, outputMessage.Payload, msg)
 }
 
-// Test handleDataTransfer
+// Test handleDataTransfer.
 func TestHandleDataTransferSrcToDst(t *testing.T) {
 	msg := make([]byte, 20)
 	out, in := net.Pipe()
 	out1, in1 := net.Pipe()
 
 	defer out1.Close()
+
 	go func() {
 		in.Write(outputMessage.Payload)
 		in.Close()
@@ -115,6 +117,7 @@ func TestHandleDataTransferDstToSrc(t *testing.T) {
 	out1, in1 := net.Pipe()
 
 	defer out.Close()
+
 	go func() {
 		in1.Write(outputMessage.Payload)
 		in1.Close()

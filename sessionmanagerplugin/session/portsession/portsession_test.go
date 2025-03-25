@@ -28,9 +28,10 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// Test Initialize
+// Test Initialize.
 func TestInitializePortSession(t *testing.T) {
 	var portParameters PortParameters
+
 	jsonutil.Remarshal(properties, &portParameters)
 
 	mockWebSocketChannel.On("SetOnMessage", mock.Anything)
@@ -47,6 +48,7 @@ func TestInitializePortSession(t *testing.T) {
 
 func TestInitializePortSessionForPortForwardingWithOldAgent(t *testing.T) {
 	var portParameters PortParameters
+
 	jsonutil.Remarshal(map[string]interface{}{"portNumber": "8080", "type": "LocalPortForwarding"}, &portParameters)
 
 	mockWebSocketChannel.On("SetOnMessage", mock.Anything)
@@ -63,6 +65,7 @@ func TestInitializePortSessionForPortForwardingWithOldAgent(t *testing.T) {
 
 func TestInitializePortSessionForPortForwarding(t *testing.T) {
 	var portParameters PortParameters
+
 	jsonutil.Remarshal(map[string]interface{}{"portNumber": "8080", "type": "LocalPortForwarding"}, &portParameters)
 
 	mockWebSocketChannel.On("SetOnMessage", mock.Anything)
@@ -80,12 +83,15 @@ func TestInitializePortSessionForPortForwarding(t *testing.T) {
 func TestStartSessionWithClosedWsConn(t *testing.T) {
 	in, out, _ := os.Pipe()
 	out.Write(outputMessage.Payload)
+
 	oldStdin := os.Stdin
 	os.Stdin = in
 
 	var actualPayload []byte
+
 	datachannel.SendMessageCall = func(log log.T, dataChannel *datachannel.DataChannel, input []byte, inputType int) error {
 		actualPayload = input
+
 		return nil
 	}
 
@@ -93,7 +99,9 @@ func TestStartSessionWithClosedWsConn(t *testing.T) {
 	// This is required as startSession has a for loop which will continuously reads data.
 	go func() {
 		time.Sleep(time.Second)
+
 		os.Stdin = oldStdin
+
 		in.Close()
 		out.Close()
 	}()
@@ -108,13 +116,14 @@ func TestStartSessionWithClosedWsConn(t *testing.T) {
 		},
 	}
 	portSession.SetSessionHandlers(mockLog)
+
 	deserializedMsg := &message.ClientMessage{}
 	err := deserializedMsg.DeserializeClientMessage(mockLog, actualPayload)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, outputMessage.Payload, deserializedMsg.Payload)
 }
 
-// Test ProcessStreamMessagePayload
+// Test ProcessStreamMessagePayload.
 func TestProcessStreamMessagePayload(t *testing.T) {
 	in, out, _ := os.Pipe()
 	defer func() {

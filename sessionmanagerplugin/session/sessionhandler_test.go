@@ -15,7 +15,7 @@
 package session
 
 import (
-	"fmt"
+	"errors"
 	"testing"
 
 	wsChannelMock "github.com/steveh/ecstoolkit/communicator/mocks"
@@ -23,9 +23,8 @@ import (
 	"github.com/steveh/ecstoolkit/datachannel"
 	dataChannelMock "github.com/steveh/ecstoolkit/datachannel/mocks"
 	"github.com/steveh/ecstoolkit/message"
-	"github.com/stretchr/testify/mock"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 var (
@@ -40,11 +39,12 @@ func TestOpenDataChannel(t *testing.T) {
 
 	sessionMock := &Session{}
 	sessionMock.DataChannel = mockDataChannel
+
 	SetupMockActions()
 	mockDataChannel.On("Open", mock.Anything).Return(nil)
 
 	err := sessionMock.OpenDataChannel(logger)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 }
 
 func TestOpenDataChannelWithError(t *testing.T) {
@@ -53,14 +53,16 @@ func TestOpenDataChannelWithError(t *testing.T) {
 
 	sessionMock := &Session{}
 	sessionMock.DataChannel = mockDataChannel
+
 	SetupMockActions()
 
-	//First reconnection failed when open datachannel, success after retry
-	mockDataChannel.On("Open", mock.Anything).Return(fmt.Errorf("error"))
-	mockDataChannel.On("Reconnect", mock.Anything).Return(fmt.Errorf("error")).Once()
+	// First reconnection failed when open datachannel, success after retry
+	mockDataChannel.On("Open", mock.Anything).Return(errors.New("error"))
+	mockDataChannel.On("Reconnect", mock.Anything).Return(errors.New("error")).Once()
 	mockDataChannel.On("Reconnect", mock.Anything).Return(nil).Once()
+
 	err := sessionMock.OpenDataChannel(logger)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 }
 
 func TestProcessFirstMessageOutputMessageFirst(t *testing.T) {

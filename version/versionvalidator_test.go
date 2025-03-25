@@ -131,6 +131,7 @@ func TestIsAgentVersionGreaterThanSupportedVersionEdgeCases(t *testing.T) {
 			{"3.0.0.0", ""},
 			{"3,0.0.0", "3.0.2.0"},
 		}
+
 		for _, tc := range invalidVersionNumberCases {
 			assert.False(t, isAgentVersionGreaterThanSupportedVersion(errorLog, tc.agentVersion, tc.supportedVersion))
 		}

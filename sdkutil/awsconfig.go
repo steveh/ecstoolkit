@@ -23,10 +23,12 @@ import (
 	"github.com/steveh/ecstoolkit/sdkutil/retryer"
 )
 
-var defaultRegion string
-var defaultProfile string
+var (
+	defaultRegion  string
+	defaultProfile string
+)
 
-// GetNewSessionWithEndpoint creates aws sdk session with given profile, region and endpoint
+// GetNewSessionWithEndpoint creates aws sdk session with given profile, region and endpoint.
 func GetNewSessionWithEndpoint(endpoint string) (sess *session.Session, err error) {
 	if sess, err = session.NewSessionWithOptions(session.Options{
 		Config: aws.Config{
@@ -38,17 +40,18 @@ func GetNewSessionWithEndpoint(endpoint string) (sess *session.Session, err erro
 		SharedConfigState: session.SharedConfigEnable,
 		Profile:           defaultProfile,
 	}); err != nil {
-		return nil, fmt.Errorf("Error creating new aws sdk session %s", err)
+		return nil, fmt.Errorf("Error creating new aws sdk session %w", err)
 	}
+
 	return sess, nil
 }
 
-// GetDefaultSession creates aws sdk session with given profile and region
+// GetDefaultSession creates aws sdk session with given profile and region.
 func GetDefaultSession() (sess *session.Session, err error) {
 	return GetNewSessionWithEndpoint("")
 }
 
-// Sets the region and profile for default aws sessions
+// Sets the region and profile for default aws sessions.
 func SetRegionAndProfile(region string, profile string) {
 	defaultRegion = region
 	defaultProfile = profile
@@ -57,6 +60,7 @@ func SetRegionAndProfile(region string, profile string) {
 var newRetryer = func() aws.RequestRetryer {
 	r := retryer.SsmCliRetryer{}
 	r.NumMaxRetries = 3
+
 	return r
 }
 

@@ -25,16 +25,19 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Test StartSession
+// Test StartSession.
 func TestStartSessionForStandardStreamForwarding(t *testing.T) {
 	in, out, _ := os.Pipe()
 	out.Write(outputMessage.Payload)
+
 	oldStdin := os.Stdin
 	os.Stdin = in
 
 	var actualPayload []byte
+
 	datachannel.SendMessageCall = func(log log.T, dataChannel *datachannel.DataChannel, input []byte, inputType int) error {
 		actualPayload = input
+
 		return nil
 	}
 
@@ -42,7 +45,9 @@ func TestStartSessionForStandardStreamForwarding(t *testing.T) {
 	// This is required as startSession has a for loop which will continuously reads data.
 	go func() {
 		time.Sleep(time.Second)
+
 		os.Stdin = oldStdin
+
 		in.Close()
 		out.Close()
 	}()
@@ -56,8 +61,9 @@ func TestStartSessionForStandardStreamForwarding(t *testing.T) {
 		},
 	}
 	portSession.SetSessionHandlers(mockLog)
+
 	deserializedMsg := &message.ClientMessage{}
 	err := deserializedMsg.DeserializeClientMessage(mockLog, actualPayload)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, outputMessage.Payload, deserializedMsg.Payload)
 }

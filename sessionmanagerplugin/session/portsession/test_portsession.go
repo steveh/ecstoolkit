@@ -44,12 +44,13 @@ func getSessionMockWithParams(properties interface{}, agentVersion string) sessi
 	datachannel := &datachannel.DataChannel{}
 	datachannel.SetAgentVersion(agentVersion)
 
-	var mockSession = session.Session{
+	mockSession := session.Session{
 		DataChannel: datachannel,
 	}
 
 	mockSession.DataChannel.Initialize(mockLog, "clientId", "sessionId", "targetId", false)
 	mockSession.DataChannel.SetWsChannel(&mockWebSocketChannel)
 	mockSession.SessionProperties = properties
+
 	return mockSession
 }

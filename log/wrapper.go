@@ -18,7 +18,7 @@ import (
 	"sync"
 )
 
-// DelegateLogger holds the base logger for logging
+// DelegateLogger holds the base logger for logging.
 type DelegateLogger struct {
 	BaseLoggerInstance BasicT
 }
@@ -32,7 +32,6 @@ type Wrapper struct {
 
 // FormatFilter can modify the format and or parameters to be passed to a logger.
 type FormatFilter interface {
-
 	// Filter modifies parameters that will be passed to log.Debug, log.Info, etc.
 	Filter(params ...interface{}) (newParams []interface{})
 
@@ -40,10 +39,11 @@ type FormatFilter interface {
 	Filterf(format string, params ...interface{}) (newFormat string, newParams []interface{})
 }
 
-// WithContext creates a wrapper logger with context
+// WithContext creates a wrapper logger with context.
 func (w *Wrapper) WithContext(context ...string) (contextLogger T) {
 	formatFilter := &ContextFormatFilter{Context: context}
 	contextLogger = &Wrapper{Format: formatFilter, M: w.M, Delegate: w.Delegate}
+
 	return contextLogger
 }
 
@@ -84,6 +84,7 @@ func (w *Wrapper) Warnf(format string, params ...interface{}) error {
 
 	w.M.Lock()
 	defer w.M.Unlock()
+
 	return w.Delegate.BaseLoggerInstance.Warnf(format, params...)
 }
 
@@ -94,6 +95,7 @@ func (w *Wrapper) Errorf(format string, params ...interface{}) error {
 
 	w.M.Lock()
 	defer w.M.Unlock()
+
 	return w.Delegate.BaseLoggerInstance.Errorf(format, params...)
 }
 
@@ -104,11 +106,12 @@ func (w *Wrapper) Criticalf(format string, params ...interface{}) error {
 
 	w.M.Lock()
 	defer w.M.Unlock()
+
 	return w.Delegate.BaseLoggerInstance.Criticalf(format, params...)
 }
 
 // Trace formats message using the default formats for its operands
-// and writes to log with level = Trace
+// and writes to log with level = Trace.
 func (w *Wrapper) Trace(v ...interface{}) {
 	v = w.Format.Filter(v...)
 	w.M.Lock()
@@ -117,7 +120,7 @@ func (w *Wrapper) Trace(v ...interface{}) {
 }
 
 // Debug formats message using the default formats for its operands
-// and writes to log with level = Debug
+// and writes to log with level = Debug.
 func (w *Wrapper) Debug(v ...interface{}) {
 	v = w.Format.Filter(v...)
 
@@ -127,7 +130,7 @@ func (w *Wrapper) Debug(v ...interface{}) {
 }
 
 // Info formats message using the default formats for its operands
-// and writes to log with level = Info
+// and writes to log with level = Info.
 func (w *Wrapper) Info(v ...interface{}) {
 	v = w.Format.Filter(v...)
 
@@ -137,32 +140,35 @@ func (w *Wrapper) Info(v ...interface{}) {
 }
 
 // Warn formats message using the default formats for its operands
-// and writes to log with level = Warn
+// and writes to log with level = Warn.
 func (w *Wrapper) Warn(v ...interface{}) error {
 	v = w.Format.Filter(v...)
 
 	w.M.Lock()
 	defer w.M.Unlock()
+
 	return w.Delegate.BaseLoggerInstance.Warn(v...)
 }
 
 // Error formats message using the default formats for its operands
-// and writes to log with level = Error
+// and writes to log with level = Error.
 func (w *Wrapper) Error(v ...interface{}) error {
 	v = w.Format.Filter(v...)
 
 	w.M.Lock()
 	defer w.M.Unlock()
+
 	return w.Delegate.BaseLoggerInstance.Error(v...)
 }
 
 // Critical formats message using the default formats for its operands
-// and writes to log with level = Critical
+// and writes to log with level = Critical.
 func (w *Wrapper) Critical(v ...interface{}) error {
 	v = w.Format.Filter(v...)
 
 	w.M.Lock()
 	defer w.M.Unlock()
+
 	return w.Delegate.BaseLoggerInstance.Critical(v...)
 }
 
@@ -180,7 +186,7 @@ func (w *Wrapper) Close() {
 	w.Delegate.BaseLoggerInstance.Close()
 }
 
-// ReplaceDelegate replaces the delegate logger with a new logger
+// ReplaceDelegate replaces the delegate logger with a new logger.
 func (w *Wrapper) ReplaceDelegate(newLogger BasicT) {
 	w.M.Lock()
 	defer w.M.Unlock()

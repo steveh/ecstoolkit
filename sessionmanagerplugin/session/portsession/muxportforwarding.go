@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"hash/fnv"
 	"io"
@@ -39,20 +40,20 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// MuxClient contains smux client session and corresponding network connection
+// MuxClient contains smux client session and corresponding network connection.
 type MuxClient struct {
 	conn    net.Conn
 	session *smux.Session
 }
 
-// MgsConn contains local server and corresponding connection to smux client
+// MgsConn contains local server and corresponding connection to smux client.
 type MgsConn struct {
 	listener net.Listener
 	conn     net.Conn
 }
 
 // MuxPortForwarding is type of port session
-// accepts multiple client connections through multiplexing
+// accepts multiple client connections through multiplexing.
 type MuxPortForwarding struct {
 	port           IPortSession
 	sessionId      string
@@ -73,36 +74,39 @@ func (c *MuxClient) close() {
 	c.conn.Close()
 }
 
-// IsStreamNotSet checks if stream is not set
+// IsStreamNotSet checks if stream is not set.
 func (p *MuxPortForwarding) IsStreamNotSet() (status bool) {
 	return p.muxClient.conn == nil
 }
 
-// Stop closes all open stream
+// Stop closes all open stream.
 func (p *MuxPortForwarding) Stop() error {
 	if p.mgsConn != nil {
 		p.mgsConn.close()
 	}
+
 	if p.muxClient != nil {
 		p.muxClient.close()
 	}
+
 	p.cleanUp()
+
 	return nil
 }
 
-// InitializeStreams initializes i/o streams
+// InitializeStreams initializes i/o streams.
 func (p *MuxPortForwarding) InitializeStreams(log log.T, agentVersion string) (err error) {
-
 	p.handleControlSignals(log)
 	p.socketFile = getUnixSocketPath(p.sessionId, os.TempDir(), "session_manager_plugin_mux.sock")
 
 	if err = p.initialize(log, agentVersion); err != nil {
 		p.cleanUp()
 	}
+
 	return
 }
 
-// ReadStream reads data from different connections
+// ReadStream reads data from different connections.
 func (p *MuxPortForwarding) ReadStream(log log.T) (err error) {
 	g, ctx := errgroup.WithContext(context.Background())
 
@@ -119,36 +123,39 @@ func (p *MuxPortForwarding) ReadStream(log log.T) (err error) {
 	return g.Wait()
 }
 
-// WriteStream writes data to stream
+// WriteStream writes data to stream.
 func (p *MuxPortForwarding) WriteStream(outputMessage message.ClientMessage) error {
 	switch message.PayloadType(outputMessage.PayloadType) {
 	case message.Output:
 		_, err := p.mgsConn.conn.Write(outputMessage.Payload)
+
 		return err
 	case message.Flag:
 		var flag message.PayloadTypeFlag
+
 		buf := bytes.NewBuffer(outputMessage.Payload)
 		binary.Read(buf, binary.BigEndian, &flag)
 
 		if message.ConnectToPortError == flag {
-			return fmt.Errorf("connection to destination port failed, check SSM Agent logs.")
+			return errors.New("connection to destination port failed, check SSM Agent logs.")
 		}
 	}
+
 	return nil
 }
 
-// cleanUp deletes unix socket file
+// cleanUp deletes unix socket file.
 func (p *MuxPortForwarding) cleanUp() {
 	os.Remove(p.socketFile)
 }
 
-// initialize opens a network connection that acts as smux client
+// initialize opens a network connection that acts as smux client.
 func (p *MuxPortForwarding) initialize(log log.T, agentVersion string) (err error) {
-
 	// open a network listener
 	var listener net.Listener
+
 	if listener, err = sessionutil.NewListener(log, p.socketFile); err != nil {
-		return
+		return err
 	}
 
 	var g errgroup.Group
@@ -159,6 +166,7 @@ func (p *MuxPortForwarding) initialize(log log.T, agentVersion string) (err erro
 		} else {
 			p.mgsConn = &MgsConn{listener, conn}
 		}
+
 		return nil
 	})
 
@@ -172,22 +180,25 @@ func (p *MuxPortForwarding) initialize(log log.T, agentVersion string) (err erro
 				// Disable smux KeepAlive or else it breaks Session Manager idle timeout.
 				smuxConfig.KeepAliveDisabled = true
 			}
+
 			if muxSession, err := smux.Client(muxConn, smuxConfig); err != nil {
 				return err
 			} else {
 				p.muxClient = &MuxClient{muxConn, muxSession}
 			}
 		}
+
 		return nil
 	})
 
 	return g.Wait()
 }
 
-// handleControlSignals handles terminate signals
+// handleControlSignals handles terminate signals.
 func (p *MuxPortForwarding) handleControlSignals(log log.T) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, sessionutil.ControlSignals...)
+
 	go func() {
 		<-c
 		log.Info("Terminate signal received, exiting.")
@@ -195,28 +206,34 @@ func (p *MuxPortForwarding) handleControlSignals(log log.T) {
 		if err := p.session.DataChannel.SendFlag(log, message.TerminateSession); err != nil {
 			log.Errorf("Failed to send TerminateSession flag: %v", err)
 		}
+
 		log.Infof("Exiting session with sessionId: %s.", p.sessionId)
 		p.Stop()
 	}()
 }
 
-// transferDataToServer reads from smux client connection and sends on data channel
+// transferDataToServer reads from smux client connection and sends on data channel.
 func (p *MuxPortForwarding) transferDataToServer(log log.T, ctx context.Context) (err error) {
 	msg := make([]byte, config.StreamDataPayloadSize)
+
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
 			var numBytes int
+
 			if numBytes, err = p.mgsConn.conn.Read(msg); err != nil {
 				log.Debugf("Reading from port failed with error: %v.", err)
+
 				return
 			}
 
 			log.Tracef("Received message of size %d from mux client.", numBytes)
+
 			if err = p.session.DataChannel.SendInputDataMessage(log, message.Output, msg[:numBytes]); err != nil {
 				log.Errorf("Failed to send packet on data channel: %v", err)
+
 				return
 			}
 			// sleep to process more data
@@ -225,7 +242,7 @@ func (p *MuxPortForwarding) transferDataToServer(log log.T, ctx context.Context)
 	}
 }
 
-// handleClientConnections sets up network server on local ssm port to accept connections from clients (browser/terminal)
+// handleClientConnections sets up network server on local ssm port to accept connections from clients (browser/terminal).
 func (p *MuxPortForwarding) handleClientConnections(log log.T, ctx context.Context) (err error) {
 	var (
 		listener   net.Listener
@@ -236,15 +253,18 @@ func (p *MuxPortForwarding) handleClientConnections(log log.T, ctx context.Conte
 		if listener, err = net.Listen(p.portParameters.LocalConnectionType, p.portParameters.LocalUnixSocket); err != nil {
 			return err
 		}
+
 		displayMsg = fmt.Sprintf("Unix socket %s opened for sessionId %s.", p.portParameters.LocalUnixSocket, p.sessionId)
 	} else {
 		localPortNumber := p.portParameters.LocalPortNumber
 		if p.portParameters.LocalPortNumber == "" {
 			localPortNumber = "0"
 		}
+
 		if listener, err = net.Listen("tcp", "localhost:"+localPortNumber); err != nil {
 			return err
 		}
+
 		p.portParameters.LocalPortNumber = strconv.Itoa(listener.Addr().(*net.TCPAddr).Port)
 		displayMsg = fmt.Sprintf("Port %s opened for sessionId %s.", p.portParameters.LocalPortNumber, p.sessionId)
 	}
@@ -256,6 +276,7 @@ func (p *MuxPortForwarding) handleClientConnections(log log.T, ctx context.Conte
 	log.Infof("Waiting for connections...")
 
 	var once sync.Once
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -274,16 +295,19 @@ func (p *MuxPortForwarding) handleClientConnections(log log.T, ctx context.Conte
 				if err != nil {
 					continue
 				}
+
 				log.Debugf("Client stream opened %d\n", stream.ID())
+
 				go handleDataTransfer(stream, conn)
 			}
 		}
 	}
 }
 
-// handleDataTransfer launches routines to transfer data between source and destination
+// handleDataTransfer launches routines to transfer data between source and destination.
 func handleDataTransfer(dst io.ReadWriteCloser, src io.ReadWriteCloser) {
 	var wait sync.WaitGroup
+
 	wait.Add(2)
 
 	go func() {
@@ -305,5 +329,6 @@ func handleDataTransfer(dst io.ReadWriteCloser, src io.ReadWriteCloser) {
 func getUnixSocketPath(sessionId string, dir string, suffix string) string {
 	hash := fnv.New32a()
 	hash.Write([]byte(sessionId))
+
 	return filepath.Join(dir, fmt.Sprintf("%d_%s", hash.Sum32(), suffix))
 }

@@ -53,7 +53,7 @@ func init() {
 	session.Register(&PortSession{})
 }
 
-// Name is the session name used inputStream the plugin
+// Name is the session name used inputStream the plugin.
 func (PortSession) Name() string {
 	return config.PortPluginName
 }
@@ -91,15 +91,19 @@ func (s *PortSession) Initialize(log log.T, sessionVar *session.Session) {
 			outputMessage := &message.ClientMessage{}
 			if err := outputMessage.DeserializeClientMessage(log, input); err != nil {
 				log.Debugf("Ignore message deserialize error while stream connection had not set.")
+
 				return
 			}
+
 			if outputMessage.MessageType == message.OutputStreamMessage {
 				log.Debugf("Waiting for user to establish connection before processing incoming messages.")
+
 				return
 			} else {
 				log.Infof("Received %s message while establishing connection", outputMessage.MessageType)
 			}
 		}
+
 		s.DataChannel.OutputMessageHandler(log, s.Stop, s.SessionId, input)
 	})
 	log.Infof("Connected to instance[%s] on port: %s", sessionVar.TargetId, s.portParameters.PortNumber)
@@ -118,16 +122,20 @@ func (s *PortSession) SetSessionHandlers(log log.T) (err error) {
 	if err = s.portSessionType.ReadStream(log); err != nil {
 		return err
 	}
+
 	return
 }
 
-// ProcessStreamMessagePayload writes messages received on datachannel to stdout
+// ProcessStreamMessagePayload writes messages received on datachannel to stdout.
 func (s *PortSession) ProcessStreamMessagePayload(log log.T, outputMessage message.ClientMessage) (isHandlerReady bool, err error) {
 	if s.portSessionType.IsStreamNotSet() {
 		log.Debugf("Waiting for streams to be established before processing incoming messages.")
+
 		return false, nil
 	}
+
 	log.Tracef("Received payload of size %d from datachannel.", outputMessage.PayloadLength)
 	err = s.portSessionType.WriteStream(outputMessage)
+
 	return true, err
 }

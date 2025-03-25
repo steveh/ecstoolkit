@@ -20,23 +20,23 @@ import (
 )
 
 const (
-	// InputStreamMessage represents message type for input data
+	// InputStreamMessage represents message type for input data.
 	InputStreamMessage = "input_stream_data"
 
-	// OutputStreamMessage represents message type for output data
+	// OutputStreamMessage represents message type for output data.
 	OutputStreamMessage = "output_stream_data"
 
-	// AcknowledgeMessage represents message type for acknowledge
+	// AcknowledgeMessage represents message type for acknowledge.
 	AcknowledgeMessage = "acknowledge"
 
-	// ChannelClosedMessage represents message type for ChannelClosed
+	// ChannelClosedMessage represents message type for ChannelClosed.
 	ChannelClosedMessage = "channel_closed"
 
-	// StartPublicationMessage represents the message type that notifies the CLI to start sending stream messages
+	// StartPublicationMessage represents the message type that notifies the CLI to start sending stream messages.
 	StartPublicationMessage = "start_publication"
 
 	// PausePublicationMessage represents the message type that notifies the CLI to pause sending stream messages
-	// as the remote data channel is inactive
+	// as the remote data channel is inactive.
 	PausePublicationMessage = "pause_publication"
 )
 
@@ -44,7 +44,7 @@ const (
 // * MessageType is a 32 byte UTF-8 string containing the message type.
 // * MessageId is a 40 byte UTF-8 string containing the UUID identifying this message being acknowledged.
 // * SequenceNumber is an 8 byte integer containing the message sequence number for serialized message.
-// * IsSequentialMessage is a boolean field representing whether the acknowledged message is part of a sequence
+// * IsSequentialMessage is a boolean field representing whether the acknowledged message is part of a sequence.
 type AcknowledgeContent struct {
 	MessageType         string `json:"AcknowledgedMessageType"`
 	MessageId           string `json:"AcknowledgedMessageId"`

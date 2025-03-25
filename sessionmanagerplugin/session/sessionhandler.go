@@ -15,7 +15,7 @@
 package session
 
 import (
-	"fmt"
+	"errors"
 	"math/rand"
 
 	sdkSession "github.com/aws/aws-sdk-go/aws/session"
@@ -27,7 +27,7 @@ import (
 	"github.com/steveh/ecstoolkit/sdkutil"
 )
 
-// OpenDataChannel initializes datachannel
+// OpenDataChannel initializes datachannel.
 func (s *Session) OpenDataChannel(log log.T) (err error) {
 	s.retryParams = retry.RepeatableExponentialRetryer{
 		GeometricRatio:      config.RetryBase,
@@ -46,6 +46,7 @@ func (s *Session) OpenDataChannel(log log.T) (err error) {
 
 	if err = s.DataChannel.Open(log); err != nil {
 		log.Errorf("Retrying connection for data channel id: %s failed with error: %s", s.SessionId, err)
+
 		s.retryParams.CallableFunc = func() (err error) { return s.DataChannel.Reconnect(log) }
 		if err = s.retryParams.Call(); err != nil {
 			log.Error(err)
@@ -55,6 +56,7 @@ func (s *Session) OpenDataChannel(log log.T) (err error) {
 	s.DataChannel.GetWsChannel().SetOnError(
 		func(err error) {
 			log.Errorf("Trying to reconnect the session: %v with seq num: %d", s.StreamUrl, s.DataChannel.GetStreamDataSequenceNumber())
+
 			s.retryParams.CallableFunc = func() (err error) { return s.ResumeSessionHandler(log) }
 			if err = s.retryParams.Call(); err != nil {
 				log.Error(err)
@@ -82,15 +84,16 @@ func (s *Session) ProcessFirstMessage(log log.T, outputMessage message.ClientMes
 			s.DisplayMode.DisplayMessage(log, outputMessage)
 		}
 	}
+
 	return true, nil
 }
 
-// Stop will end the session
+// Stop will end the session.
 func (s *Session) Stop() error {
 	return nil
 }
 
-// GetResumeSessionParams calls ResumeSession API and gets tokenvalue for reconnecting
+// GetResumeSessionParams calls ResumeSession API and gets tokenvalue for reconnecting.
 func (s *Session) GetResumeSessionParams(log log.T) (string, error) {
 	var (
 		resumeSessionOutput *ssm.ResumeSessionOutput
@@ -101,6 +104,7 @@ func (s *Session) GetResumeSessionParams(log log.T) (string, error) {
 	if sdkSession, err = sdkutil.GetNewSessionWithEndpoint(s.Endpoint); err != nil {
 		return "", err
 	}
+
 	s.sdk = ssm.New(sdkSession)
 
 	resumeSessionInput := ssm.ResumeSessionInput{
@@ -108,8 +112,10 @@ func (s *Session) GetResumeSessionParams(log log.T) (string, error) {
 	}
 
 	log.Debugf("Resume Session input parameters: %v", resumeSessionInput)
+
 	if resumeSessionOutput, err = s.sdk.ResumeSession(&resumeSessionInput); err != nil {
 		log.Errorf("Resume Session failed: %v", err)
+
 		return "", err
 	}
 
@@ -120,22 +126,26 @@ func (s *Session) GetResumeSessionParams(log log.T) (string, error) {
 	return *resumeSessionOutput.TokenValue, nil
 }
 
-// ResumeSessionHandler gets token value and tries to Reconnect to datachannel
+// ResumeSessionHandler gets token value and tries to Reconnect to datachannel.
 func (s *Session) ResumeSessionHandler(log log.T) (err error) {
 	s.TokenValue, err = s.GetResumeSessionParams(log)
 	if err != nil {
 		log.Errorf("Failed to get token: %v", err)
+
 		return
 	} else if s.TokenValue == "" {
 		log.Infof("Session: %s timed out.", s.SessionId)
-		return fmt.Errorf("session timed out")
+
+		return errors.New("session timed out")
 	}
+
 	s.DataChannel.GetWsChannel().SetChannelToken(s.TokenValue)
 	err = s.DataChannel.Reconnect(log)
+
 	return
 }
 
-// TerminateSession calls TerminateSession API
+// TerminateSession calls TerminateSession API.
 func (s *Session) TerminateSession(log log.T) error {
 	var (
 		err        error
@@ -144,8 +154,10 @@ func (s *Session) TerminateSession(log log.T) error {
 
 	if newSession, err = sdkutil.GetNewSessionWithEndpoint(s.Endpoint); err != nil {
 		log.Errorf("Terminate Session failed: %v", err)
+
 		return err
 	}
+
 	s.sdk = ssm.New(newSession)
 
 	terminateSessionInput := ssm.TerminateSessionInput{
@@ -153,9 +165,12 @@ func (s *Session) TerminateSession(log log.T) error {
 	}
 
 	log.Debugf("Terminate Session input parameters: %v", terminateSessionInput)
+
 	if _, err = s.sdk.TerminateSession(&terminateSessionInput); err != nil {
 		log.Errorf("Terminate Session failed: %v", err)
+
 		return err
 	}
+
 	return nil
 }

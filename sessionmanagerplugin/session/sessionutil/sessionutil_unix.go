@@ -27,15 +27,15 @@ import (
 	"github.com/steveh/ecstoolkit/message"
 )
 
-type DisplayMode struct {
-}
+type DisplayMode struct{}
 
 func (d *DisplayMode) InitDisplayMode(log log.T) {
 }
 
-// DisplayMessage function displays the output on the screen
+// DisplayMessage function displays the output on the screen.
 func (d *DisplayMode) DisplayMessage(log log.T, message message.ClientMessage) {
 	var out io.Writer = os.Stdout
+
 	fmt.Fprint(out, string(message.Payload))
 }
 

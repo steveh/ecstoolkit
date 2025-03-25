@@ -51,32 +51,32 @@ type WebSocketChannel struct {
 	ChannelToken string
 }
 
-// GetChannelToken gets the channel token
+// GetChannelToken gets the channel token.
 func (webSocketChannel *WebSocketChannel) GetChannelToken() string {
 	return webSocketChannel.ChannelToken
 }
 
-// SetChannelToken sets the channel token
+// SetChannelToken sets the channel token.
 func (webSocketChannel *WebSocketChannel) SetChannelToken(channelToken string) {
 	webSocketChannel.ChannelToken = channelToken
 }
 
-// GetStreamUrl gets stream url
+// GetStreamUrl gets stream url.
 func (webSocketChannel *WebSocketChannel) GetStreamUrl() string {
 	return webSocketChannel.Url
 }
 
-// SetOnError sets OnError field of websocket channel
+// SetOnError sets OnError field of websocket channel.
 func (webSocketChannel *WebSocketChannel) SetOnError(onErrorHandler func(error)) {
 	webSocketChannel.OnError = onErrorHandler
 }
 
-// SetOnMessage sets OnMessage field of websocket channel
+// SetOnMessage sets OnMessage field of websocket channel.
 func (webSocketChannel *WebSocketChannel) SetOnMessage(onMessageHandler func([]byte)) {
 	webSocketChannel.OnMessage = onMessageHandler
 }
 
-// Initialize initializes websocket channel fields
+// Initialize initializes websocket channel fields.
 func (webSocketChannel *WebSocketChannel) Initialize(log log.T, channelUrl string, channelToken string) {
 	webSocketChannel.ChannelToken = channelToken
 	webSocketChannel.Url = channelUrl
@@ -84,10 +84,9 @@ func (webSocketChannel *WebSocketChannel) Initialize(log log.T, channelUrl strin
 
 // StartPings starts the pinging process to keep the websocket channel alive.
 func (webSocketChannel *WebSocketChannel) StartPings(log log.T, pingInterval time.Duration) {
-
 	go func() {
 		for {
-			if webSocketChannel.IsOpen == false {
+			if !webSocketChannel.IsOpen {
 				return
 			}
 
@@ -95,19 +94,22 @@ func (webSocketChannel *WebSocketChannel) StartPings(log log.T, pingInterval tim
 			webSocketChannel.writeLock.Lock()
 			err := webSocketChannel.Connection.WriteMessage(websocket.PingMessage, []byte("keepalive"))
 			webSocketChannel.writeLock.Unlock()
+
 			if err != nil {
 				log.Errorf("Error while sending websocket ping: %v", err)
+
 				return
 			}
+
 			time.Sleep(pingInterval)
 		}
 	}()
 }
 
 // SendMessage sends a byte message through the websocket connection.
-// Examples of message type are websocket.TextMessage or websocket.Binary
+// Examples of message type are websocket.TextMessage or websocket.Binary.
 func (webSocketChannel *WebSocketChannel) SendMessage(log log.T, input []byte, inputType int) error {
-	if webSocketChannel.IsOpen == false {
+	if !webSocketChannel.IsOpen {
 		return errors.New("Can't send message: Connection is closed.")
 	}
 
@@ -118,20 +120,23 @@ func (webSocketChannel *WebSocketChannel) SendMessage(log log.T, input []byte, i
 	webSocketChannel.writeLock.Lock()
 	err := webSocketChannel.Connection.WriteMessage(inputType, input)
 	webSocketChannel.writeLock.Unlock()
+
 	return err
 }
 
 // Close closes the corresponding connection.
 func (webSocketChannel *WebSocketChannel) Close(log log.T) error {
-
 	log.Info("Closing websocket channel connection to: " + webSocketChannel.Url)
-	if webSocketChannel.IsOpen == true {
+
+	if webSocketChannel.IsOpen {
 		// Send signal to stop receiving message
 		webSocketChannel.IsOpen = false
+
 		return websocketutil.NewWebsocketUtil(log, nil).CloseConnection(webSocketChannel.Connection)
 	}
 
 	log.Info("Websocket channel connection to: " + webSocketChannel.Url + " is already Closed!")
+
 	return nil
 }
 
@@ -144,6 +149,7 @@ func (webSocketChannel *WebSocketChannel) Open(log log.T) error {
 	if err != nil {
 		return err
 	}
+
 	webSocketChannel.Connection = ws
 	webSocketChannel.IsOpen = true
 	webSocketChannel.StartPings(log, config.PingTimeInterval)
@@ -157,10 +163,12 @@ func (webSocketChannel *WebSocketChannel) Open(log log.T) error {
 		}()
 
 		retryCount := 0
+
 		for {
-			if webSocketChannel.IsOpen == false {
+			if !webSocketChannel.IsOpen {
 				log.Debugf("Ending the channel listening routine since the channel is closed: %s",
 					webSocketChannel.Url)
+
 				break
 			}
 
@@ -170,8 +178,10 @@ func (webSocketChannel *WebSocketChannel) Open(log log.T) error {
 				if retryCount >= config.RetryAttempt {
 					log.Errorf("Reach the retry limit %v for receive messages.", config.RetryAttempt)
 					webSocketChannel.OnError(err)
+
 					break
 				}
+
 				log.Debugf("An error happened when receiving the message. Retried times: %v, Error: %v, Messagetype: %v",
 					retryCount,
 					err.Error(),
@@ -179,12 +189,13 @@ func (webSocketChannel *WebSocketChannel) Open(log log.T) error {
 			} else if messageType != websocket.TextMessage && messageType != websocket.BinaryMessage {
 				// We only accept text messages which are interpreted as UTF-8 or binary encoded text.
 				log.Errorf("Invalid message type. We only accept UTF-8 or binary encoded text. Message type: %v", messageType)
-
 			} else {
 				retryCount = 0
+
 				webSocketChannel.OnMessage(rawMessage)
 			}
 		}
 	}()
+
 	return nil
 }

@@ -19,7 +19,7 @@ import (
 	"time"
 )
 
-// ActionType used in Handshake to determine action requested by the agent
+// ActionType used in Handshake to determine action requested by the agent.
 type ActionType string
 
 const (
@@ -35,36 +35,36 @@ const (
 	Unsupported ActionStatus = 3
 )
 
-// This is sent by the agent to initialize KMS encryption
+// This is sent by the agent to initialize KMS encryption.
 type KMSEncryptionRequest struct {
 	KMSKeyID string `json:"KMSKeyId"`
 }
 
-// This is received by the agent to set up KMS encryption
+// This is received by the agent to set up KMS encryption.
 type KMSEncryptionResponse struct {
 	KMSCipherTextKey  []byte `json:"KMSCipherTextKey"`
 	KMSCipherTextHash []byte `json:"KMSCipherTextHash"`
 }
 
-// SessionType request contains type of the session that needs to be launched and properties for plugin
+// SessionType request contains type of the session that needs to be launched and properties for plugin.
 type SessionTypeRequest struct {
 	SessionType string      `json:"SessionType"`
 	Properties  interface{} `json:"Properties"`
 }
 
-// Handshake payload sent by the agent to the session manager plugin
+// Handshake payload sent by the agent to the session manager plugin.
 type HandshakeRequestPayload struct {
 	AgentVersion           string                  `json:"AgentVersion"`
 	RequestedClientActions []RequestedClientAction `json:"RequestedClientActions"`
 }
 
-// An action requested by the agent to the plugin
+// An action requested by the agent to the plugin.
 type RequestedClientAction struct {
 	ActionType       ActionType      `json:"ActionType"`
 	ActionParameters json.RawMessage `json:"ActionParameters"`
 }
 
-// The result of processing the action by the plugin
+// The result of processing the action by the plugin.
 type ProcessedClientAction struct {
 	ActionType   ActionType   `json:"ActionType"`
 	ActionStatus ActionStatus `json:"ActionStatus"`
@@ -72,7 +72,7 @@ type ProcessedClientAction struct {
 	Error        string       `json:"Error"`
 }
 
-// Handshake Response sent by the plugin in response to the handshake request
+// Handshake Response sent by the plugin in response to the handshake request.
 type HandshakeResponsePayload struct {
 	ClientVersion          string                  `json:"ClientVersion"`
 	ProcessedClientActions []ProcessedClientAction `json:"ProcessedClientActions"`

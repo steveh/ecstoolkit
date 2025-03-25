@@ -23,11 +23,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var (
-	callableFunc = func() error {
-		return errors.New("Error occured in callable function")
-	}
-)
+var callableFunc = func() error {
+	return errors.New("Error occurred in callable function")
+}
 
 func TestRepeatableExponentialRetryerRetriesForGivenNumberOfMaxRetries(t *testing.T) {
 	retryer := RepeatableExponentialRetryer{
@@ -38,5 +36,5 @@ func TestRepeatableExponentialRetryerRetriesForGivenNumberOfMaxRetries(t *testin
 		config.DataChannelNumMaxRetries,
 	}
 	err := retryer.Call()
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 }

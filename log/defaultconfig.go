@@ -50,5 +50,6 @@ func LoadLog(defaultLogDir string, logFile string, errorFile string) []byte {
     </formats>
 </seelog>
 `
+
 	return []byte(logConfig)
 }

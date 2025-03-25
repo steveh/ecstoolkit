@@ -41,17 +41,21 @@ func (retryer *RepeatableExponentialRetryer) NextSleepTime(attempt int) time.Dur
 func (retryer *RepeatableExponentialRetryer) Call() (err error) {
 	attempt := 0
 	failedAttemptsSoFar := 0
+
 	for {
 		err := retryer.CallableFunc()
 		if err == nil || failedAttemptsSoFar == retryer.MaxAttempts {
 			return err
 		}
+
 		sleep := retryer.NextSleepTime(attempt)
 		if int(sleep/time.Millisecond) > retryer.MaxDelayInMilli {
 			attempt = 0
 			sleep = retryer.NextSleepTime(attempt)
 		}
+
 		time.Sleep(sleep)
+
 		attempt++
 		failedAttemptsSoFar++
 	}

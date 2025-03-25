@@ -24,7 +24,7 @@ type version struct {
 	version []string
 }
 
-// NewVersion initializes version struct by splitting given version string into string list using separator "."
+// NewVersion initializes version struct by splitting given version string into string list using separator ".".
 func NewVersion(versionString string) (version, error) {
 	if versionString == "" {
 		return version{}, fmt.Errorf("invalid version %s", versionString)
@@ -35,7 +35,7 @@ func NewVersion(versionString string) (version, error) {
 	}, nil
 }
 
-// compare returns 0 if thisVersion is equal to otherVersion, 1 if thisVersion is greater than otherVersion, -1 otherwise
+// compare returns 0 if thisVersion is equal to otherVersion, 1 if thisVersion is greater than otherVersion, -1 otherwise.
 func (thisVersion version) compare(otherVersion version) (int, error) {
 	if len(thisVersion.version) != len(otherVersion.version) {
 		return -1, fmt.Errorf("length mismatch for versions %s and %s", thisVersion.version, otherVersion.version)
@@ -46,10 +46,12 @@ func (thisVersion version) compare(otherVersion version) (int, error) {
 		otherVersionSlice int
 		err               error
 	)
+
 	for i := range thisVersion.version {
 		if thisVersionSlice, err = strconv.Atoi(thisVersion.version[i]); err != nil {
 			return -1, err
 		}
+
 		if otherVersionSlice, err = strconv.Atoi(otherVersion.version[i]); err != nil {
 			return -1, err
 		}
@@ -60,5 +62,6 @@ func (thisVersion version) compare(otherVersion version) (int, error) {
 			return -1, nil
 		}
 	}
+
 	return 0, nil
 }

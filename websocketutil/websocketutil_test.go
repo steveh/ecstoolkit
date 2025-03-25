@@ -36,11 +36,12 @@ func handlerToBeTested(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		http.Error(w, fmt.Sprintf("cannot upgrade: %v", err), http.StatusInternalServerError)
 	}
-	mt, p, err := conn.ReadMessage()
 
+	mt, p, err := conn.ReadMessage()
 	if err != nil {
 		return
 	}
+
 	conn.WriteMessage(mt, []byte("hello "+string(p)))
 }
 
@@ -48,38 +49,44 @@ func TestWebsocketUtilOpenCloseConnection(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(handlerToBeTested))
 	u, _ := url.Parse(srv.URL)
 	u.Scheme = "ws"
-	var log = log.NewMockLog()
-	var ws = NewWebsocketUtil(log, nil)
+
+	log := log.NewMockLog()
+
+	ws := NewWebsocketUtil(log, nil)
 	conn, _ := ws.OpenConnection(u.String())
 	assert.NotNil(t, conn, "Open connection failed.")
 
 	err := ws.CloseConnection(conn)
-	assert.Nil(t, err, "Error closing the websocket connection.")
+	assert.NoError(t, err, "Error closing the websocket connection.")
 }
 
 func TestWebsocketUtilOpenConnectionInvalidUrl(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(handlerToBeTested))
 	u, _ := url.Parse(srv.URL)
 	u.Scheme = "ws"
-	var log = log.NewMockLog()
-	var ws = NewWebsocketUtil(log, nil)
+
+	log := log.NewMockLog()
+
+	ws := NewWebsocketUtil(log, nil)
 	conn, _ := ws.OpenConnection("InvalidUrl")
 	assert.Nil(t, conn, "Open connection failed.")
 
 	err := ws.CloseConnection(conn)
-	assert.NotNil(t, err, "Error closing the websocket connection.")
+	assert.Error(t, err, "Error closing the websocket connection.")
 }
 
 func TestSendMessage(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(handlerToBeTested))
 	u, _ := url.Parse(srv.URL)
 	u.Scheme = "ws"
-	var log = log.NewMockLog()
-	var ws = NewWebsocketUtil(log, nil)
+
+	log := log.NewMockLog()
+
+	ws := NewWebsocketUtil(log, nil)
 	conn, _ := ws.OpenConnection(u.String())
 	assert.NotNil(t, conn, "Open connection failed.")
-	conn.WriteMessage(websocket.TextMessage, []byte("testing testing"))
+	conn.WriteMessage(websocket.TextMessage, []byte("testing"))
 
 	err := ws.CloseConnection(conn)
-	assert.Nil(t, err, "Error closing the websocket connection.")
+	assert.NoError(t, err, "Error closing the websocket connection.")
 }

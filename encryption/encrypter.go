@@ -50,60 +50,68 @@ type Encrypter struct {
 var NewEncrypter = func(log log.T, kmsKeyId string, context map[string]*string, KMSService kmsiface.KMSAPI) (*Encrypter, error) {
 	encrypter := Encrypter{kmsKeyId: kmsKeyId, KMSService: KMSService}
 	err := encrypter.generateEncryptionKey(log, kmsKeyId, context)
+
 	return &encrypter, err
 }
 
-// generateEncryptionKey calls KMS to generate a new encryption key
+// generateEncryptionKey calls KMS to generate a new encryption key.
 func (encrypter *Encrypter) generateEncryptionKey(log log.T, kmsKeyId string, context map[string]*string) error {
 	cipherTextKey, plainTextKey, err := KMSGenerateDataKey(kmsKeyId, encrypter.KMSService, context)
 	if err != nil {
 		log.Errorf("Error generating data key from KMS: %s,", err)
+
 		return err
 	}
+
 	keySize := len(plainTextKey) / 2
 	encrypter.decryptionKey = plainTextKey[:keySize]
 	encrypter.encryptionKey = plainTextKey[keySize:]
 	encrypter.cipherTextKey = cipherTextKey
+
 	return nil
 }
 
-// GetEncryptedDataKey returns the cipherText that was pulled from KMS
+// GetEncryptedDataKey returns the cipherText that was pulled from KMS.
 func (encrypter *Encrypter) GetEncryptedDataKey() (ciptherTextBlob []byte) {
 	return encrypter.cipherTextKey
 }
 
-// GetKMSKeyId gets the KMS key id that is used to generate the encryption key
+// GetKMSKeyId gets the KMS key id that is used to generate the encryption key.
 func (encrypter *Encrypter) GetKMSKeyId() (kmsKey string) {
 	return encrypter.kmsKeyId
 }
 
-// getAEAD gets AEAD which is a GCM cipher mode providing authenticated encryption with associated data
+// getAEAD gets AEAD which is a GCM cipher mode providing authenticated encryption with associated data.
 func getAEAD(plainTextKey []byte) (aesgcm cipher.AEAD, err error) {
 	var block cipher.Block
+
 	if block, err = aes.NewCipher(plainTextKey); err != nil {
-		return nil, fmt.Errorf("error creating NewCipher, %v", err)
+		return nil, fmt.Errorf("error creating NewCipher, %w", err)
 	}
 
 	if aesgcm, err = cipher.NewGCM(block); err != nil {
-		return nil, fmt.Errorf("error creating NewGCM, %v", err)
+		return nil, fmt.Errorf("error creating NewGCM, %w", err)
 	}
 
 	return aesgcm, nil
 }
 
-// Encrypt encrypts a byte slice and returns the encrypted slice
+// Encrypt encrypts a byte slice and returns the encrypted slice.
 func (encrypter *Encrypter) Encrypt(log log.T, plainText []byte) (cipherText []byte, err error) {
 	var aesgcm cipher.AEAD
 
 	if aesgcm, err = getAEAD(encrypter.encryptionKey); err != nil {
-		err = fmt.Errorf("%v", err)
+		err = fmt.Errorf("%w", err)
+
 		return
 	}
 
 	cipherText = make([]byte, nonceSize+len(plainText))
+
 	nonce := make([]byte, nonceSize)
 	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
-		err = fmt.Errorf("error when generating nonce for encryption, %v", err)
+		err = fmt.Errorf("error when generating nonce for encryption, %w", err)
+
 		return
 	}
 
@@ -113,14 +121,17 @@ func (encrypter *Encrypter) Encrypt(log log.T, plainText []byte) (cipherText []b
 	// Append nonce to the beginning of the cipher text to be used while decrypting
 	cipherText = append(cipherText[:nonceSize], nonce...)
 	cipherText = append(cipherText[nonceSize:], cipherTextWithoutNonce...)
+
 	return cipherText, nil
 }
 
-// Decrypt decrypts a byte slice and returns the decrypted slice
+// Decrypt decrypts a byte slice and returns the decrypted slice.
 func (encrypter *Encrypter) Decrypt(log log.T, cipherText []byte) (plainText []byte, err error) {
 	var aesgcm cipher.AEAD
+
 	if aesgcm, err = getAEAD(encrypter.decryptionKey); err != nil {
-		err = fmt.Errorf("%v", err)
+		err = fmt.Errorf("%w", err)
+
 		return
 	}
 
@@ -130,8 +141,10 @@ func (encrypter *Encrypter) Decrypt(log log.T, cipherText []byte) (plainText []b
 
 	// Decrypt just the actual cipherText using nonce extracted above
 	if plainText, err = aesgcm.Open(nil, nonce, cipherTextWithoutNonce, nil); err != nil {
-		err = fmt.Errorf("error decrypting encrypted test, %v", err)
+		err = fmt.Errorf("error decrypting encrypted test, %w", err)
+
 		return
 	}
+
 	return plainText, nil
 }

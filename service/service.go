@@ -14,22 +14,22 @@
 // Package service is a wrapper for the new Service
 package service
 
-// OpenDataChannelInput
+// OpenDataChannelInput.
 type OpenDataChannelInput struct {
 	_ struct{} `type:"structure"`
 
 	// MessageSchemaVersion is a required field
-	MessageSchemaVersion *string `json:"MessageSchemaVersion" min:"1" type:"string" required:"true"`
+	MessageSchemaVersion *string `json:"MessageSchemaVersion" min:"1" required:"true" type:"string"`
 
 	// RequestId is a required field
-	RequestId *string `json:"RequestId" min:"16" type:"string" required:"true"`
+	RequestId *string `json:"RequestId" min:"16" required:"true" type:"string"`
 
 	// TokenValue is a required field
-	TokenValue *string `json:"TokenValue" min:"1" type:"string" required:"true"`
+	TokenValue *string `json:"TokenValue" min:"1" required:"true" type:"string"`
 
 	// ClientId is a required field
-	ClientId *string `json:"ClientId" min:"1" type:"string" required:"true"`
+	ClientId *string `json:"ClientId" min:"1" required:"true" type:"string"`
 
 	// ClientVersion is a required field
-	ClientVersion *string `json:"ClientVersion" min:"1" type:"string" required:"true"`
+	ClientVersion *string `json:"ClientVersion" min:"1" required:"true" type:"string"`
 }

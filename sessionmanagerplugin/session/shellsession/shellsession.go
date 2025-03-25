@@ -50,7 +50,7 @@ func init() {
 	session.Register(&ShellSession{})
 }
 
-// Name is the session name used in the plugin
+// Name is the session name used in the plugin.
 func (ShellSession) Name() string {
 	return config.ShellPluginName
 }
@@ -64,26 +64,26 @@ func (s *ShellSession) Initialize(log log.T, sessionVar *session.Session) {
 		})
 }
 
-// StartSession takes input and write it to data channel
+// StartSession takes input and write it to data channel.
 func (s *ShellSession) SetSessionHandlers(log log.T) (err error) {
-
 	// handle re-size
 	s.handleTerminalResize(log)
 
 	// handle control signals
 	s.handleControlSignals(log)
 
-	//handles keyboard input
+	// handles keyboard input
 	err = s.handleKeyboardInput(log)
 
 	return
 }
 
-// handleControlSignals handles control signals when given by user
+// handleControlSignals handles control signals when given by user.
 func (s *ShellSession) handleControlSignals(log log.T) {
 	go func() {
 		signals := make(chan os.Signal, 1)
 		signal.Notify(signals, sessionutil.ControlSignals...)
+
 		for {
 			sig := <-signals
 			if b, ok := sessionutil.SignalsByteMap[sig]; ok {
@@ -103,6 +103,7 @@ func (s *ShellSession) handleTerminalResize(log log.T) {
 		inputSizeData []byte
 		err           error
 	)
+
 	go func() {
 		for {
 			// If running from IDE GetTerminalSizeCall will not work. Supply a fixed width and height value.
@@ -122,7 +123,9 @@ func (s *ShellSession) handleTerminalResize(log log.T) {
 				if inputSizeData, err = json.Marshal(sizeData); err != nil {
 					log.Errorf("Cannot marshall size data: %v", err)
 				}
+
 				log.Debugf("Sending input size data: %s", inputSizeData)
+
 				if err = s.DataChannel.SendInputDataMessage(log, message.Size, inputSizeData); err != nil {
 					log.Errorf("Failed to Send size data: %v", err)
 				}
@@ -133,8 +136,9 @@ func (s *ShellSession) handleTerminalResize(log log.T) {
 	}()
 }
 
-// ProcessStreamMessagePayload prints payload received on datachannel to console
+// ProcessStreamMessagePayload prints payload received on datachannel to console.
 func (s ShellSession) ProcessStreamMessagePayload(log log.T, outputMessage message.ClientMessage) (isHandlerReady bool, err error) {
 	s.DisplayMode.DisplayMessage(log, outputMessage)
+
 	return true, nil
 }

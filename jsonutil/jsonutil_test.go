@@ -15,6 +15,7 @@
 package jsonutil
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -30,15 +31,18 @@ func ExampleMarshal() {
 		Name   string
 		Colors []string
 	}
+
 	group := ColorGroup{
 		ID:     1,
 		Name:   "Reds",
 		Colors: []string{"Crimson", "Red", "Ruby", "Maroon"},
 	}
+
 	b, err := Marshal(group)
 	if err != nil {
 		fmt.Println("error:", err)
 	}
+
 	fmt.Println(b)
 	// Output:
 	// {"ID":1,"Name":"Reds","Colors":["Crimson","Red","Ruby","Maroon"]}
@@ -50,6 +54,7 @@ func ExampleRemarshal() {
 		Name   string
 		Colors []string
 	}
+
 	group := ColorGroup{
 		ID:     1,
 		Name:   "Reds",
@@ -78,6 +83,7 @@ func ExampleIndent() {
 		Name   string
 		Number int
 	}
+
 	roads := []Road{
 		{"Diamond Fork", 29},
 		{"Sheep Creek", 51},
@@ -113,10 +119,12 @@ func TestIndent(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		out := Indent(tc.input)
+
 		correct, err := ioutil.ReadFile(filepath.Join("testdata", t.Name()+tc.name+".golden"))
 		if err != nil {
 			t.Errorf("error reading file: %v", err)
 		}
+
 		assert.Equal(t, string(correct), out)
 	}
 }
@@ -131,20 +139,23 @@ func TestMarshal(t *testing.T) {
 		"Reds",
 		[]string{"Crimson", "Red", "Ruby", "Maroon"},
 	}
+
 	out, err := Marshal(group)
 	if err != nil {
 		t.Errorf("error in %s: %v", t.Name(), err)
 	}
+
 	correct, err := ioutil.ReadFile(filepath.Join("testdata", t.Name()+".golden"))
 	assert.Equal(t, string(correct), out)
 }
 
 func TestUnmarshalFile(t *testing.T) {
 	filename := "rumpelstilzchen"
+
 	var contents interface{}
 
 	// missing file
-	ioUtil = ioUtilStub{err: fmt.Errorf("some error")}
+	ioUtil = ioUtilStub{err: errors.New("some error")}
 	err1 := UnmarshalFile(filename, &contents)
 	assert.Error(t, err1, "expected readfile error")
 
@@ -164,11 +175,15 @@ func TestRemarshal(t *testing.T) {
 	prop["RunCommand"] = "echo"
 	prop2 := make(map[string]string)
 	prop2["command"] = "echo"
+
 	type Property struct {
 		RunCommand string
 	}
+
 	var newProp Property
+
 	var newProp2 Property
+
 	err := Remarshal(prop, &newProp)
 	assert.NoError(t, err, "message should remarshal successfully")
 	err = Remarshal(prop2, &newProp2)
@@ -180,14 +195,17 @@ func TestRemarshalInvalidInput(t *testing.T) {
 	// Using channel as unsupported json type
 	// Expect an error and no change to input object
 	badInput := make(chan bool)
+
 	type Output struct {
 		name string
 	}
+
 	var output Output
 	// Save an copy of output to compare to after Remarshal has been called to confirm no changes were made
 	copy := output
 	err := Remarshal(badInput, &output)
-	assert.NotNil(t, err)
+	assert.Error(t, err)
+
 	if !assert.ObjectsAreEqual(copy, output) {
 		t.Fatalf("Object was modified by call to Remarshal")
 	}
@@ -195,28 +213,33 @@ func TestRemarshalInvalidInput(t *testing.T) {
 
 func TestUnmarshal(t *testing.T) {
 	content := `{"parameter": "1"}`
+
 	type TestStruct struct {
 		Parameter string `json:"parameter"`
 	}
+
 	output := TestStruct{}
 	err := Unmarshal(content, &output)
 	assert.NoError(t, err, "Message should parse correctly")
-	assert.Equal(t, output.Parameter, "1")
+	assert.Equal(t, "1", output.Parameter)
 }
 
 func TestUnmarshalExtraInput(t *testing.T) {
 	content := `{"parameter": "1", "name": "Richard"}`
+
 	type TestStruct struct {
 		Parameter string `json:"parameter"`
 	}
+
 	output := TestStruct{}
 	err := Unmarshal(content, &output)
 	assert.NoError(t, err, "Message should parse correctly")
-	assert.Equal(t, output.Parameter, "1")
+	assert.Equal(t, "1", output.Parameter)
 }
 
 func TestUnmarshalInvalidInput(t *testing.T) {
 	content := "Hello"
+
 	var dest interface{}
 	err := Unmarshal(content, &dest)
 	assert.Error(t, err, "This is not json format. Error expected")
@@ -232,16 +255,19 @@ func TestMarshalIndent(t *testing.T) {
 		"Reds",
 		[]string{"Crimson", "Red", "Ruby", "Maroon"},
 	}
+
 	correct, err := ioutil.ReadFile(filepath.Join("testdata", t.Name()+".golden"))
 	if err != nil {
 		t.Errorf("error: %v", err)
 		t.FailNow()
 	}
+
 	out, err := MarshalIndent(group)
 	if err != nil {
 		t.Errorf("error: %v", err)
 		t.FailNow()
 	}
+
 	assert.Equal(t, string(correct), out)
 }
 
@@ -249,10 +275,10 @@ func TestMarshalIndentErrorsOnInvalidInput(t *testing.T) {
 	// Using channel as invalid input
 	// Breaks the same for any json-invalid types
 	_, err := MarshalIndent(make(chan int))
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 }
 
-// ioutil stub
+// ioutil stub.
 type ioUtilStub struct {
 	b   []byte
 	err error

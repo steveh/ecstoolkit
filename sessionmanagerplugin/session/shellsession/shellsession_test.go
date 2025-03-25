@@ -16,7 +16,7 @@ package shellsession
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"os"
 	"os/signal"
 	"sync"
@@ -48,7 +48,7 @@ var (
 func TestName(t *testing.T) {
 	shellSession := ShellSession{}
 	name := shellSession.Name()
-	assert.Equal(t, name, "Standard_Stream")
+	assert.Equal(t, "Standard_Stream", name)
 }
 
 func TestInitialize(t *testing.T) {
@@ -72,13 +72,15 @@ func TestHandleControlSignals(t *testing.T) {
 	counter := 0
 	sendDataMessage := func() error {
 		counter++
-		return fmt.Errorf("SendInputDataMessage error")
+
+		return errors.New("SendInputDataMessage error")
 	}
 	mockDataChannel.On("SendInputDataMessage", mock.Anything, mock.Anything, mock.Anything).Return(sendDataMessage())
 
 	signalCh := make(chan os.Signal, 1)
 	go func() {
 		p, _ := os.FindProcess(os.Getpid())
+
 		signal.Notify(signalCh, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTSTP)
 		shellSession.handleControlSignals(logger)
 		p.Signal(syscall.SIGINT)
@@ -87,8 +89,8 @@ func TestHandleControlSignals(t *testing.T) {
 	}()
 
 	<-waitCh
-	assert.Equal(t, <-signalCh, syscall.SIGINT)
-	assert.Equal(t, counter, 1)
+	assert.Equal(t, syscall.SIGINT, <-signalCh)
+	assert.Equal(t, 1, counter)
 }
 
 func TestSendInputDataMessageWithPayloadTypeSize(t *testing.T) {
@@ -100,14 +102,16 @@ func TestSendInputDataMessageWithPayloadTypeSize(t *testing.T) {
 	dataChannel := getDataChannel()
 	mockChannel := &mocks.IWebSocketChannel{}
 	dataChannel.SetWsChannel(mockChannel)
+
 	SendMessageCallCount := 0
 	datachannel.SendMessageCall = func(log log.T, dataChannel *datachannel.DataChannel, input []byte, inputType int) error {
 		SendMessageCallCount++
+
 		return nil
 	}
 
 	err := dataChannel.SendInputDataMessage(logger, message.Size, sizeDataBytes)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, expectedSequenceNumber, dataChannel.ExpectedSequenceNumber)
 	assert.Equal(t, 1, SendMessageCallCount)
 }
@@ -133,6 +137,7 @@ func TestTerminalResizeWhenSessionSizeDataIsNotEqualToActualSize(t *testing.T) {
 	}
 
 	var wg sync.WaitGroup
+
 	wg.Add(1)
 	// Spawning a separate go routine to close websocket connection.
 	// This is required as handleTerminalResize has a for loop which will continuously check for
@@ -145,8 +150,10 @@ func TestTerminalResizeWhenSessionSizeDataIsNotEqualToActualSize(t *testing.T) {
 	SendMessageCallCount := 0
 	datachannel.SendMessageCall = func(log log.T, dataChannel *datachannel.DataChannel, input []byte, inputType int) error {
 		SendMessageCallCount++
+
 		return nil
 	}
+
 	go shellSession.handleTerminalResize(logger)
 	wg.Wait()
 	assert.Equal(t, 1, SendMessageCallCount)
@@ -161,12 +168,13 @@ func TestProcessStreamMessagePayload(t *testing.T) {
 	}
 	isReady, err := shellSession.ProcessStreamMessagePayload(logger, msg)
 	assert.True(t, isReady)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 }
 
 func getDataChannel() *datachannel.DataChannel {
 	dataChannel := &datachannel.DataChannel{}
 	dataChannel.Initialize(logger, clientId, sessionId, instanceId, false)
 	dataChannel.SetWsChannel(mockWsChannel)
+
 	return dataChannel
 }

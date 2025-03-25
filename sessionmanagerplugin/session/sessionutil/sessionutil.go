@@ -19,5 +19,6 @@ import "github.com/steveh/ecstoolkit/log"
 func NewDisplayMode(log log.T) DisplayMode {
 	displayMode := DisplayMode{}
 	displayMode.InitDisplayMode(log)
+
 	return displayMode
 }

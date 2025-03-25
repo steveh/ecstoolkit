@@ -23,10 +23,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/steveh/ecstoolkit/config"
-
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/google/uuid"
+	"github.com/steveh/ecstoolkit/config"
 	"github.com/steveh/ecstoolkit/datachannel"
 	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
@@ -86,20 +85,21 @@ type Session struct {
 	DisplayMode           sessionutil.DisplayMode
 }
 
-// startSession create the datachannel for session
+// startSession create the datachannel for session.
 var startSession = func(session *Session, log log.T) error {
 	return session.Execute(log)
 }
 
-// setSessionHandlersWithSessionType set session handlers based on session subtype
+// setSessionHandlersWithSessionType set session handlers based on session subtype.
 var setSessionHandlersWithSessionType = func(session *Session, log log.T) error {
 	// SessionType is set inside DataChannel
 	sessionSubType := SessionRegistry[session.SessionType]
 	sessionSubType.Initialize(log, session)
+
 	return sessionSubType.SetSessionHandlers(log)
 }
 
-// Set up a scheduler to listen on stream data resend timeout event
+// Set up a scheduler to listen on stream data resend timeout event.
 var handleStreamMessageResendTimeout = func(session *Session, log log.T) {
 	log.Tracef("Setting up scheduler to listen on IsStreamMessageResendTimeout event.")
 	go func() {
@@ -111,6 +111,7 @@ var handleStreamMessageResendTimeout = func(session *Session, log log.T) {
 				if err := session.TerminateSession(log); err != nil {
 					log.Errorf("Unable to terminate session upon stream data timeout. %v", err)
 				}
+
 				return
 			}
 		}
@@ -125,7 +126,7 @@ var handleStreamMessageResendTimeout = func(session *Session, log log.T) {
 // args[3] is operation name
 // args[4] is profile name from aws credentials/config files
 // args[5] is parameters input to aws cli for StartSession api
-// args[6] is endpoint for ssm service
+// args[6] is endpoint for ssm service.
 func ValidateInputAndStartSession(args []string, out io.Writer) {
 	var (
 		err                error
@@ -138,20 +139,23 @@ func ValidateInputAndStartSession(args []string, out io.Writer) {
 		ssmEndpoint        string
 		target             string
 	)
+
 	log := log.Logger(true, "session-manager-plugin")
 
 	if len(args) == 1 {
 		fmt.Fprint(out, "\nThe Session Manager plugin was installed successfully. "+
 			"Use the AWS CLI to start a session.\n\n")
+
 		return
 	} else if len(args) == 2 && args[1] == "--version" {
 		fmt.Fprintf(out, "%s\n", string(version.Version))
+
 		return
 	} else if len(args) >= 2 && len(args) < LegacyArgumentLength {
 		fmt.Fprintf(out, "\nUnknown operation %s. \nUse "+
 			"session-manager-plugin --version to check the version.\n\n", string(args[1]))
-		return
 
+		return
 	} else if len(args) == LegacyArgumentLength {
 		// If arguments do not have Profile passed from AWS CLI to Session-Manager-Plugin then
 		// should be upgraded to use Session Manager encryption feature
@@ -161,8 +165,9 @@ func ValidateInputAndStartSession(args []string, out io.Writer) {
 	for argsIndex := 1; argsIndex < len(args); argsIndex++ {
 		switch argsIndex {
 		case 1:
-			if strings.HasPrefix(args[1], "AWS_SSM_START_SESSION_RESPONSE") == true {
+			if strings.HasPrefix(args[1], "AWS_SSM_START_SESSION_RESPONSE") {
 				response = []byte(os.Getenv(args[1]))
+
 				if err = os.Unsetenv(args[1]); err != nil {
 					log.Errorf("Failed to remove temporary session env parameter: %v", err)
 				}
@@ -184,7 +189,9 @@ func ValidateInputAndStartSession(args []string, out io.Writer) {
 			ssmEndpoint = args[6]
 		}
 	}
+
 	sdkutil.SetRegionAndProfile(region, profile)
+
 	clientId := uuid.New().String()
 
 	switch operationName {
@@ -192,6 +199,7 @@ func ValidateInputAndStartSession(args []string, out io.Writer) {
 		if err = json.Unmarshal(response, &startSessionOutput); err != nil {
 			log.Errorf("Cannot perform start session: %v", err)
 			fmt.Fprintf(out, "Cannot perform start session: %v\n", err)
+
 			return
 		}
 
@@ -205,17 +213,19 @@ func ValidateInputAndStartSession(args []string, out io.Writer) {
 
 	default:
 		fmt.Fprint(out, "Invalid Operation")
+
 		return
 	}
 
 	if err = startSession(&session, log); err != nil {
 		log.Errorf("Cannot perform start session: %v", err)
 		fmt.Fprintf(out, "Cannot perform start session: %v\n", err)
+
 		return
 	}
 }
 
-// Execute create data channel and start the session
+// Execute create data channel and start the session.
 func (s *Session) Execute(log log.T) (err error) {
 	log.Infof("Starting session with SessionId: %s", s.SessionId)
 
@@ -224,6 +234,7 @@ func (s *Session) Execute(log log.T) (err error) {
 
 	if err = s.OpenDataChannel(log); err != nil {
 		log.Errorf("Error in Opening data channel: %v", err)
+
 		return
 	}
 
@@ -232,12 +243,15 @@ func (s *Session) Execute(log log.T) (err error) {
 	// The session type is set either by handshake or the first packet received.
 	if !<-s.DataChannel.IsSessionTypeSet() {
 		log.Errorf("unable to set SessionType for session %s", s.SessionId)
+
 		return errors.New("unable to determine SessionType")
 	} else {
 		s.SessionType = s.DataChannel.GetSessionType()
 		s.SessionProperties = s.DataChannel.GetSessionProperties()
+
 		if err = setSessionHandlersWithSessionType(s, log); err != nil {
 			log.Errorf("Session ending with error: %v", err)
+
 			return
 		}
 	}

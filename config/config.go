@@ -38,13 +38,13 @@ const (
 	RetryAttempt                       = 5
 	PingTimeInterval                   = 5 * time.Minute
 
-	// Plugin names
+	// Plugin names.
 	ShellPluginName                  = "Standard_Stream"
 	PortPluginName                   = "Port"
 	InteractiveCommandsPluginName    = "InteractiveCommands"
 	NonInteractiveCommandsPluginName = "NonInteractiveCommands"
 
-	//Agent Versions
+	// Agent Versions.
 	TerminateSessionFlagSupportedAfterThisAgentVersion            = "2.3.722.0"
 	TCPMultiplexingSupportedAfterThisAgentVersion                 = "3.0.196.0"
 	TCPMultiplexingWithSmuxKeepAliveDisabledAfterThisAgentVersion = "3.1.1511.0"

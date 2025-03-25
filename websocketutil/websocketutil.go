@@ -35,7 +35,6 @@ type WebsocketUtil struct {
 
 // NewWebsocketUtil is the factory function for websocketutil.
 func NewWebsocketUtil(logger log.T, dialerInput *websocket.Dialer) *WebsocketUtil {
-
 	var websocketUtil *WebsocketUtil
 
 	if dialerInput == nil {
@@ -55,12 +54,12 @@ func NewWebsocketUtil(logger log.T, dialerInput *websocket.Dialer) *WebsocketUti
 
 // OpenConnection opens a websocket connection provided an input url.
 func (u *WebsocketUtil) OpenConnection(url string) (*websocket.Conn, error) {
-
 	u.log.Infof("Opening websocket connection to: ", url)
 
 	conn, _, err := u.dialer.Dial(url, nil)
 	if err != nil {
 		u.log.Errorf("Failed to dial websocket: %s", err.Error())
+
 		return nil, err
 	}
 
@@ -71,7 +70,6 @@ func (u *WebsocketUtil) OpenConnection(url string) (*websocket.Conn, error) {
 
 // CloseConnection closes a websocket connection given the Conn object as input.
 func (u *WebsocketUtil) CloseConnection(ws *websocket.Conn) error {
-
 	if ws == nil {
 		return errors.New("websocket conn object is nil")
 	}
@@ -81,6 +79,7 @@ func (u *WebsocketUtil) CloseConnection(ws *websocket.Conn) error {
 	err := ws.Close()
 	if err != nil {
 		u.log.Errorf("Failed to close websocket: %s", err.Error())
+
 		return err
 	}
 

@@ -39,7 +39,7 @@ var (
 // pkgMutex is the lock used to serialize calls to the logger.
 var pkgMutex = new(sync.Mutex)
 
-// loggerInstance is the delegate logger in the wrapper
+// loggerInstance is the delegate logger in the wrapper.
 var loggerInstance = &DelegateLogger{}
 
 // ContextFormatFilter is a filter that can add a context to the parameters of a log message.
@@ -57,10 +57,13 @@ func (f ContextFormatFilter) Filter(params ...interface{}) (newParams []interfac
 	for i, param := range f.Context {
 		newParams[i] = param + " "
 	}
+
 	ctxLen := len(f.Context)
+
 	for i, param := range params {
 		newParams[ctxLen+i] = param
 	}
+
 	return newParams
 }
 
@@ -70,8 +73,10 @@ func (f ContextFormatFilter) Filterf(format string, params ...interface{}) (newF
 	for _, param := range f.Context {
 		newFormat += param + " "
 	}
+
 	newFormat += format
 	newParams = params
+
 	return
 }
 
@@ -84,10 +89,11 @@ func Logger(useWatcher bool, clientName string) T {
 		logger := logConfig.InitLogger(useWatcher)
 		cache(logger)
 	}
+
 	return getCached()
 }
 
-// initLogger initializes a new logger based on current configurations and starts file watcher on the configurations file
+// initLogger initializes a new logger based on current configurations and starts file watcher on the configurations file.
 func (config *LogConfig) InitLogger(useWatcher bool) (logger T) {
 	// Read the current configurations or get the default configurations
 	logConfigBytes := config.GetLogConfigBytes()
@@ -99,31 +105,35 @@ func (config *LogConfig) InitLogger(useWatcher bool) (logger T) {
 		// Start the config file watcher
 		config.startWatcher(logger)
 	}
+
 	return
 }
 
-// check if a logger has be loaded
+// check if a logger has be loaded.
 func isLoaded() bool {
 	lock.RLock()
 	defer lock.RUnlock()
+
 	return loadedLogger != nil
 }
 
-// cache the loaded logger
+// cache the loaded logger.
 func cache(logger T) {
 	lock.Lock()
 	defer lock.Unlock()
+
 	loadedLogger = &logger
 }
 
-// return the cached logger
+// return the cached logger.
 func getCached() T {
 	lock.RLock()
 	defer lock.RUnlock()
+
 	return *loadedLogger
 }
 
-// startWatcher starts the file watcher on the seelog configurations file path
+// startWatcher starts the file watcher on the seelog configurations file path.
 func (config *LogConfig) startWatcher(logger T) {
 	defer func() {
 		// In case the creation of watcher panics, let the current logger continue
@@ -131,25 +141,25 @@ func (config *LogConfig) startWatcher(logger T) {
 			logger.Errorf("Seelog File Watcher Initilization Failed. Any updates on config file will be ignored unless agent is restarted: %v", msg)
 		}
 	}()
+
 	fileWatcher := &FileWatcher{}
 	fileWatcher.Init(logger, DefaultSeelogConfigFilePath, config.replaceLogger)
 	// Start the file watcher
 	fileWatcher.Start()
 }
 
-// ReplaceLogger replaces the current logger with a new logger initialized from the current configurations file
+// ReplaceLogger replaces the current logger with a new logger initialized from the current configurations file.
 func (config *LogConfig) replaceLogger() {
-
 	// Get the current logger
 	logger := getCached()
 
-	//Create new logger
+	// Create new logger
 	logConfigBytes := config.GetLogConfigBytes()
 	baseLogger, err := initBaseLoggerFromBytes(logConfigBytes)
-
 	// If err in creating logger, do not replace logger
 	if err != nil {
 		logger.Error("New logger creation failed")
+
 		return
 	}
 
@@ -160,6 +170,7 @@ func (config *LogConfig) replaceLogger() {
 	wrapper, ok := logger.(*Wrapper)
 	if !ok {
 		logger.Errorf("Logger replace failed. The logger is not a wrapper")
+
 		return
 	}
 
@@ -178,20 +189,22 @@ func initBaseLoggerFromBytes(seelogConfig []byte) (seelogger seelog.LoggerInterf
 		// Create logger with default config
 		seelogger, _ = seelog.LoggerFromConfigAsBytes(DefaultConfig())
 	}
+
 	return
 }
 
-// withContext creates a wrapper logger on the base logger passed with context is passed
+// withContext creates a wrapper logger on the base logger passed with context is passed.
 func withContext(logger seelog.LoggerInterface, context ...string) (contextLogger T) {
 	loggerInstance.BaseLoggerInstance = logger
 	formatFilter := &ContextFormatFilter{Context: context}
 	contextLogger = &Wrapper{Format: formatFilter, M: pkgMutex, Delegate: loggerInstance}
 
 	setStackDepth(logger)
+
 	return contextLogger
 }
 
-// setStackDepth sets the stack depth of the logger passed
+// setStackDepth sets the stack depth of the logger passed.
 func setStackDepth(logger seelog.LoggerInterface) {
 	// additional stack depth so that we print the calling function correctly
 	// stack depth 0 would print the function in the wrapper (e.g. wrapper.Debug)

@@ -20,14 +20,14 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-// IFileWatcher interface for FileWatcher with functions to initialize, start and stop the watcher
+// IFileWatcher interface for FileWatcher with functions to initialize, start and stop the watcher.
 type IFileWatcher interface {
 	Init(log T, configFilePath string, replaceLogger func())
 	Start()
 	Stop()
 }
 
-// FileWatcher implements the IFileWatcher by using fileChangeWatcher and fileExistsWatcher
+// FileWatcher implements the IFileWatcher by using fileChangeWatcher and fileExistsWatcher.
 type FileWatcher struct {
 	configFilePath string
 	replaceLogger  func()
@@ -35,16 +35,15 @@ type FileWatcher struct {
 	watcher        *fsnotify.Watcher
 }
 
-// Init initializes the data and channels for the filewatcher
+// Init initializes the data and channels for the filewatcher.
 func (fileWatcher *FileWatcher) Init(log T, configFilePath string, replaceLogger func()) {
 	fileWatcher.replaceLogger = replaceLogger
 	fileWatcher.configFilePath = configFilePath
 	fileWatcher.log = log
 }
 
-// Start creates and starts the go routines for filewatcher
+// Start creates and starts the go routines for filewatcher.
 func (fileWatcher *FileWatcher) Start() {
-
 	fileWatcher.log.Debugf("Start File Watcher On: %v", fileWatcher.configFilePath)
 
 	// Since the filewatcher fails if the file does not exist, need to watch the parent directory for any changes
@@ -56,6 +55,7 @@ func (fileWatcher *FileWatcher) Start() {
 	if err != nil {
 		// Error initializing the watcher
 		fileWatcher.log.Errorf("Error initializing the watcher: %v", err)
+
 		return
 	}
 
@@ -69,17 +69,18 @@ func (fileWatcher *FileWatcher) Start() {
 	if err != nil {
 		// Error adding the file to watcher
 		fileWatcher.log.Errorf("Error adding the directory to watcher: %v", err)
+
 		return
 	}
 }
 
-// fileEventHandler implements handling of the events triggered by the OS
+// fileEventHandler implements handling of the events triggered by the OS.
 func (fileWatcher *FileWatcher) fileEventHandler() {
-
 	// Waiting on signals from OS
 	for event := range fileWatcher.watcher.Events {
 		// Event signalled by OS on file
 		fileWatcher.log.Debugf("Event on file %v : %v", event.Name, event)
+
 		if event.Name == fileWatcher.configFilePath {
 			// Event on the file being watched
 			if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create || event.Op&fsnotify.Rename == fsnotify.Rename {
@@ -92,7 +93,7 @@ func (fileWatcher *FileWatcher) fileEventHandler() {
 	}
 }
 
-// Stop stops the filewatcher
+// Stop stops the filewatcher.
 func (fileWatcher *FileWatcher) Stop() {
 	fileWatcher.log.Infof("Stop the filewatcher on :%v", fileWatcher.configFilePath)
 	// Check if watcher instance is set

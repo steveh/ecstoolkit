@@ -19,23 +19,23 @@ import (
 	"github.com/steveh/ecstoolkit/log"
 )
 
-// DoesAgentSupportTCPMultiplexing returns true if given agentVersion supports TCP multiplexing in port plugin, false otherwise
+// DoesAgentSupportTCPMultiplexing returns true if given agentVersion supports TCP multiplexing in port plugin, false otherwise.
 func DoesAgentSupportTCPMultiplexing(log log.T, agentVersion string) (supported bool) {
 	return isAgentVersionGreaterThanSupportedVersion(log, agentVersion, config.TCPMultiplexingSupportedAfterThisAgentVersion)
 }
 
-// DoesAgentSupportDisableSmuxKeepAlive returns true if given agentVersion disables smux KeepAlive in TCP multiplexing in port plugin, false otherwise
+// DoesAgentSupportDisableSmuxKeepAlive returns true if given agentVersion disables smux KeepAlive in TCP multiplexing in port plugin, false otherwise.
 func DoesAgentSupportDisableSmuxKeepAlive(log log.T, agentVersion string) (supported bool) {
 	return isAgentVersionGreaterThanSupportedVersion(log, agentVersion, config.TCPMultiplexingWithSmuxKeepAliveDisabledAfterThisAgentVersion)
 }
 
-// DoesAgentSupportTerminateSessionFlag returns true if given agentVersion supports TerminateSession flag, false otherwise
+// DoesAgentSupportTerminateSessionFlag returns true if given agentVersion supports TerminateSession flag, false otherwise.
 func DoesAgentSupportTerminateSessionFlag(log log.T, agentVersion string) (supported bool) {
 	return isAgentVersionGreaterThanSupportedVersion(log, agentVersion, config.TerminateSessionFlagSupportedAfterThisAgentVersion)
 }
 
 // isAgentVersionGreaterThanSupportedVersion returns true if agentVersion is greater than supportedVersion,
-// false in case of any error and agentVersion is equalTo or less than supportedVersion
+// false in case of any error and agentVersion is equalTo or less than supportedVersion.
 func isAgentVersionGreaterThanSupportedVersion(log log.T, agentVersionString string, supportedVersionString string) (supported bool) {
 	var (
 		supportedVersion version
@@ -43,23 +43,28 @@ func isAgentVersionGreaterThanSupportedVersion(log log.T, agentVersionString str
 		compareResult    int
 		err              error
 	)
+
 	if supportedVersion, err = NewVersion(supportedVersionString); err != nil {
 		log.Debugf("supportedVersion initialization failed, %v", err)
+
 		return
 	}
 
 	if agentVersion, err = NewVersion(agentVersionString); err != nil {
 		log.Debugf("agentVersion initialization failed, %v", err)
+
 		return
 	}
 
 	if compareResult, err = agentVersion.compare(supportedVersion); err != nil {
 		log.Debugf("version comparison failed, %v", err)
+
 		return
 	}
 
 	if compareResult == 1 {
 		supported = true
 	}
+
 	return
 }

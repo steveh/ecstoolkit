@@ -16,7 +16,7 @@ package jsonutil
 
 import "io/ioutil"
 
-// dependency
+// dependency.
 var ioUtil ioUtility = ioU{}
 
 type ioUtility interface {

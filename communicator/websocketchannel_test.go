@@ -65,7 +65,8 @@ var upgrader = websocket.Upgrader{
 // handlerToBeTested echos all incoming input from a websocket connection back to the client while
 // adding the word "echo".
 func handlerToBeTested(w http.ResponseWriter, req *http.Request) {
-	var log = log.NewMockLog()
+	log := log.NewMockLog()
+
 	conn, err := upgrader.Upgrade(w, req, nil)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("cannot upgrade: %v", err), http.StatusInternalServerError)
@@ -73,19 +74,20 @@ func handlerToBeTested(w http.ResponseWriter, req *http.Request) {
 
 	for {
 		mt, p, err := conn.ReadMessage()
-
 		if err != nil {
 			log.Errorf("error: %v", err)
+
 			return
 		}
 
-		//echo back the same sent string from the client while adding "echo" at the beginning
+		// echo back the same sent string from the client while adding "echo" at the beginning
 		conn.WriteMessage(mt, []byte("echo "+string(p)))
 	}
 }
 
 func TestWebSocketChannel_GetChannelToken(t *testing.T) {
 	t.Log("Starting test: webSocketChannel.GetChannelToken")
+
 	channel := &WebSocketChannel{
 		ChannelToken: defaultChannelToken,
 	}
@@ -96,6 +98,7 @@ func TestWebSocketChannel_GetChannelToken(t *testing.T) {
 
 func TestWebSocketChannel_SetChannelToken(t *testing.T) {
 	t.Log("Starting test: webSocketChannel.SetChannelToken")
+
 	channel := &WebSocketChannel{}
 
 	channel.SetChannelToken(defaultChannelToken)
@@ -104,6 +107,7 @@ func TestWebSocketChannel_SetChannelToken(t *testing.T) {
 
 func TestWebSocketChannel_GetStreamUrl(t *testing.T) {
 	t.Log("Starting test: webSocketChannel.GetStreamUrl")
+
 	channel := &WebSocketChannel{
 		Url: defaultStreamUrl,
 	}
@@ -114,6 +118,7 @@ func TestWebSocketChannel_GetStreamUrl(t *testing.T) {
 
 func TestWebSocketChannel_SetOnError(t *testing.T) {
 	t.Log("Starting test: webSocketChannel.SetOnError")
+
 	channel := &WebSocketChannel{}
 	errorCallbackWrapper := &ErrorCallbackWrapper{}
 	errorCallbackWrapper.On("defaultErrorHandler", defaultError).Return()
@@ -127,6 +132,7 @@ func TestWebSocketChannel_SetOnError(t *testing.T) {
 
 func TestWebsocketChannel_SetOnMessage(t *testing.T) {
 	t.Log("Starting test: webSocketChannel.SetOnMessage")
+
 	channel := &WebSocketChannel{}
 	messageCallbackWrapper := &MessageCallbackWrapper{}
 	messageCallbackWrapper.On("defaultMessageHandler", defaultMessage).Return()
@@ -140,6 +146,7 @@ func TestWebsocketChannel_SetOnMessage(t *testing.T) {
 
 func TestWebsocketchannel_Initialize(t *testing.T) {
 	t.Log("Starting test: webSocketChannel.Initialize")
+
 	channel := &WebSocketChannel{}
 	channel.Initialize(mockLogger, defaultStreamUrl, defaultChannelToken)
 
@@ -149,41 +156,46 @@ func TestWebsocketchannel_Initialize(t *testing.T) {
 
 func TestOpenCloseWebSocketChannel(t *testing.T) {
 	t.Log("Starting test: TestOpenCloseWebSocketChannel")
+
 	srv := httptest.NewServer(http.HandlerFunc(handlerToBeTested))
 	u, _ := url.Parse(srv.URL)
 	u.Scheme = "ws"
-	var log = log.NewMockLog()
+
+	log := log.NewMockLog()
 
 	websocketchannel := WebSocketChannel{
 		Url: u.String(),
 	}
 
 	err := websocketchannel.Open(log)
-	assert.Nil(t, err, "Error opening the websocket connection.")
+	assert.NoError(t, err, "Error opening the websocket connection.")
 	assert.NotNil(t, websocketchannel.Connection, "Open connection failed.")
 	assert.True(t, websocketchannel.IsOpen, "IsOpen is not set to true.")
 
 	err = websocketchannel.Close(log)
-	assert.Nil(t, err, "Error closing the websocket connection.")
+	assert.NoError(t, err, "Error closing the websocket connection.")
 	assert.False(t, websocketchannel.IsOpen, "IsOpen is not set to false.")
 	t.Log("Ending test: TestOpenCloseWebSocketChannel")
 }
 
 func TestReadWriteTextToWebSocketChannel(t *testing.T) {
 	t.Log("Starting test: TestReadWriteWebSocketChannel ")
+
 	srv := httptest.NewServer(http.HandlerFunc(handlerToBeTested))
 	u, _ := url.Parse(srv.URL)
 	u.Scheme = "ws"
-	var log = log.NewMockLog()
+
+	log := log.NewMockLog()
 
 	var wg sync.WaitGroup
+
 	wg.Add(1)
 
 	onMessage := func(input []byte) {
 		defer wg.Done()
 		t.Log(input)
 		// Verify read from websocket server
-		assert.Equal(t, string(input), "echo channelreadwrite")
+		assert.Equal(t, "echo channelreadwrite", string(input))
 	}
 
 	websocketchannel := WebSocketChannel{
@@ -193,7 +205,7 @@ func TestReadWriteTextToWebSocketChannel(t *testing.T) {
 
 	// Open the websocket connection
 	err := websocketchannel.Open(log)
-	assert.Nil(t, err, "Error opening the websocket connection.")
+	assert.NoError(t, err, "Error opening the websocket connection.")
 	assert.NotNil(t, websocketchannel.Connection, "Open connection failed.")
 
 	// Verify write to websocket server
@@ -201,26 +213,29 @@ func TestReadWriteTextToWebSocketChannel(t *testing.T) {
 	wg.Wait()
 
 	err = websocketchannel.Close(log)
-	assert.Nil(t, err, "Error closing the websocket connection.")
+	assert.NoError(t, err, "Error closing the websocket connection.")
 	assert.False(t, websocketchannel.IsOpen, "IsOpen is not set to false.")
 	t.Log("Ending test: TestReadWriteWebSocketChannel ")
 }
 
 func TestReadWriteBinaryToWebSocketChannel(t *testing.T) {
 	t.Log("Starting test: TestReadWriteWebSocketChannel ")
+
 	srv := httptest.NewServer(http.HandlerFunc(handlerToBeTested))
 	u, _ := url.Parse(srv.URL)
 	u.Scheme = "ws"
-	var log = log.NewMockLog()
+
+	log := log.NewMockLog()
 
 	var wg sync.WaitGroup
+
 	wg.Add(1)
 
 	onMessage := func(input []byte) {
 		defer wg.Done()
 		t.Log(input)
 		// Verify read from websocket server
-		assert.Equal(t, string(input), "echo channelreadwrite")
+		assert.Equal(t, "echo channelreadwrite", string(input))
 	}
 
 	websocketchannel := WebSocketChannel{
@@ -230,7 +245,7 @@ func TestReadWriteBinaryToWebSocketChannel(t *testing.T) {
 
 	// Open the websocket connection
 	err := websocketchannel.Open(log)
-	assert.Nil(t, err, "Error opening the websocket connection.")
+	assert.NoError(t, err, "Error opening the websocket connection.")
 	assert.NotNil(t, websocketchannel.Connection, "Open connection failed.")
 
 	// Verify write to websocket server
@@ -238,17 +253,19 @@ func TestReadWriteBinaryToWebSocketChannel(t *testing.T) {
 	wg.Wait()
 
 	err = websocketchannel.Close(log)
-	assert.Nil(t, err, "Error closing the websocket connection.")
+	assert.NoError(t, err, "Error closing the websocket connection.")
 	assert.False(t, websocketchannel.IsOpen, "IsOpen is not set to false.")
 	t.Log("Ending test: TestReadWriteWebSocketChannel ")
 }
 
 func TestMultipleReadWriteWebSocketChannel(t *testing.T) {
 	t.Log("Starting test: TestMultipleReadWriteWebSocketChannel")
+
 	srv := httptest.NewServer(http.HandlerFunc(handlerToBeTested))
 	u, _ := url.Parse(srv.URL)
 	u.Scheme = "ws"
-	var log = log.NewMockLog()
+
+	log := log.NewMockLog()
 
 	read1 := make(chan bool)
 	read2 := make(chan bool)
@@ -259,6 +276,7 @@ func TestMultipleReadWriteWebSocketChannel(t *testing.T) {
 		if string(input) == "echo channelreadwrite1" {
 			read1 <- true
 		}
+
 		if string(input) == "echo channelreadwrite2" {
 			read2 <- true
 		}
@@ -271,7 +289,7 @@ func TestMultipleReadWriteWebSocketChannel(t *testing.T) {
 
 	// Open the websocket connection
 	err := websocketchannel.Open(log)
-	assert.Nil(t, err, "Error opening the websocket connection.")
+	assert.NoError(t, err, "Error opening the websocket connection.")
 	assert.NotNil(t, websocketchannel.Connection, "Open connection failed.")
 
 	// Verify writes to websocket server
@@ -281,7 +299,7 @@ func TestMultipleReadWriteWebSocketChannel(t *testing.T) {
 	assert.True(t, <-read2, "Didn't ready value 2 correctly")
 
 	err = websocketchannel.Close(log)
-	assert.Nil(t, err, "Error closing the websocket connection.")
+	assert.NoError(t, err, "Error closing the websocket connection.")
 	assert.False(t, websocketchannel.IsOpen, "IsOpen is not set to false.")
 
 	t.Log("Ending test: TestMultipleReadWriteWebSocketChannel")

@@ -16,6 +16,7 @@ package session
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -37,6 +38,7 @@ var (
 
 func TestValidateInputAndStartSessionWithNoInputArgument(t *testing.T) {
 	var buffer bytes.Buffer
+
 	args := []string{""}
 	ValidateInputAndStartSession(args, &buffer)
 	assert.Contains(t, buffer.String(), "The Session Manager plugin was installed successfully")
@@ -44,6 +46,7 @@ func TestValidateInputAndStartSessionWithNoInputArgument(t *testing.T) {
 
 func TestValidateInputAndStartSessionWithWrongInputArgument(t *testing.T) {
 	var buffer bytes.Buffer
+
 	args := []string{1: "version"}
 	ValidateInputAndStartSession(args, &buffer)
 	assert.Contains(t, buffer.String(), "Use session-manager-plugin --version to check the version")
@@ -51,53 +54,71 @@ func TestValidateInputAndStartSessionWithWrongInputArgument(t *testing.T) {
 
 func TestValidateInputAndStartSession(t *testing.T) {
 	var buffer bytes.Buffer
+
 	sessionResponse := "{\"SessionId\": \"user-012345\", \"TokenValue\": \"ABCD\", \"StreamUrl\": \"wss://ssmmessages.us-east-1.amazonaws.com/v1/data-channel/user-012345?role=publish_subscribe\"}"
-	args := []string{"session-manager-plugin",
+	args := []string{
+		"session-manager-plugin",
 		sessionResponse,
-		"us-east-1", "StartSession", "", "{\"Target\": \"i-0123abc\"}", "https://ssm.us-east-1.amazonaws.com"}
-	startSession = func(session *Session, log log.T) error {
-		return fmt.Errorf("Some error")
+		"us-east-1", "StartSession", "", "{\"Target\": \"i-0123abc\"}", "https://ssm.us-east-1.amazonaws.com",
 	}
+	startSession = func(session *Session, log log.T) error {
+		return errors.New("Some error")
+	}
+
 	ValidateInputAndStartSession(args, &buffer)
 	assert.Contains(t, buffer.String(), "Cannot perform start session: Some error")
 }
 
 func TestValidateInputAndStartSessionWithEnvVariableParameter(t *testing.T) {
 	var buffer bytes.Buffer
+
 	sessionResponse := "{\"SessionId\": \"user-012345\", \"TokenValue\": \"Session-Token\", \"StreamUrl\": \"wss://ssmmessages.us-east-1.amazonaws.com/v1/data-channel/user-012345?role=publish_subscribe\"}"
 	os.Setenv("AWS_SSM_START_SESSION_RESPONSE", sessionResponse)
-	args := []string{"session-manager-plugin",
+
+	args := []string{
+		"session-manager-plugin",
 		"AWS_SSM_START_SESSION_RESPONSE",
-		"us-east-1", "StartSession", "", "{\"Target\": \"i-0123abc\"}", "https://ssm.us-east-1.amazonaws.com"}
+		"us-east-1", "StartSession", "", "{\"Target\": \"i-0123abc\"}", "https://ssm.us-east-1.amazonaws.com",
+	}
 	parameterPassed := false
 	startSession = func(session *Session, log log.T) error {
 		if session.TokenValue == "Session-Token" && session.SessionId == "user-012345" {
 			parameterPassed = true
 		}
+
 		return nil
 	}
 
 	ValidateInputAndStartSession(args, &buffer)
-	var _, envVariableExist = os.LookupEnv("AWS_SSM_START_SESSION_RESPONSE")
+
+	_, envVariableExist := os.LookupEnv("AWS_SSM_START_SESSION_RESPONSE")
+
 	assert.False(t, envVariableExist)
 	assert.True(t, parameterPassed)
 }
 
 func TestValidateInputAndStartSessionWithWrongEnvVariableName(t *testing.T) {
 	var buffer bytes.Buffer
+
 	sessionResponse := "{\"SessionId\": \"user-012345\", \"TokenValue\": \"Session-Token\", \"StreamUrl\": \"wss://ssmmessages.us-east-1.amazonaws.com/v1/data-channel/user-012345?role=publish_subscribe\"}"
 	os.Setenv("WRONG_ENV_NAME", sessionResponse)
-	args := []string{"session-manager-plugin",
+
+	args := []string{
+		"session-manager-plugin",
 		"WRONG_ENV_NAME",
-		"us-east-1", "StartSession", "", "{\"Target\": \"i-0123abc\"}", "https://ssm.us-east-1.amazonaws.com"}
+		"us-east-1", "StartSession", "", "{\"Target\": \"i-0123abc\"}", "https://ssm.us-east-1.amazonaws.com",
+	}
 	startSessionInvoked := false
 	startSession = func(session *Session, log log.T) error {
 		startSessionInvoked = true
+
 		return nil
 	}
 
 	ValidateInputAndStartSession(args, &buffer)
-	var _, envVariableExist = os.LookupEnv("WRONG_ENV_NAME")
+
+	_, envVariableExist := os.LookupEnv("WRONG_ENV_NAME")
+
 	assert.Contains(t, buffer.String(), "Cannot perform start session: invalid character 'W'")
 	assert.True(t, envVariableExist)
 	assert.False(t, startSessionInvoked)
@@ -106,6 +127,7 @@ func TestValidateInputAndStartSessionWithWrongEnvVariableName(t *testing.T) {
 func TestExecute(t *testing.T) {
 	sessionMock := &Session{}
 	sessionMock.DataChannel = mockDataChannel
+
 	SetupMockActions()
 	mockDataChannel.On("Open", mock.Anything).Return(nil)
 
@@ -123,13 +145,14 @@ func TestExecute(t *testing.T) {
 	}
 
 	err := sessionMock.Execute(logger)
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "start session error for Standard_Stream")
 }
 
 func TestExecuteAndStreamMessageResendTimesOut(t *testing.T) {
 	sessionMock := &Session{}
 	sessionMock.DataChannel = mockDataChannel
+
 	SetupMockActions()
 	mockDataChannel.On("Open", mock.Anything).Return(nil)
 
@@ -137,11 +160,15 @@ func TestExecuteAndStreamMessageResendTimesOut(t *testing.T) {
 	mockDataChannel.On("IsStreamMessageResendTimeout").Return(isStreamMessageResendTimeout)
 
 	var wg sync.WaitGroup
+
 	wg.Add(1)
+
 	handleStreamMessageResendTimeout = func(session *Session, log log.T) {
 		time.Sleep(10 * time.Millisecond)
 		isStreamMessageResendTimeout <- true
+
 		wg.Done()
+
 		return
 	}
 
@@ -158,10 +185,11 @@ func TestExecuteAndStreamMessageResendTimesOut(t *testing.T) {
 	var err error
 	go func() {
 		err = sessionMock.Execute(logger)
+
 		time.Sleep(200 * time.Millisecond)
 	}()
 	wg.Wait()
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 }
 
 func SetupMockActions() {
