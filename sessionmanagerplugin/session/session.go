@@ -48,7 +48,7 @@ type ISessionPlugin interface {
 	SetSessionHandlers(log.T) error
 	ProcessStreamMessagePayload(log log.T, streamDataMessage message.ClientMessage) (isHandlerReady bool, err error)
 	Initialize(log log.T, sessionVar *Session)
-	Stop()
+	Stop() error
 	Name() string
 }
 
@@ -56,7 +56,7 @@ type ISession interface {
 	Execute(log.T) error
 	OpenDataChannel(log.T) error
 	ProcessFirstMessage(log log.T, outputMessage message.ClientMessage) (isHandlerReady bool, err error)
-	Stop()
+	Stop() error
 	GetResumeSessionParams(log.T) (string, error)
 	ResumeSessionHandler(log.T) error
 	TerminateSession(log.T) error

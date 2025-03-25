@@ -138,7 +138,7 @@ type StreamingMessage struct {
 
 type OutputStreamDataMessageHandler func(log log.T, streamDataMessage message.ClientMessage) (bool, error)
 
-type Stop func()
+type Stop func() error
 
 var SendAcknowledgeMessageCall = func(log log.T, dataChannel *DataChannel, streamDataMessage message.ClientMessage) error {
 	return dataChannel.SendAcknowledgeMessage(log, streamDataMessage)

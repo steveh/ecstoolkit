@@ -61,7 +61,7 @@ func (d *DisplayMode) InitDisplayMode(log log.T) {
 }
 
 // DisplayMessage function displays the output on the screen
-func (d *DisplayMode) DisplayMessage(log log.T, message message.ClientMessage) {
+func (d *DisplayMode) DisplayMessage(log log.T, message message.ClientMessage) error {
 	var (
 		done *uint32
 		err  error
@@ -72,8 +72,9 @@ func (d *DisplayMode) DisplayMessage(log log.T, message message.ClientMessage) {
 	if err = windows.WriteFile(d.handle, message.Payload, done, nil); err != nil {
 		log.Errorf("error occurred while writing to file: %v", err)
 		fmt.Fprintf(os.Stdout, "\nError getting the output. %s\n", err.Error())
-		os.Exit(0)
+		return err
 	}
+	return nil
 }
 
 // NewListener starts a new socket listener on the address.

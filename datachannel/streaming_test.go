@@ -299,7 +299,9 @@ func TestDataChannelIncomingMessageHandlerForExpectedInputStreamDataMessage(t *t
 		return true, nil
 	}
 
-	var stopHandler Stop
+	var stopHandler Stop = func() error {
+		return nil
+	}
 
 	dataChannel.RegisterOutputStreamHandler(handler, true)
 	// First scenario is to test when incoming message sequence number matches with expected sequence number
@@ -339,7 +341,9 @@ func TestDataChannelIncomingMessageHandlerForUnexpectedInputStreamDataMessage(t 
 		return nil
 	}
 
-	var stopHandler Stop
+	var stopHandler Stop = func() error {
+		return nil
+	}
 
 	err := dataChannel.OutputMessageHandler(logger, stopHandler, sessionId, serializedClientMessages[1])
 	assert.Nil(t, err)
@@ -367,7 +371,9 @@ func TestDataChannelIncomingMessageHandlerForAcknowledgeMessage(t *testing.T) {
 	dataChannel := getDataChannel()
 	mockChannel := &communicatorMocks.IWebSocketChannel{}
 	dataChannel.wsChannel = mockChannel
-	var stopHandler Stop
+	var stopHandler Stop = func() error {
+		return nil
+	}
 
 	for i := 0; i < 3; i++ {
 		dataChannel.AddDataToOutgoingMessageBuffer(streamingMessages[i])
@@ -418,7 +424,9 @@ func TestDataChannelIncomingMessageHandlerForPausePublicationessage(t *testing.T
 		return true, nil
 	}
 
-	var stopHandler Stop
+	var stopHandler Stop = func() error {
+		return nil
+	}
 
 	dataChannel.RegisterOutputStreamHandler(handler, true)
 	err := dataChannel.OutputMessageHandler(logger, stopHandler, sessionId, serializedClientMessages[0])
@@ -472,7 +480,7 @@ func TestHandshakeRequestHandler(t *testing.T) {
 			reflect.DeepEqual(handshakeResponse.ProcessedClientActions, expectedActions)
 	}
 	mockChannel.On("SendMessage", mock.Anything, mock.MatchedBy(handshakeResponseMatcher), mock.Anything).Return(nil)
-	dataChannel.OutputMessageHandler(mockLogger, func() {}, sessionId, handshakeRequestMessageBytes)
+	dataChannel.OutputMessageHandler(mockLogger, func() error { return nil }, sessionId, handshakeRequestMessageBytes)
 	assert.Equal(t, mockEncrypter, dataChannel.encryption)
 }
 

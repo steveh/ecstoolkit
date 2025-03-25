@@ -39,10 +39,10 @@ func (p *StandardStreamForwarding) IsStreamNotSet() (status bool) {
 }
 
 // Stop closes the streams
-func (p *StandardStreamForwarding) Stop() {
+func (p *StandardStreamForwarding) Stop() error {
 	p.inputStream.Close()
 	p.outputStream.Close()
-	os.Exit(0)
+	return nil
 }
 
 // InitializeStreams initializes the streams with its file descriptors

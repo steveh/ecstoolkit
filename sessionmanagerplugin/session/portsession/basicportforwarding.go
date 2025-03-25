@@ -57,11 +57,11 @@ func (p *BasicPortForwarding) IsStreamNotSet() (status bool) {
 }
 
 // Stop closes the stream
-func (p *BasicPortForwarding) Stop() {
+func (p *BasicPortForwarding) Stop() error {
 	if p.stream != nil {
 		(*p.stream).Close()
 	}
-	os.Exit(0)
+	return nil
 }
 
 // InitializeStreams establishes connection and initializes the stream

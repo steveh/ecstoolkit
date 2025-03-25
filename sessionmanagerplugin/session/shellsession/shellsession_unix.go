@@ -52,10 +52,10 @@ func setState(state *bytes.Buffer) error {
 }
 
 // stop restores the terminal settings and exits
-func (s *ShellSession) Stop() {
+func (s *ShellSession) Stop() error {
 	setState(&s.originalSttyState)
 	setState(bytes.NewBufferString("echo")) // for linux and ubuntu
-	os.Exit(0)
+	return nil
 }
 
 // handleKeyboardInput handles input entered by customer on terminal

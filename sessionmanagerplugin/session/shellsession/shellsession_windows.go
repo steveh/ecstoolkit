@@ -18,7 +18,6 @@
 package shellsession
 
 import (
-	"os"
 	"time"
 
 	"github.com/eiannone/keyboard"
@@ -54,8 +53,8 @@ var specialKeysInputMap = map[keyboard.Key][]byte{
 }
 
 // stop restores the terminal settings and exits
-func (s *ShellSession) Stop() {
-	os.Exit(0)
+func (s *ShellSession) Stop() error {
+	return nil
 }
 
 // handleKeyboardInput handles input entered by customer on terminal

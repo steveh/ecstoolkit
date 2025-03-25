@@ -79,7 +79,7 @@ func (p *MuxPortForwarding) IsStreamNotSet() (status bool) {
 }
 
 // Stop closes all open stream
-func (p *MuxPortForwarding) Stop() {
+func (p *MuxPortForwarding) Stop() error {
 	if p.mgsConn != nil {
 		p.mgsConn.close()
 	}
@@ -87,7 +87,7 @@ func (p *MuxPortForwarding) Stop() {
 		p.muxClient.close()
 	}
 	p.cleanUp()
-	os.Exit(0)
+	return nil
 }
 
 // InitializeStreams initializes i/o streams
