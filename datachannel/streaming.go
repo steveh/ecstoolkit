@@ -22,7 +22,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"os"
 	"reflect"
 	"sync"
 	"time"
@@ -511,7 +510,8 @@ func (dataChannel *DataChannel) handleHandshakeComplete(log log.T, clientMessage
 		handshakeComplete.HandshakeTimeToComplete.Seconds())
 
 	if handshakeComplete.CustomerMessage != "" {
-		fmt.Fprintln(os.Stdout, handshakeComplete.CustomerMessage)
+		log.Infof("Exiting session with sessionId: %s.", dataChannel.SessionId)
+		log.Infof("SessionId: %s : %s", dataChannel.SessionId, handshakeComplete.CustomerMessage)
 	}
 
 	return err
@@ -782,11 +782,11 @@ func (dataChannel DataChannel) HandleChannelClosedMessage(log log.T, stopHandler
 		log.Errorf("Cannot deserialize payload to ChannelClosedMessage: %v.", err)
 	}
 
-	log.Infof("Exiting session with sessionId: %s with output: %s", sessionId, channelClosedMessage.Output)
+	log.Infof("Exiting session with sessionId: %s.", sessionId)
 	if channelClosedMessage.Output == "" {
-		fmt.Fprintf(os.Stdout, "\n\nExiting session with sessionId: %s.\n\n", sessionId)
+		log.Infof("SessionId: %s : %s", sessionId, channelClosedMessage.Output)
 	} else {
-		fmt.Fprintf(os.Stdout, "\n\nSessionId: %s : %s\n\n", sessionId, channelClosedMessage.Output)
+		log.Infof("SessionId: %s : %s", sessionId, channelClosedMessage.Output)
 	}
 
 	stopHandler()

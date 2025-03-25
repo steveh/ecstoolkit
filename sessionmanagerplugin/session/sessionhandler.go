@@ -17,7 +17,6 @@ package session
 import (
 	"fmt"
 	"math/rand"
-	"os"
 
 	sdkSession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -128,8 +127,7 @@ func (s *Session) ResumeSessionHandler(log log.T) (err error) {
 		log.Errorf("Failed to get token: %v", err)
 		return
 	} else if s.TokenValue == "" {
-		log.Debugf("Session: %s timed out", s.SessionId)
-		fmt.Fprintf(os.Stdout, "Session: %s timed out.\n", s.SessionId)
+		log.Infof("Session: %s timed out.", s.SessionId)
 		return fmt.Errorf("session timed out")
 	}
 	s.DataChannel.GetWsChannel().SetChannelToken(s.TokenValue)
