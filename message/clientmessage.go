@@ -15,8 +15,8 @@
 package message
 
 import (
+	"github.com/google/uuid"
 	"github.com/steveh/ecstoolkit/log"
-	"github.com/twinj/uuid"
 )
 
 const (

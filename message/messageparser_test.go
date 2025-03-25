@@ -24,9 +24,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/steveh/ecstoolkit/log"
 	"github.com/stretchr/testify/assert"
-	"github.com/twinj/uuid"
 )
 
 type EXPECTATION int
@@ -675,7 +675,7 @@ func TestClientMessage_Validate(t *testing.T) {
 		SchemaVersion:  schemaVersion,
 		SequenceNumber: 1,
 		Flags:          2,
-		MessageId:      *u,
+		MessageId:      u,
 		Payload:        payload,
 		PayloadLength:  3,
 	}
@@ -711,13 +711,14 @@ func TestClientMessage_ValidateStartPublicationMessage(t *testing.T) {
 	assert.NoError(t, err)
 
 	clientMessage := ClientMessage{
+		MessageType:    StartPublicationMessage,
 		SchemaVersion:  schemaVersion,
+		CreatedDate:    createdDate,
 		SequenceNumber: 1,
 		Flags:          2,
-		MessageId:      *u,
+		MessageId:      u,
 		Payload:        payload,
 		PayloadLength:  3,
-		MessageType:    StartPublicationMessage,
 	}
 
 	err = clientMessage.Validate()
@@ -850,14 +851,14 @@ func TestPutUuid(t *testing.T) {
 				mockLogger,
 				tc.byteArray,
 				tc.offsetStart,
-				*uuidInput)
+				uuidInput)
 			if tc.expectation == SUCCESS {
 				assert.Nil(t, err, "%s:%s threw an error when no error was expected.", t.Name(), tc.name)
 				strExpected := tc.expected.(string)
 				uuidOut, err := uuid.Parse(strExpected)
 				assert.NoError(t, err)
 				expectedBuffer := get16ByteBuffer()
-				putUuid(mockLogger, expectedBuffer, 0, *uuidOut)
+				putUuid(mockLogger, expectedBuffer, 0, uuidOut)
 				assert.Equal(t, tc.byteArray, expectedBuffer)
 			} else if tc.expectation == ERROR {
 				assert.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
@@ -931,7 +932,6 @@ func TestGetBytesFromInteger(t *testing.T) {
 }
 
 func TestSerializeAndDeserializeClientMessage(t *testing.T) {
-
 	u, err := uuid.Parse(messageId)
 	assert.NoError(t, err)
 
@@ -941,7 +941,7 @@ func TestSerializeAndDeserializeClientMessage(t *testing.T) {
 		CreatedDate:    createdDate,
 		SequenceNumber: 1,
 		Flags:          2,
-		MessageId:      *u,
+		MessageId:      u,
 		Payload:        payload,
 	}
 
@@ -1038,7 +1038,7 @@ func TestDeserializeAgentMessageWithChannelClosed(t *testing.T) {
 		CreatedDate:    createdDate,
 		SequenceNumber: 1,
 		Flags:          2,
-		MessageId:      *u,
+		MessageId:      u,
 		Payload:        channelClosedJson,
 	}
 

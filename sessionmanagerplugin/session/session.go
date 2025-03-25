@@ -26,6 +26,7 @@ import (
 	"github.com/steveh/ecstoolkit/config"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/google/uuid"
 	"github.com/steveh/ecstoolkit/datachannel"
 	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
@@ -33,7 +34,6 @@ import (
 	"github.com/steveh/ecstoolkit/sdkutil"
 	"github.com/steveh/ecstoolkit/sessionmanagerplugin/session/sessionutil"
 	"github.com/steveh/ecstoolkit/version"
-	"github.com/twinj/uuid"
 )
 
 const (
@@ -139,7 +139,6 @@ func ValidateInputAndStartSession(args []string, out io.Writer) {
 		target             string
 	)
 	log := log.Logger(true, "session-manager-plugin")
-	uuid.SwitchFormat(uuid.FormatCanonical)
 
 	if len(args) == 1 {
 		fmt.Fprint(out, "\nThe Session Manager plugin was installed successfully. "+
@@ -186,7 +185,7 @@ func ValidateInputAndStartSession(args []string, out io.Writer) {
 		}
 	}
 	sdkutil.SetRegionAndProfile(region, profile)
-	clientId := uuid.NewV4().String()
+	clientId := uuid.New().String()
 
 	switch operationName {
 	case StartSessionOperation:

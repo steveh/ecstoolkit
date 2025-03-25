@@ -28,6 +28,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/steveh/ecstoolkit/communicator"
 	"github.com/steveh/ecstoolkit/config"
@@ -36,7 +37,6 @@ import (
 	"github.com/steveh/ecstoolkit/message"
 	"github.com/steveh/ecstoolkit/service"
 	"github.com/steveh/ecstoolkit/version"
-	"github.com/twinj/uuid"
 )
 
 type IDataChannel interface {
@@ -198,8 +198,7 @@ func (dataChannel *DataChannel) SetWebsocket(log log.T, channelUrl string, chann
 
 // FinalizeHandshake sends the token for service to acknowledge the connection.
 func (dataChannel *DataChannel) FinalizeDataChannelHandshake(log log.T, tokenValue string) (err error) {
-	uuid.SwitchFormat(uuid.FormatCanonical)
-	uid := uuid.NewV4().String()
+	uid := uuid.New().String()
 
 	log.Infof("Sending token through data channel %s to acknowledge connection", dataChannel.wsChannel.GetStreamUrl())
 	openDataChannelInput := service.OpenDataChannelInput{
@@ -278,7 +277,7 @@ func (dataChannel *DataChannel) SendInputDataMessage(
 		msg  []byte
 	)
 
-	messageId := uuid.NewV4()
+	messageUUID := uuid.New()
 
 	// today 'enter' is taken as 'next line' in winpty shell. so hardcoding 'next line' byte to actual 'enter' byte
 	if bytes.Equal(inputData, []byte{10}) {
@@ -298,7 +297,7 @@ func (dataChannel *DataChannel) SendInputDataMessage(
 		SchemaVersion:  1,
 		CreatedDate:    uint64(time.Now().UnixNano() / 1000000),
 		Flags:          flag,
-		MessageId:      messageId,
+		MessageId:      messageUUID,
 		PayloadType:    uint32(payloadType),
 		Payload:        inputData,
 		SequenceNumber: dataChannel.StreamDataSequenceNumber,

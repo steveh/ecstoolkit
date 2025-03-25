@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	communicatorMocks "github.com/steveh/ecstoolkit/communicator/mocks"
 	"github.com/steveh/ecstoolkit/config"
@@ -35,7 +36,6 @@ import (
 	"github.com/steveh/ecstoolkit/version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/twinj/uuid"
 )
 
 var (
@@ -610,7 +610,7 @@ func getClientMessage(sequenceNumber int64, messageType string, payloadType uint
 		CreatedDate:    createdDate,
 		SequenceNumber: sequenceNumber,
 		Flags:          2,
-		MessageId:      *messageUUID,
+		MessageId:      messageUUID,
 		PayloadType:    payloadType,
 		Payload:        payload,
 	}
