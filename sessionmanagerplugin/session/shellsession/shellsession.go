@@ -16,6 +16,7 @@ package shellsession
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"os"
 	"os/signal"
@@ -40,6 +41,8 @@ type ShellSession struct {
 	// SizeData is used to store size data at session level to compare with new size.
 	SizeData          message.SizeData
 	originalSttyState bytes.Buffer
+	shutdown          context.CancelFunc
+	log               log.T
 }
 
 var GetTerminalSizeCall = func(fd int) (width int, height int, err error) {
