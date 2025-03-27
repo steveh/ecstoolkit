@@ -448,7 +448,7 @@ func (dataChannel *DataChannel) OutputMessageHandler(ctx context.Context, log lo
 	case message.StartPublicationMessage, message.PausePublicationMessage:
 		return nil
 	default:
-		log.Warn("Invalid message type received: %s", outputMessage.MessageType)
+		log.Warnf("Invalid message type received: %s", outputMessage.MessageType)
 	}
 
 	return nil
@@ -726,7 +726,7 @@ func (dataChannel *DataChannel) HandleOutputMessage(
 
 			isHandlerReady, err := dataChannel.processOutputMessageWithHandlers(log, outputMessage)
 			if err != nil {
-				log.Error("Failed to process stream data message: %s", err.Error())
+				log.Errorf("Failed to process stream data message: %s", err.Error())
 
 				return err
 			}
@@ -925,7 +925,7 @@ func (dataChannel *DataChannel) ProcessKMSEncryptionHandshakeAction(ctx context.
 
 	kmsEncRequest := message.KMSEncryptionRequest{}
 	json.Unmarshal(actionParams, &kmsEncRequest)
-	log.Info(actionParams)
+	log.Infof("%+v", actionParams)
 
 	kmsKeyId := kmsEncRequest.KMSKeyID
 

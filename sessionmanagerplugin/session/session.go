@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"strings"
 	"time"
@@ -122,7 +123,7 @@ type ExecuteSessionOptions struct {
 }
 
 // ExecuteSession runs an ECS Exec command.
-func ExecuteSession(ctx context.Context, ecsClient *ecs.Client, ssmClient *ssm.Client, kmsClient *kms.Client, options ExecuteSessionOptions) error {
+func ExecuteSession(ctx context.Context, ecsClient *ecs.Client, ssmClient *ssm.Client, kmsClient *kms.Client, logger *slog.Logger, options ExecuteSessionOptions) error {
 	parsedARN, err := arn.Parse(options.TaskARN)
 	if err != nil {
 		return fmt.Errorf("invalid ARN: %w", err)
@@ -154,7 +155,7 @@ func ExecuteSession(ctx context.Context, ecsClient *ecs.Client, ssmClient *ssm.C
 		return fmt.Errorf("generate UUID: %w", err)
 	}
 
-	log := log.Logger(true, "session-manager-plugin")
+	log := log.NewSlogger(logger)
 
 	dc := datachannel.DataChannel{
 		KMSClient: kmsClient,

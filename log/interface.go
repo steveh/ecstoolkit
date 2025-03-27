@@ -1,79 +1,40 @@
-// Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License"). You may not
-// use this file except in compliance with the License. A copy of the
-// License is located at
-//
-// http://aws.amazon.com/apache2.0/
-//
-// or in the "license" file accompanying this file. This file is distributed
-// on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-// either express or implied. See the License for the specific language governing
-// permissions and limitations under the License.
-
 // Package log is used to initialize the logger.
 package log
 
-// BasicT represents structs capable of logging messages.
-// This interface matches seelog.LoggerInterface.
-type BasicT interface {
+// T represents structs capable of logging messages.
+type T interface {
 	// Tracef formats message according to format specifier
 	// and writes to log with level Trace.
-	Tracef(format string, params ...interface{})
+	Tracef(format string, params ...any)
 
 	// Debugf formats message according to format specifier
 	// and writes to log with level Debug.
-	Debugf(format string, params ...interface{})
+	Debugf(format string, params ...any)
 
 	// Infof formats message according to format specifier
 	// and writes to log with level Info.
-	Infof(format string, params ...interface{})
+	Infof(format string, params ...any)
 
 	// Warnf formats message according to format specifier
 	// and writes to log with level Warn.
-	Warnf(format string, params ...interface{}) error
+	Warnf(format string, params ...any)
 
 	// Errorf formats message according to format specifier
 	// and writes to log with level Error.
-	Errorf(format string, params ...interface{}) error
+	Errorf(format string, params ...any)
 
-	// Criticalf formats message according to format specifier
-	// and writes to log with level Critical.
-	Criticalf(format string, params ...interface{}) error
+	// Trace writes to log with level Trace.
+	Trace(message string)
 
-	// Trace formats message using the default formats for its operands
-	// and writes to log with level Trace.
-	Trace(v ...interface{})
+	// Debug writes to log with level Debug.
+	Debug(message string)
 
-	// Debug formats message using the default formats for its operands
-	// and writes to log with level Debug.
-	Debug(v ...interface{})
+	// Info writes to log with level Info.
+	Info(message string)
 
-	// Info formats message using the default formats for its operands
-	// and writes to log with level Info.
-	Info(v ...interface{})
+	// Warn writes to log with level Warn.
+	Warn(message string)
 
-	// Warn formats message using the default formats for its operands
-	// and writes to log with level Warn.
-	Warn(v ...interface{}) error
-
-	// Error formats message using the default formats for its operands
-	// and writes to log with level Error.
-	Error(v ...interface{}) error
-
-	// Critical formats message using the default formats for its operands
-	// and writes to log with level Critical.
-	Critical(v ...interface{}) error
-
-	// Flush flushes all the messages in the logger.
-	Flush()
-
-	// Close flushes all the messages in the logger and closes it. The logger cannot be used after this operation.
-	Close()
-}
-
-// T represents structs capable of logging messages, and context management.
-type T interface {
-	BasicT
-	WithContext(context ...string) (contextLogger T)
+	// Error writes to log with level Error.
+	Error(message string)
 }

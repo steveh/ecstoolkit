@@ -7,8 +7,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ecs v1.54.2
 	github.com/aws/aws-sdk-go-v2/service/kms v1.38.1
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.58.0
-	github.com/cihub/seelog v0.0.0-20170130134532-f561c5e57575
-	github.com/fsnotify/fsnotify v1.8.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/stretchr/testify v1.10.0

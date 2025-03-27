@@ -212,7 +212,7 @@ func (p *BasicPortForwarding) reconnect(log log.T) (err error) {
 	var conn net.Conn
 
 	if conn, err = acceptConnection(log, *p.listener); err != nil {
-		return log.Errorf("Failed to accept connection with error. %v", err)
+		return fmt.Errorf("Failed to accept connection with error. %w", err)
 	}
 
 	p.stream = &conn

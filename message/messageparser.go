@@ -636,8 +636,10 @@ func (clientMessage *ClientMessage) DeserializeChannelClosedMessage(log log.T) (
 
 func (clientMessage *ClientMessage) DeserializeHandshakeRequest(log log.T) (handshakeRequest HandshakeRequestPayload, err error) {
 	if clientMessage.PayloadType != uint32(HandshakeRequestPayloadType) {
-		err = log.Errorf("ClientMessage PayloadType is not of type HandshakeRequestPayloadType. Found payload type: %d",
+		err = fmt.Errorf("ClientMessage PayloadType is not of type HandshakeRequestPayloadType. Found payload type: %d",
 			clientMessage.PayloadType)
+
+		log.Error(err.Error())
 
 		return
 	}
@@ -652,8 +654,10 @@ func (clientMessage *ClientMessage) DeserializeHandshakeRequest(log log.T) (hand
 
 func (clientMessage *ClientMessage) DeserializeHandshakeComplete(log log.T) (handshakeComplete HandshakeCompletePayload, err error) {
 	if clientMessage.PayloadType != uint32(HandshakeCompletePayloadType) {
-		err = log.Errorf("ClientMessage PayloadType is not of type HandshakeCompletePayloadType. Found payload type: %d",
+		err = fmt.Errorf("ClientMessage PayloadType is not of type HandshakeCompletePayloadType. Found payload type: %d",
 			clientMessage.PayloadType)
+
+		log.Error(err.Error())
 
 		return
 	}

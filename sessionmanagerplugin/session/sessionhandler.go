@@ -48,7 +48,7 @@ func (s *Session) OpenDataChannel(ctx context.Context, log log.T) (err error) {
 
 		s.retryParams.CallableFunc = func() (err error) { return s.DataChannel.Reconnect(log) }
 		if err = s.retryParams.Call(); err != nil {
-			log.Error(err)
+			log.Errorf("%+v", err)
 		}
 	}
 
@@ -58,7 +58,7 @@ func (s *Session) OpenDataChannel(ctx context.Context, log log.T) (err error) {
 
 			s.retryParams.CallableFunc = func() (err error) { return s.ResumeSessionHandler(ctx, log) }
 			if err = s.retryParams.Call(); err != nil {
-				log.Error(err)
+				log.Errorf("%+v", err)
 			}
 		})
 

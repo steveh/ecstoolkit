@@ -509,7 +509,7 @@ func TestHandleOutputMessageForDefaultTypeWithError(t *testing.T) {
 	rawMessage := []byte("rawMessage")
 
 	var handler OutputStreamDataMessageHandler = func(log log.T, outputMessage message.ClientMessage) (bool, error) {
-		return true, log.Errorf("OutputStreamDataMessageHandler Error")
+		return true, errors.New("OutputStreamDataMessageHandler Error")
 	}
 
 	dataChannel.RegisterOutputStreamHandler(handler, true)
@@ -554,7 +554,7 @@ func TestProcessOutputMessageWithHandlers(t *testing.T) {
 	dataChannel.wsChannel = mockChannel
 
 	var handler OutputStreamDataMessageHandler = func(log log.T, outputMessage message.ClientMessage) (bool, error) {
-		return true, log.Errorf("OutputStreamDataMessageHandler Error")
+		return true, errors.New("OutputStreamDataMessageHandler Error")
 	}
 
 	dataChannel.RegisterOutputStreamHandler(handler, true)
