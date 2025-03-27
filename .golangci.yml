@@ -8,6 +8,40 @@ linters:
     - funlen
     - gocognit
     - lll
+    - paralleltest
+    - revive
+    - varnamelen
+    - wrapcheck
+    - testpackage
+    - unconvert
+    - nonamedreturns
+    - tagliatelle
+    - gochecknoglobals
+    - err113
+    - errcheck
+    - gosec
+    - mnd
+    - testifylint
+    - errchkjson
+    - staticcheck
+    - inamedparam
+    - dupl
+    - unused
+    - unparam
+    - recvcheck
+    - bodyclose
+    - errname
+    - errorlint
+    - exhaustive
+    - forcetypeassert
+    - gochecknoinits
+    - gocritic
+    - ineffassign
+    - interfacebloat
+    - ireturn
+    - nestif
+    - predeclared
+    - wastedassign
   exclusions:
     generated: lax
 formatters:

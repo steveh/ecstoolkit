@@ -100,7 +100,7 @@ func (s *Session) GetResumeSessionParams(ctx context.Context, log log.T) (string
 
 	log.Debugf("Resume Session input parameters: %v", resumeSessionInput)
 
-	resumeSessionOutput, err := s.ssmClient.ResumeSession(ctx, &resumeSessionInput)
+	resumeSessionOutput, err := s.SSMClient.ResumeSession(ctx, &resumeSessionInput)
 	if err != nil {
 		log.Errorf("Resume Session failed: %v", err)
 
@@ -141,7 +141,7 @@ func (s *Session) TerminateSession(ctx context.Context, log log.T) error {
 
 	log.Debugf("Terminate Session input parameters: %v", terminateSessionInput)
 
-	if _, err := s.ssmClient.TerminateSession(ctx, &terminateSessionInput); err != nil {
+	if _, err := s.SSMClient.TerminateSession(ctx, &terminateSessionInput); err != nil {
 		log.Errorf("Terminate Session failed: %v", err)
 
 		return err

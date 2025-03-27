@@ -244,6 +244,9 @@ func (dataChannel *DataChannel) Open(log log.T) (err error) {
 
 // Close closes datachannel - its web socket connection.
 func (dataChannel *DataChannel) Close(log log.T) error {
+	fmt.Printf("dataChannel: %+v\n", dataChannel)
+	fmt.Printf("dataChannel.wsChannel: %+v\n", dataChannel.wsChannel)
+
 	log.Infof("Closing datachannel with url %s", dataChannel.wsChannel.GetStreamUrl())
 
 	return dataChannel.wsChannel.Close(log)

@@ -35,6 +35,8 @@ type PortSession struct {
 	portSessionType IPortSession
 }
 
+var _ session.ISessionPlugin = (*PortSession)(nil)
+
 type IPortSession interface {
 	IsStreamNotSet() (status bool)
 	InitializeStreams(ctx context.Context, log log.T, agentVersion string) (err error)
@@ -49,10 +51,6 @@ type PortParameters struct {
 	LocalUnixSocket     string `json:"localUnixSocket"`
 	LocalConnectionType string `json:"localConnectionType"`
 	Type                string `json:"type"`
-}
-
-func init() {
-	session.Register(&PortSession{})
 }
 
 // Name is the session name used inputStream the plugin.
