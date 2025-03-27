@@ -14,13 +14,14 @@
 package encryption
 
 import (
+	"context"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
 	"fmt"
 	"io"
 
-	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
+	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/steveh/ecstoolkit/log"
 )
 
@@ -39,7 +40,7 @@ type IEncrypter interface {
 }
 
 type Encrypter struct {
-	KMSService kmsiface.KMSAPI
+	KMSService *kms.Client
 
 	kmsKeyId      string
 	cipherTextKey []byte
@@ -47,16 +48,16 @@ type Encrypter struct {
 	decryptionKey []byte
 }
 
-var NewEncrypter = func(log log.T, kmsKeyId string, context map[string]*string, KMSService kmsiface.KMSAPI) (*Encrypter, error) {
+var NewEncrypter = func(ctx context.Context, log log.T, kmsKeyId string, encryptionContext map[string]string, KMSService *kms.Client) (*Encrypter, error) {
 	encrypter := Encrypter{kmsKeyId: kmsKeyId, KMSService: KMSService}
-	err := encrypter.generateEncryptionKey(log, kmsKeyId, context)
+	err := encrypter.generateEncryptionKey(ctx, log, kmsKeyId, encryptionContext)
 
 	return &encrypter, err
 }
 
 // generateEncryptionKey calls KMS to generate a new encryption key.
-func (encrypter *Encrypter) generateEncryptionKey(log log.T, kmsKeyId string, context map[string]*string) error {
-	cipherTextKey, plainTextKey, err := KMSGenerateDataKey(kmsKeyId, encrypter.KMSService, context)
+func (encrypter *Encrypter) generateEncryptionKey(ctx context.Context, log log.T, kmsKeyId string, encryptionContext map[string]string) error {
+	cipherTextKey, plainTextKey, err := KMSGenerateDataKey(ctx, kmsKeyId, encrypter.KMSService, encryptionContext)
 	if err != nil {
 		log.Errorf("Error generating data key from KMS: %s,", err)
 

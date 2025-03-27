@@ -15,6 +15,7 @@
 package portsession
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"os"
@@ -41,6 +42,9 @@ type BasicPortForwarding struct {
 	session        session.Session
 }
 
+// Ensure BasicPortForwarding implements IPortSession.
+var _ IPortSession = (*BasicPortForwarding)(nil)
+
 // getNewListener returns a new listener to given address and type like tcp, unix etc.
 var getNewListener = func(listenerType string, listenerAddress string) (listener net.Listener, err error) {
 	return net.Listen(listenerType, listenerAddress)
@@ -66,8 +70,8 @@ func (p *BasicPortForwarding) Stop() error {
 }
 
 // InitializeStreams establishes connection and initializes the stream.
-func (p *BasicPortForwarding) InitializeStreams(log log.T, agentVersion string) (err error) {
-	p.handleControlSignals(log)
+func (p *BasicPortForwarding) InitializeStreams(ctx context.Context, log log.T, agentVersion string) (err error) {
+	p.handleControlSignals(ctx, log)
 
 	if err = p.startLocalConn(log); err != nil {
 		return
@@ -77,7 +81,7 @@ func (p *BasicPortForwarding) InitializeStreams(log log.T, agentVersion string) 
 }
 
 // ReadStream reads data from the stream.
-func (p *BasicPortForwarding) ReadStream(log log.T) (err error) {
+func (p *BasicPortForwarding) ReadStream(ctx context.Context, log log.T) (err error) {
 	msg := make([]byte, config.StreamDataPayloadSize)
 
 	for {
@@ -178,7 +182,7 @@ func (p *BasicPortForwarding) startLocalListener(log log.T, portNumber string) (
 }
 
 // handleControlSignals handles terminate signals.
-func (p *BasicPortForwarding) handleControlSignals(log log.T) {
+func (p *BasicPortForwarding) handleControlSignals(ctx context.Context, log log.T) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, sessionutil.ControlSignals...)
 
@@ -194,7 +198,7 @@ func (p *BasicPortForwarding) handleControlSignals(log log.T) {
 			log.Infof("Exiting session with sessionId: %s.", p.sessionId)
 			p.Stop()
 		} else {
-			p.session.TerminateSession(log)
+			p.session.TerminateSession(ctx, log)
 		}
 	}()
 }

@@ -15,6 +15,7 @@
 package portsession
 
 import (
+	"context"
 	"errors"
 	"net"
 	"os"
@@ -73,7 +74,7 @@ func TestSetSessionHandlers(t *testing.T) {
 
 		process, _ := os.FindProcess(os.Getpid())
 		process.Signal(syscall.SIGINT)
-		portSession.SetSessionHandlers(mockLog)
+		portSession.SetSessionHandlers(context.TODO(), mockLog)
 	}()
 
 	time.Sleep(time.Second)
@@ -94,7 +95,7 @@ func TestStartSessionTCPLocalPortFromDocument(t *testing.T) {
 			portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding"},
 		},
 	}
-	portSession.SetSessionHandlers(mockLog)
+	portSession.SetSessionHandlers(context.TODO(), mockLog)
 	assert.Equal(t, "54321", portSession.portParameters.LocalPortNumber)
 }
 
@@ -111,7 +112,7 @@ func TestStartSessionTCPAcceptFailed(t *testing.T) {
 			portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding"},
 		},
 	}
-	assert.Equal(t, portSession.SetSessionHandlers(mockLog), connErr)
+	assert.Equal(t, portSession.SetSessionHandlers(context.TODO(), mockLog), connErr)
 }
 
 func TestStartSessionTCPConnectFailed(t *testing.T) {
@@ -127,5 +128,5 @@ func TestStartSessionTCPConnectFailed(t *testing.T) {
 			portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding"},
 		},
 	}
-	assert.Equal(t, portSession.SetSessionHandlers(mockLog), listenerError)
+	assert.Equal(t, portSession.SetSessionHandlers(context.TODO(), mockLog), listenerError)
 }

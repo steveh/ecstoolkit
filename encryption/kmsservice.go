@@ -14,58 +14,43 @@
 package encryption
 
 import (
+	"context"
 	"fmt"
 
-	sdkSession "github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/kms"
-	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
-	"github.com/steveh/ecstoolkit/log"
-	"github.com/steveh/ecstoolkit/sdkutil"
+	"github.com/aws/aws-sdk-go-v2/service/kms"
 )
 
 // KMSKeySizeInBytes is the key size that is fetched from KMS. 64 bytes key is split into two halves.
 // First half 32 bytes key is used by agent for encryption and second half 32 bytes by clients like cli/console.
-const KMSKeySizeInBytes int64 = 64
+const KMSKeySizeInBytes int32 = 64
 
-func NewKMSService(log log.T) (kmsService *kms.KMS, err error) {
-	var session *sdkSession.Session
+// func KMSDecrypt(ctx context.Context, log log.T, svc *kms.Client, ciptherTextBlob []byte, encryptionContext map[string]string) (plainText []byte, err error) {
+// 	output, err := svc.Decrypt(ctx, &kms.DecryptInput{
+// 		CiphertextBlob:    ciptherTextBlob,
+// 		EncryptionContext: encryptionContext,
+// 	})
+// 	if err != nil {
+// 		log.Error("Error when decrypting data key", err)
 
-	if session, err = sdkutil.GetDefaultSession(); err != nil {
-		return nil, err
-	}
+// 		return nil, err
+// 	}
 
-	kmsService = kms.New(session)
-
-	return kmsService, nil
-}
-
-func KMSDecrypt(log log.T, svc kmsiface.KMSAPI, ciptherTextBlob []byte, encryptionContext map[string]*string) (plainText []byte, err error) {
-	output, err := svc.Decrypt(&kms.DecryptInput{
-		CiphertextBlob:    ciptherTextBlob,
-		EncryptionContext: encryptionContext,
-	})
-	if err != nil {
-		log.Error("Error when decrypting data key", err)
-
-		return nil, err
-	}
-
-	return output.Plaintext, nil
-}
+// 	return output.Plaintext, nil
+// }
 
 // GenerateDataKey gets cipher text and plain text keys from KMS service.
-func KMSGenerateDataKey(kmsKeyId string, svc kmsiface.KMSAPI, context map[string]*string) (cipherTextKey []byte, plainTextKey []byte, err error) {
+func KMSGenerateDataKey(ctx context.Context, kmsKeyId string, svc *kms.Client, context map[string]string) ([]byte, []byte, error) {
 	kmsKeySize := KMSKeySizeInBytes
+
 	generateDataKeyInput := kms.GenerateDataKeyInput{
 		KeyId:             &kmsKeyId,
 		NumberOfBytes:     &kmsKeySize,
 		EncryptionContext: context,
 	}
 
-	var generateDataKeyOutput *kms.GenerateDataKeyOutput
-
-	if generateDataKeyOutput, err = svc.GenerateDataKey(&generateDataKeyInput); err != nil {
-		return nil, nil, fmt.Errorf("Error calling KMS GenerateDataKey API: %w", err)
+	generateDataKeyOutput, err := svc.GenerateDataKey(ctx, &generateDataKeyInput)
+	if err != nil {
+		return nil, nil, fmt.Errorf("calling KMS GenerateDataKey API: %w", err)
 	}
 
 	return generateDataKeyOutput.CiphertextBlob, generateDataKeyOutput.Plaintext, nil

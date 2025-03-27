@@ -58,17 +58,17 @@ func (ShellSession) Name() string {
 	return config.ShellPluginName
 }
 
-func (s *ShellSession) Initialize(log log.T, sessionVar *session.Session) {
+func (s *ShellSession) Initialize(ctx context.Context, log log.T, sessionVar *session.Session) {
 	s.Session = *sessionVar
 	s.DataChannel.RegisterOutputStreamHandler(s.ProcessStreamMessagePayload, true)
 	s.DataChannel.GetWsChannel().SetOnMessage(
 		func(input []byte) {
-			s.DataChannel.OutputMessageHandler(log, s.Stop, s.SessionId, input)
+			s.DataChannel.OutputMessageHandler(ctx, log, s.Stop, s.SessionId, input)
 		})
 }
 
 // StartSession takes input and write it to data channel.
-func (s *ShellSession) SetSessionHandlers(log log.T) (err error) {
+func (s *ShellSession) SetSessionHandlers(ctx context.Context, log log.T) error {
 	// handle re-size
 	s.handleTerminalResize(log)
 
@@ -76,9 +76,7 @@ func (s *ShellSession) SetSessionHandlers(log log.T) (err error) {
 	s.handleControlSignals(log)
 
 	// handles keyboard input
-	err = s.handleKeyboardInput(log)
-
-	return
+	return s.handleKeyboardInput(ctx, log)
 }
 
 // handleControlSignals handles control signals when given by user.

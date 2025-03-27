@@ -15,6 +15,7 @@
 package portsession
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -39,7 +40,7 @@ func TestInitializePortSession(t *testing.T) {
 	portSession := PortSession{
 		Session: getSessionMock(),
 	}
-	portSession.Initialize(mockLog, &portSession.Session)
+	portSession.Initialize(context.TODO(), mockLog, &portSession.Session)
 
 	mockWebSocketChannel.AssertExpectations(t)
 	assert.Equal(t, portParameters, portSession.portParameters, "Initialize port parameters")
@@ -56,7 +57,7 @@ func TestInitializePortSessionForPortForwardingWithOldAgent(t *testing.T) {
 	portSession := PortSession{
 		Session: getSessionMockWithParams(portParameters, "2.2.0.0"),
 	}
-	portSession.Initialize(mockLog, &portSession.Session)
+	portSession.Initialize(context.TODO(), mockLog, &portSession.Session)
 
 	mockWebSocketChannel.AssertExpectations(t)
 	assert.Equal(t, portParameters, portSession.portParameters, "Initialize port parameters")
@@ -73,7 +74,7 @@ func TestInitializePortSessionForPortForwarding(t *testing.T) {
 	portSession := PortSession{
 		Session: getSessionMockWithParams(portParameters, "3.1.0.0"),
 	}
-	portSession.Initialize(mockLog, &portSession.Session)
+	portSession.Initialize(context.TODO(), mockLog, &portSession.Session)
 
 	mockWebSocketChannel.AssertExpectations(t)
 	assert.Equal(t, portParameters, portSession.portParameters, "Initialize port parameters")
@@ -115,7 +116,7 @@ func TestStartSessionWithClosedWsConn(t *testing.T) {
 			session:      getSessionMock(),
 		},
 	}
-	portSession.SetSessionHandlers(mockLog)
+	portSession.SetSessionHandlers(context.TODO(), mockLog)
 
 	deserializedMsg := &message.ClientMessage{}
 	err := deserializedMsg.DeserializeClientMessage(mockLog, actualPayload)

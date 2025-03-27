@@ -15,6 +15,7 @@
 package portsession
 
 import (
+	"context"
 	"net"
 	"testing"
 	"time"
@@ -55,7 +56,7 @@ func TestReadStream(t *testing.T) {
 	}
 
 	go func() {
-		portSession.portSessionType.ReadStream(mockLog)
+		portSession.portSessionType.ReadStream(context.TODO(), mockLog)
 	}()
 
 	time.Sleep(time.Second)

@@ -64,6 +64,9 @@ type MuxPortForwarding struct {
 	mgsConn        *MgsConn
 }
 
+// Ensure MuxPortForwarding implements IPortSession.
+var _ IPortSession = (*MuxPortForwarding)(nil)
+
 func (c *MgsConn) close() {
 	c.listener.Close()
 	c.conn.Close()
@@ -95,7 +98,7 @@ func (p *MuxPortForwarding) Stop() error {
 }
 
 // InitializeStreams initializes i/o streams.
-func (p *MuxPortForwarding) InitializeStreams(log log.T, agentVersion string) (err error) {
+func (p *MuxPortForwarding) InitializeStreams(_ context.Context, log log.T, agentVersion string) (err error) {
 	p.handleControlSignals(log)
 	p.socketFile = getUnixSocketPath(p.sessionId, os.TempDir(), "session_manager_plugin_mux.sock")
 
@@ -107,8 +110,8 @@ func (p *MuxPortForwarding) InitializeStreams(log log.T, agentVersion string) (e
 }
 
 // ReadStream reads data from different connections.
-func (p *MuxPortForwarding) ReadStream(log log.T) (err error) {
-	g, ctx := errgroup.WithContext(context.Background())
+func (p *MuxPortForwarding) ReadStream(ctx context.Context, log log.T) (err error) {
+	g, ctx := errgroup.WithContext(ctx)
 
 	// reads data from smux client and transfers to server over datachannel
 	g.Go(func() error {

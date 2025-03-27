@@ -15,20 +15,19 @@
 package session
 
 import (
+	"context"
 	"errors"
 	"math/rand"
 
-	sdkSession "github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/steveh/ecstoolkit/config"
 	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
 	"github.com/steveh/ecstoolkit/retry"
-	"github.com/steveh/ecstoolkit/sdkutil"
 )
 
 // OpenDataChannel initializes datachannel.
-func (s *Session) OpenDataChannel(log log.T) (err error) {
+func (s *Session) OpenDataChannel(ctx context.Context, log log.T) (err error) {
 	s.retryParams = retry.RepeatableExponentialRetryer{
 		GeometricRatio:      config.RetryBase,
 		InitialDelayInMilli: rand.Intn(config.DataChannelRetryInitialDelayMillis) + config.DataChannelRetryInitialDelayMillis,
@@ -40,7 +39,7 @@ func (s *Session) OpenDataChannel(log log.T) (err error) {
 	s.DataChannel.SetWebsocket(log, s.StreamUrl, s.TokenValue)
 	s.DataChannel.GetWsChannel().SetOnMessage(
 		func(input []byte) {
-			s.DataChannel.OutputMessageHandler(log, s.Stop, s.SessionId, input)
+			s.DataChannel.OutputMessageHandler(ctx, log, s.Stop, s.SessionId, input)
 		})
 	s.DataChannel.RegisterOutputStreamHandler(s.ProcessFirstMessage, false)
 
@@ -57,7 +56,7 @@ func (s *Session) OpenDataChannel(log log.T) (err error) {
 		func(err error) {
 			log.Errorf("Trying to reconnect the session: %v with seq num: %d", s.StreamUrl, s.DataChannel.GetStreamDataSequenceNumber())
 
-			s.retryParams.CallableFunc = func() (err error) { return s.ResumeSessionHandler(log) }
+			s.retryParams.CallableFunc = func() (err error) { return s.ResumeSessionHandler(ctx, log) }
 			if err = s.retryParams.Call(); err != nil {
 				log.Error(err)
 			}
@@ -94,26 +93,15 @@ func (s *Session) Stop() error {
 }
 
 // GetResumeSessionParams calls ResumeSession API and gets tokenvalue for reconnecting.
-func (s *Session) GetResumeSessionParams(log log.T) (string, error) {
-	var (
-		resumeSessionOutput *ssm.ResumeSessionOutput
-		err                 error
-		sdkSession          *sdkSession.Session
-	)
-
-	if sdkSession, err = sdkutil.GetNewSessionWithEndpoint(s.Endpoint); err != nil {
-		return "", err
-	}
-
-	s.sdk = ssm.New(sdkSession)
-
+func (s *Session) GetResumeSessionParams(ctx context.Context, log log.T) (string, error) {
 	resumeSessionInput := ssm.ResumeSessionInput{
 		SessionId: &s.SessionId,
 	}
 
 	log.Debugf("Resume Session input parameters: %v", resumeSessionInput)
 
-	if resumeSessionOutput, err = s.sdk.ResumeSession(&resumeSessionInput); err != nil {
+	resumeSessionOutput, err := s.ssmClient.ResumeSession(ctx, &resumeSessionInput)
+	if err != nil {
 		log.Errorf("Resume Session failed: %v", err)
 
 		return "", err
@@ -127,8 +115,8 @@ func (s *Session) GetResumeSessionParams(log log.T) (string, error) {
 }
 
 // ResumeSessionHandler gets token value and tries to Reconnect to datachannel.
-func (s *Session) ResumeSessionHandler(log log.T) (err error) {
-	s.TokenValue, err = s.GetResumeSessionParams(log)
+func (s *Session) ResumeSessionHandler(ctx context.Context, log log.T) (err error) {
+	s.TokenValue, err = s.GetResumeSessionParams(ctx, log)
 	if err != nil {
 		log.Errorf("Failed to get token: %v", err)
 
@@ -146,27 +134,14 @@ func (s *Session) ResumeSessionHandler(log log.T) (err error) {
 }
 
 // TerminateSession calls TerminateSession API.
-func (s *Session) TerminateSession(log log.T) error {
-	var (
-		err        error
-		newSession *sdkSession.Session
-	)
-
-	if newSession, err = sdkutil.GetNewSessionWithEndpoint(s.Endpoint); err != nil {
-		log.Errorf("Terminate Session failed: %v", err)
-
-		return err
-	}
-
-	s.sdk = ssm.New(newSession)
-
+func (s *Session) TerminateSession(ctx context.Context, log log.T) error {
 	terminateSessionInput := ssm.TerminateSessionInput{
 		SessionId: &s.SessionId,
 	}
 
 	log.Debugf("Terminate Session input parameters: %v", terminateSessionInput)
 
-	if _, err = s.sdk.TerminateSession(&terminateSessionInput); err != nil {
+	if _, err := s.ssmClient.TerminateSession(ctx, &terminateSessionInput); err != nil {
 		log.Errorf("Terminate Session failed: %v", err)
 
 		return err

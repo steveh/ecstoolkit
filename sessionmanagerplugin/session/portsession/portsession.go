@@ -15,6 +15,8 @@
 package portsession
 
 import (
+	"context"
+
 	"github.com/steveh/ecstoolkit/config"
 	"github.com/steveh/ecstoolkit/jsonutil"
 	"github.com/steveh/ecstoolkit/log"
@@ -35,8 +37,8 @@ type PortSession struct {
 
 type IPortSession interface {
 	IsStreamNotSet() (status bool)
-	InitializeStreams(log log.T, agentVersion string) (err error)
-	ReadStream(log log.T) (err error)
+	InitializeStreams(ctx context.Context, log log.T, agentVersion string) (err error)
+	ReadStream(ctx context.Context, log log.T) (err error)
 	WriteStream(outputMessage message.ClientMessage) (err error)
 	Stop() error
 }
@@ -58,7 +60,7 @@ func (PortSession) Name() string {
 	return config.PortPluginName
 }
 
-func (s *PortSession) Initialize(log log.T, sessionVar *session.Session) {
+func (s *PortSession) Initialize(ctx context.Context, log log.T, sessionVar *session.Session) {
 	s.Session = *sessionVar
 	if err := jsonutil.Remarshal(s.SessionProperties, &s.portParameters); err != nil {
 		log.Errorf("Invalid format: %v", err)
@@ -104,7 +106,7 @@ func (s *PortSession) Initialize(log log.T, sessionVar *session.Session) {
 			}
 		}
 
-		s.DataChannel.OutputMessageHandler(log, s.Stop, s.SessionId, input)
+		s.DataChannel.OutputMessageHandler(ctx, log, s.Stop, s.SessionId, input)
 	})
 	log.Infof("Connected to instance[%s] on port: %s", sessionVar.TargetId, s.portParameters.PortNumber)
 }
@@ -114,12 +116,12 @@ func (s *PortSession) Stop() error {
 }
 
 // StartSession redirects inputStream/outputStream data to datachannel.
-func (s *PortSession) SetSessionHandlers(log log.T) (err error) {
-	if err = s.portSessionType.InitializeStreams(log, s.DataChannel.GetAgentVersion()); err != nil {
+func (s *PortSession) SetSessionHandlers(ctx context.Context, log log.T) (err error) {
+	if err = s.portSessionType.InitializeStreams(ctx, log, s.DataChannel.GetAgentVersion()); err != nil {
 		return err
 	}
 
-	if err = s.portSessionType.ReadStream(log); err != nil {
+	if err = s.portSessionType.ReadStream(ctx, log); err != nil {
 		return err
 	}
 

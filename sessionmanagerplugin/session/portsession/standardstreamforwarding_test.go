@@ -15,6 +15,7 @@
 package portsession
 
 import (
+	"context"
 	"os"
 	"testing"
 	"time"
@@ -60,7 +61,7 @@ func TestStartSessionForStandardStreamForwarding(t *testing.T) {
 			portParameters: PortParameters{PortNumber: "22"},
 		},
 	}
-	portSession.SetSessionHandlers(mockLog)
+	portSession.SetSessionHandlers(context.TODO(), mockLog)
 
 	deserializedMsg := &message.ClientMessage{}
 	err := deserializedMsg.DeserializeClientMessage(mockLog, actualPayload)

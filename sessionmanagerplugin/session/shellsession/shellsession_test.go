@@ -15,6 +15,7 @@
 package shellsession
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"os"
@@ -58,7 +59,7 @@ func TestInitialize(t *testing.T) {
 	mockDataChannel.On("RegisterOutputStreamHandler", mock.Anything, true).Times(1)
 	mockDataChannel.On("GetWsChannel").Return(mockWsChannel)
 	mockWsChannel.On("SetOnMessage", mock.Anything)
-	shellSession.Initialize(logger, session)
+	shellSession.Initialize(context.TODO(), logger, session)
 	assert.Equal(t, shellSession.Session, *session)
 }
 

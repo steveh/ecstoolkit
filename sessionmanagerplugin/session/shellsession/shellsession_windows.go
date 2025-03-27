@@ -18,6 +18,7 @@
 package shellsession
 
 import (
+	"context"
 	"time"
 
 	"github.com/eiannone/keyboard"
@@ -58,7 +59,7 @@ func (s *ShellSession) Stop() error {
 }
 
 // handleKeyboardInput handles input entered by customer on terminal
-func (s *ShellSession) handleKeyboardInput(log log.T) (err error) {
+func (s *ShellSession) handleKeyboardInput(_ context.Context, log log.T) (err error) {
 	var (
 		character rune         //character input from keyboard
 		key       keyboard.Key //special keys like arrows and function keys

@@ -17,6 +17,7 @@ package datachannel
 import (
 	"bytes"
 	"container/list"
+	"context"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
@@ -26,8 +27,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/steveh/ecstoolkit/communicator"
@@ -50,7 +51,7 @@ type IDataChannel interface {
 	SendInputDataMessage(log log.T, payloadType message.PayloadType, inputData []byte) error
 	ResendStreamDataMessageScheduler(log log.T) error
 	ProcessAcknowledgedMessage(log log.T, acknowledgeMessageContent message.AcknowledgeContent) error
-	OutputMessageHandler(log log.T, stopHandler Stop, sessionID string, rawMessage []byte) error
+	OutputMessageHandler(ctx context.Context, log log.T, stopHandler Stop, sessionID string, rawMessage []byte) error
 	SendAcknowledgeMessage(log log.T, clientMessage message.ClientMessage) error
 	AddDataToOutgoingMessageBuffer(streamMessage StreamingMessage)
 	RemoveDataFromOutgoingMessageBuffer(streamMessageElement *list.Element)
@@ -96,6 +97,9 @@ type DataChannel struct {
 	RoundTripTimeVariation float64
 	// timeout used for resending unacknowledged message
 	RetransmissionTimeout time.Duration
+
+	KMSClient *kms.Client
+
 	// Encrypter to encrypt/decrypt if agent requests encryption
 	encryption        encryption.IEncrypter
 	encryptionEnabled bool
@@ -155,8 +159,8 @@ var GetRoundTripTime = func(streamingMessage StreamingMessage) time.Duration {
 	return time.Since(streamingMessage.LastSentTime)
 }
 
-var newEncrypter = func(log log.T, kmsKeyId string, encryptionConext map[string]*string, kmsService kmsiface.KMSAPI) (encryption.IEncrypter, error) {
-	return encryption.NewEncrypter(log, kmsKeyId, encryptionConext, kmsService)
+var newEncrypter = func(ctx context.Context, log log.T, kmsKeyId string, encryptionConext map[string]string, kmsService *kms.Client) (encryption.IEncrypter, error) {
+	return encryption.NewEncrypter(ctx, log, kmsKeyId, encryptionConext, kmsService)
 }
 
 // Initialize populates the data channel object with the correct values.
@@ -367,7 +371,7 @@ func (dataChannel *DataChannel) ResendStreamDataMessageScheduler(log log.T) (err
 		}
 	}()
 
-	return
+	return err
 }
 
 // ProcessAcknowledgedMessage processes acknowledge messages by deleting them from OutgoingMessageBuffer.
@@ -416,7 +420,7 @@ func (dataChannel *DataChannel) SendAcknowledgeMessage(log log.T, streamDataMess
 }
 
 // OutputMessageHandler gets output on the data channel.
-func (dataChannel *DataChannel) OutputMessageHandler(log log.T, stopHandler Stop, sessionID string, rawMessage []byte) error {
+func (dataChannel *DataChannel) OutputMessageHandler(ctx context.Context, log log.T, stopHandler Stop, sessionID string, rawMessage []byte) error {
 	outputMessage := &message.ClientMessage{}
 
 	err := outputMessage.DeserializeClientMessage(log, rawMessage)
@@ -436,7 +440,7 @@ func (dataChannel *DataChannel) OutputMessageHandler(log log.T, stopHandler Stop
 
 	switch outputMessage.MessageType {
 	case message.OutputStreamMessage:
-		return dataChannel.HandleOutputMessage(log, *outputMessage, rawMessage)
+		return dataChannel.HandleOutputMessage(ctx, log, *outputMessage, rawMessage)
 	case message.AcknowledgeMessage:
 		return dataChannel.HandleAcknowledgeMessage(log, *outputMessage)
 	case message.ChannelClosedMessage:
@@ -451,7 +455,7 @@ func (dataChannel *DataChannel) OutputMessageHandler(log log.T, stopHandler Stop
 }
 
 // handleHandshakeRequest is the handler for payloads of type HandshakeRequest.
-func (dataChannel *DataChannel) handleHandshakeRequest(log log.T, clientMessage message.ClientMessage) error {
+func (dataChannel *DataChannel) handleHandshakeRequest(ctx context.Context, log log.T, clientMessage message.ClientMessage) error {
 	handshakeRequest, err := clientMessage.DeserializeHandshakeRequest(log)
 	if err != nil {
 		log.Errorf("Deserialize Handshake Request failed: %s", err)
@@ -473,7 +477,7 @@ func (dataChannel *DataChannel) handleHandshakeRequest(log log.T, clientMessage 
 		switch action.ActionType {
 		case message.KMSEncryption:
 			processedAction.ActionType = action.ActionType
-			err := dataChannel.ProcessKMSEncryptionHandshakeAction(log, action.ActionParameters)
+			err := dataChannel.ProcessKMSEncryptionHandshakeAction(ctx, log, action.ActionParameters)
 
 			if err != nil {
 				processedAction.ActionStatus = message.Failed
@@ -652,6 +656,7 @@ func (dataChannel *DataChannel) processOutputMessageWithHandlers(log log.T, mess
 
 // handleOutputMessage handles incoming stream data message by processing the payload and updating expectedSequenceNumber.
 func (dataChannel *DataChannel) HandleOutputMessage(
+	ctx context.Context,
 	log log.T,
 	outputMessage message.ClientMessage,
 	rawMessage []byte,
@@ -669,7 +674,7 @@ func (dataChannel *DataChannel) HandleOutputMessage(
 				// PayloadType is HandshakeRequest so we call our own handler instead of the provided handler
 				log.Debugf("Processing HandshakeRequest message %s", outputMessage)
 
-				if err = dataChannel.handleHandshakeRequest(log, outputMessage); err != nil {
+				if err = dataChannel.handleHandshakeRequest(ctx, log, outputMessage); err != nil {
 					log.Errorf("Unable to process incoming data payload, MessageType %s, "+
 						"PayloadType HandshakeRequestPayloadType, err: %s.", outputMessage.MessageType, err)
 
@@ -913,7 +918,7 @@ func (dataChannel *DataChannel) CalculateRetransmissionTimeout(log log.T, stream
 
 // ProcessKMSEncryptionHandshakeAction sets up the encrypter and calls KMS to generate a new data key. This is triggered
 // when encryption is specified in HandshakeRequest.
-func (dataChannel *DataChannel) ProcessKMSEncryptionHandshakeAction(log log.T, actionParams json.RawMessage) (err error) {
+func (dataChannel *DataChannel) ProcessKMSEncryptionHandshakeAction(ctx context.Context, log log.T, actionParams json.RawMessage) (err error) {
 	if dataChannel.IsAwsCliUpgradeNeeded {
 		return errors.New("Installed version of CLI does not support Session Manager encryption feature. Please upgrade to the latest version of your CLI (e.g., AWS CLI).")
 	}
@@ -924,13 +929,8 @@ func (dataChannel *DataChannel) ProcessKMSEncryptionHandshakeAction(log log.T, a
 
 	kmsKeyId := kmsEncRequest.KMSKeyID
 
-	kmsService, err := encryption.NewKMSService(log)
-	if err != nil {
-		return fmt.Errorf("error while creating new KMS service, %w", err)
-	}
-
-	encryptionContext := map[string]*string{"aws:ssm:SessionId": &dataChannel.SessionId, "aws:ssm:TargetId": &dataChannel.TargetId}
-	dataChannel.encryption, err = newEncrypter(log, kmsKeyId, encryptionContext, kmsService)
+	encryptionContext := map[string]string{"aws:ssm:SessionId": dataChannel.SessionId, "aws:ssm:TargetId": dataChannel.TargetId}
+	dataChannel.encryption, err = newEncrypter(ctx, log, kmsKeyId, encryptionContext, dataChannel.KMSClient)
 
 	return
 }

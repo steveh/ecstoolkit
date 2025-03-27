@@ -15,6 +15,7 @@
 package datachannel
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"reflect"
@@ -23,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
+	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	communicatorMocks "github.com/steveh/ecstoolkit/communicator/mocks"
@@ -313,7 +314,7 @@ func TestDataChannelIncomingMessageHandlerForExpectedInputStreamDataMessage(t *t
 	dataChannel.RegisterOutputStreamHandler(handler, true)
 	// First scenario is to test when incoming message sequence number matches with expected sequence number
 	// and no message found in IncomingMessageBuffer
-	err := dataChannel.OutputMessageHandler(logger, stopHandler, sessionId, serializedClientMessages[0])
+	err := dataChannel.OutputMessageHandler(context.TODO(), logger, stopHandler, sessionId, serializedClientMessages[0])
 	assert.NoError(t, err)
 	assert.Equal(t, int64(1), dataChannel.ExpectedSequenceNumber)
 	assert.Empty(t, dataChannel.IncomingMessageBuffer.Messages)
@@ -326,7 +327,7 @@ func TestDataChannelIncomingMessageHandlerForExpectedInputStreamDataMessage(t *t
 	dataChannel.AddDataToIncomingMessageBuffer(streamingMessages[4])
 	dataChannel.AddDataToIncomingMessageBuffer(streamingMessages[3])
 
-	err = dataChannel.OutputMessageHandler(logger, stopHandler, sessionId, serializedClientMessages[1])
+	err = dataChannel.OutputMessageHandler(context.TODO(), logger, stopHandler, sessionId, serializedClientMessages[1])
 	assert.NoError(t, err)
 	assert.Equal(t, int64(5), dataChannel.ExpectedSequenceNumber)
 	assert.Len(t, dataChannel.IncomingMessageBuffer.Messages, 1)
@@ -353,13 +354,13 @@ func TestDataChannelIncomingMessageHandlerForUnexpectedInputStreamDataMessage(t 
 		return nil
 	}
 
-	err := dataChannel.OutputMessageHandler(logger, stopHandler, sessionId, serializedClientMessages[1])
+	err := dataChannel.OutputMessageHandler(context.TODO(), logger, stopHandler, sessionId, serializedClientMessages[1])
 	assert.NoError(t, err)
 
-	err = dataChannel.OutputMessageHandler(logger, stopHandler, sessionId, serializedClientMessages[2])
+	err = dataChannel.OutputMessageHandler(context.TODO(), logger, stopHandler, sessionId, serializedClientMessages[2])
 	assert.NoError(t, err)
 
-	err = dataChannel.OutputMessageHandler(logger, stopHandler, sessionId, serializedClientMessages[3])
+	err = dataChannel.OutputMessageHandler(context.TODO(), logger, stopHandler, sessionId, serializedClientMessages[3])
 	assert.NoError(t, err)
 
 	// Since capacity of IncomingMessageBuffer is 2, stream data with sequence number 3 should be ignored without sending acknowledgement
@@ -404,7 +405,7 @@ func TestDataChannelIncomingMessageHandlerForAcknowledgeMessage(t *testing.T) {
 	payload, _ = json.Marshal(acknowledgeContent)
 	clientMessage := getClientMessage(0, message.AcknowledgeMessage, uint32(message.Output), payload)
 	serializedClientMessage, _ := clientMessage.SerializeClientMessage(logger)
-	err := dataChannel.OutputMessageHandler(logger, stopHandler, sessionId, serializedClientMessage)
+	err := dataChannel.OutputMessageHandler(context.TODO(), logger, stopHandler, sessionId, serializedClientMessage)
 
 	assert.NoError(t, err)
 	assert.Equal(t, 1, ProcessAcknowledgedMessageCallCount)
@@ -440,7 +441,7 @@ func TestDataChannelIncomingMessageHandlerForPausePublicationessage(t *testing.T
 	}
 
 	dataChannel.RegisterOutputStreamHandler(handler, true)
-	err := dataChannel.OutputMessageHandler(logger, stopHandler, sessionId, serializedClientMessages[0])
+	err := dataChannel.OutputMessageHandler(context.TODO(), logger, stopHandler, sessionId, serializedClientMessages[0])
 	assert.NoError(t, err)
 }
 
@@ -455,8 +456,8 @@ func TestHandshakeRequestHandler(t *testing.T) {
 		uint32(message.HandshakeRequestPayloadType), handshakeRequestBytes)
 	handshakeRequestMessageBytes, _ := clientMessage.SerializeClientMessage(mockLogger)
 
-	newEncrypter = func(log log.T, kmsKeyIdInput string, context map[string]*string, KMSService kmsiface.KMSAPI) (encryption.IEncrypter, error) {
-		expectedContext := map[string]*string{"aws:ssm:SessionId": &sessionId, "aws:ssm:TargetId": &instanceId}
+	newEncrypter = func(ctx context.Context, log log.T, kmsKeyIdInput string, context map[string]string, KMSService *kms.Client) (encryption.IEncrypter, error) {
+		expectedContext := map[string]string{"aws:ssm:SessionId": sessionId, "aws:ssm:TargetId": instanceId}
 
 		assert.Equal(t, kmsKeyId, kmsKeyIdInput)
 		assert.Equal(t, expectedContext, context)
@@ -495,7 +496,7 @@ func TestHandshakeRequestHandler(t *testing.T) {
 			reflect.DeepEqual(handshakeResponse.ProcessedClientActions, expectedActions)
 	}
 	mockChannel.On("SendMessage", mock.Anything, mock.MatchedBy(handshakeResponseMatcher), mock.Anything).Return(nil)
-	dataChannel.OutputMessageHandler(mockLogger, func() error { return nil }, sessionId, handshakeRequestMessageBytes)
+	dataChannel.OutputMessageHandler(context.TODO(), mockLogger, func() error { return nil }, sessionId, handshakeRequestMessageBytes)
 	assert.Equal(t, mockEncrypter, dataChannel.encryption)
 }
 
@@ -513,7 +514,7 @@ func TestHandleOutputMessageForDefaultTypeWithError(t *testing.T) {
 
 	dataChannel.RegisterOutputStreamHandler(handler, true)
 
-	err := dataChannel.HandleOutputMessage(mockLogger, clientMessage, rawMessage)
+	err := dataChannel.HandleOutputMessage(context.TODO(), mockLogger, clientMessage, rawMessage)
 	assert.Error(t, err)
 }
 
@@ -531,7 +532,7 @@ func TestHandleOutputMessageForExitCodePayloadTypeWithError(t *testing.T) {
 
 	rawMessage := []byte("rawMessage")
 
-	err := dataChannel.HandleOutputMessage(mockLogger, clientMessage, rawMessage)
+	err := dataChannel.HandleOutputMessage(context.TODO(), mockLogger, clientMessage, rawMessage)
 	assert.Equal(t, mockErr, err)
 }
 
@@ -542,7 +543,7 @@ func TestHandleHandshakeRequestWithMessageDeserializeError(t *testing.T) {
 	clientMessage := getClientMessage(0, message.OutputStreamMessage,
 		uint32(message.HandshakeCompletePayloadType), handshakeRequestBytes)
 
-	err := dataChannel.handleHandshakeRequest(mockLogger, clientMessage)
+	err := dataChannel.handleHandshakeRequest(context.TODO(), mockLogger, clientMessage)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "ClientMessage PayloadType is not of type HandshakeRequestPayloadType")
 }

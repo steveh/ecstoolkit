@@ -15,38 +15,33 @@
 package session
 
 import (
-	"encoding/json"
+	"context"
 	"errors"
 	"fmt"
-	"io"
-	"os"
+	"net/url"
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
+	"github.com/aws/aws-sdk-go-v2/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/kms"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/google/uuid"
 	"github.com/steveh/ecstoolkit/config"
 	"github.com/steveh/ecstoolkit/datachannel"
 	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
 	"github.com/steveh/ecstoolkit/retry"
-	"github.com/steveh/ecstoolkit/sdkutil"
 	"github.com/steveh/ecstoolkit/sessionmanagerplugin/session/sessionutil"
-	"github.com/steveh/ecstoolkit/version"
-)
-
-const (
-	LegacyArgumentLength  = 4
-	ArgumentLength        = 7
-	StartSessionOperation = "StartSession"
 )
 
 var SessionRegistry = map[string]ISessionPlugin{}
 
 type ISessionPlugin interface {
-	SetSessionHandlers(log.T) error
+	SetSessionHandlers(ctx context.Context, log log.T) error
 	ProcessStreamMessagePayload(log log.T, streamDataMessage message.ClientMessage) (isHandlerReady bool, err error)
-	Initialize(log log.T, sessionVar *Session)
+	Initialize(ctx context.Context, log log.T, sessionVar *Session)
 	Stop() error
 	Name() string
 }
@@ -78,7 +73,7 @@ type Session struct {
 	Endpoint              string
 	ClientId              string
 	TargetId              string
-	sdk                   *ssm.SSM
+	ssmClient             *ssm.Client
 	retryParams           retry.RepeatableExponentialRetryer
 	SessionType           string
 	SessionProperties     interface{}
@@ -86,21 +81,21 @@ type Session struct {
 }
 
 // startSession create the datachannel for session.
-var startSession = func(session *Session, log log.T) error {
-	return session.Execute(log)
+var startSession = func(ctx context.Context, session *Session, log log.T) error {
+	return session.Execute(ctx, log)
 }
 
 // setSessionHandlersWithSessionType set session handlers based on session subtype.
-var setSessionHandlersWithSessionType = func(session *Session, log log.T) error {
+var setSessionHandlersWithSessionType = func(ctx context.Context, session *Session, log log.T) error {
 	// SessionType is set inside DataChannel
 	sessionSubType := SessionRegistry[session.SessionType]
-	sessionSubType.Initialize(log, session)
+	sessionSubType.Initialize(ctx, log, session)
 
-	return sessionSubType.SetSessionHandlers(log)
+	return sessionSubType.SetSessionHandlers(ctx, log)
 }
 
 // Set up a scheduler to listen on stream data resend timeout event.
-var handleStreamMessageResendTimeout = func(session *Session, log log.T) {
+var handleStreamMessageResendTimeout = func(ctx context.Context, session *Session, log log.T) {
 	log.Tracef("Setting up scheduler to listen on IsStreamMessageResendTimeout event.")
 	go func() {
 		for {
@@ -108,7 +103,7 @@ var handleStreamMessageResendTimeout = func(session *Session, log log.T) {
 			time.Sleep(config.ResendSleepInterval)
 			if <-session.DataChannel.IsStreamMessageResendTimeout() {
 				log.Errorf("Terminating session %s as the stream data was not processed before timeout.", session.SessionId)
-				if err := session.TerminateSession(log); err != nil {
+				if err := session.TerminateSession(ctx, log); err != nil {
 					log.Errorf("Unable to terminate session upon stream data timeout. %v", err)
 				}
 
@@ -118,127 +113,124 @@ var handleStreamMessageResendTimeout = func(session *Session, log log.T) {
 	}()
 }
 
-// ValidateInputAndStartSession validates input sent from AWS CLI and starts a session if validation is successful.
-// AWS CLI sends input in the order of
-// args[0] will be path of executable (ignored)
-// args[1] is session response
-// args[2] is client region
-// args[3] is operation name
-// args[4] is profile name from aws credentials/config files
-// args[5] is parameters input to aws cli for StartSession api
-// args[6] is endpoint for ssm service.
-func ValidateInputAndStartSession(args []string, out io.Writer) {
-	var (
-		err                error
-		session            Session
-		startSessionOutput ssm.StartSessionOutput
-		response           []byte
-		region             string
-		operationName      string
-		profile            string
-		ssmEndpoint        string
-		target             string
-	)
+type ExecuteSessionOptions struct {
+	Cluster            string
+	TaskARN            string
+	ContainerName      string
+	ContainerRuntimeID string
+	Command            string
+}
+
+// ExecuteSession runs an ECS Exec command.
+func ExecuteSession(ctx context.Context, ecsClient *ecs.Client, ssmClient *ssm.Client, kmsClient *kms.Client, options ExecuteSessionOptions) error {
+	parsedARN, err := arn.Parse(options.TaskARN)
+	if err != nil {
+		return fmt.Errorf("invalid ARN: %w", err)
+	}
+
+	// if we could guarantee the task ARN was in the newer long format we could extract the cluster name from there
+	taskResourceParts := strings.Split(parsedARN.Resource, "/")
+	if len(taskResourceParts) < 3 {
+		return fmt.Errorf("invalid resource ID: %s", parsedARN.Resource)
+	}
+
+	taskID := taskResourceParts[2]
+
+	execute, err := ecsClient.ExecuteCommand(ctx, &ecs.ExecuteCommandInput{
+		Cluster:     aws.String(options.Cluster),
+		Task:        aws.String(parsedARN.String()),
+		Container:   aws.String(options.ContainerName),
+		Command:     aws.String(options.Command),
+		Interactive: true,
+	})
+	if err != nil {
+		return fmt.Errorf("execute command: %w", err)
+	}
+
+	endpoint := url.URL{Scheme: "https", Host: fmt.Sprintf("ssm.%s.amazonaws.com", parsedARN.Region)}
+
+	clientID, err := uuid.NewRandom()
+	if err != nil {
+		return fmt.Errorf("generate UUID: %w", err)
+	}
 
 	log := log.Logger(true, "session-manager-plugin")
 
-	if len(args) == 1 {
-		fmt.Fprint(out, "\nThe Session Manager plugin was installed successfully. "+
-			"Use the AWS CLI to start a session.\n\n")
-
-		return
-	} else if len(args) == 2 && args[1] == "--version" {
-		fmt.Fprintf(out, "%s\n", string(version.Version))
-
-		return
-	} else if len(args) >= 2 && len(args) < LegacyArgumentLength {
-		fmt.Fprintf(out, "\nUnknown operation %s. \nUse "+
-			"session-manager-plugin --version to check the version.\n\n", string(args[1]))
-
-		return
-	} else if len(args) == LegacyArgumentLength {
-		// If arguments do not have Profile passed from AWS CLI to Session-Manager-Plugin then
-		// should be upgraded to use Session Manager encryption feature
-		session.IsAwsCliUpgradeNeeded = true
+	dc := datachannel.DataChannel{
+		KMSClient: kmsClient,
 	}
 
-	for argsIndex := 1; argsIndex < len(args); argsIndex++ {
-		switch argsIndex {
-		case 1:
-			if strings.HasPrefix(args[1], "AWS_SSM_START_SESSION_RESPONSE") {
-				response = []byte(os.Getenv(args[1]))
+	sess := Session{
+		DataChannel: &dc,
+		SessionId:   *execute.Session.SessionId,
+		StreamUrl:   *execute.Session.StreamUrl,
+		TokenValue:  *execute.Session.TokenValue,
+		Endpoint:    endpoint.String(),
+		ClientId:    clientID.String(),
+		TargetId:    fmt.Sprintf("ecs:%s_%s_%s", options.Cluster, taskID, options.ContainerRuntimeID),
+		DisplayMode: sessionutil.NewDisplayMode(log),
+		ssmClient:   ssmClient,
+	}
 
-				if err = os.Unsetenv(args[1]); err != nil {
-					log.Errorf("Failed to remove temporary session env parameter: %v", err)
+	if err := sess.OpenDataChannel(ctx, log); err != nil {
+		return fmt.Errorf("open data channel: %w", err)
+	}
+
+	sess.DataChannel.SetSessionType(config.ShellPluginName)
+
+	go func() {
+		for {
+			// Repeat this loop for every 200ms
+			time.Sleep(config.ResendSleepInterval)
+
+			if <-sess.DataChannel.IsStreamMessageResendTimeout() {
+				log.Errorf("terminating session as the stream data was not processed before timeout: sessionID: %s", sess.SessionId)
+
+				if err := sess.TerminateSession(ctx, log); err != nil {
+					log.Errorf("unable to terminate session upon stream data timeout: %v", err)
 				}
-			} else {
-				response = []byte(args[1])
+
+				return
 			}
-		case 2:
-			region = args[2]
-		case 3:
-			operationName = args[3]
-		case 4:
-			profile = args[4]
-		case 5:
-			// args[5] is parameters input to aws cli for StartSession api call
-			startSessionRequest := make(map[string]interface{})
-			json.Unmarshal([]byte(args[5]), &startSessionRequest)
-			target = startSessionRequest["Target"].(string)
-		case 6:
-			ssmEndpoint = args[6]
 		}
+	}()
+
+	// The session type is set either by handshake or the first packet received.
+	if !<-sess.DataChannel.IsSessionTypeSet() {
+		return errors.New("unable to determine session type")
 	}
 
-	sdkutil.SetRegionAndProfile(region, profile)
+	sess.SessionType = sess.DataChannel.GetSessionType()
+	sess.SessionProperties = sess.DataChannel.GetSessionProperties()
 
-	clientId := uuid.New().String()
-
-	switch operationName {
-	case StartSessionOperation:
-		if err = json.Unmarshal(response, &startSessionOutput); err != nil {
-			log.Errorf("Cannot perform start session: %v", err)
-			fmt.Fprintf(out, "Cannot perform start session: %v\n", err)
-
-			return
-		}
-
-		session.SessionId = *startSessionOutput.SessionId
-		session.StreamUrl = *startSessionOutput.StreamUrl
-		session.TokenValue = *startSessionOutput.TokenValue
-		session.Endpoint = ssmEndpoint
-		session.ClientId = clientId
-		session.TargetId = target
-		session.DataChannel = &datachannel.DataChannel{}
-
-	default:
-		fmt.Fprint(out, "Invalid Operation")
-
-		return
+	sessionSubType := SessionRegistry[sess.SessionType]
+	if sessionSubType == nil {
+		return fmt.Errorf("unknown session type %s", sess.SessionType)
 	}
 
-	if err = startSession(&session, log); err != nil {
-		log.Errorf("Cannot perform start session: %v", err)
-		fmt.Fprintf(out, "Cannot perform start session: %v\n", err)
+	sessionSubType.Initialize(ctx, log, &sess)
 
-		return
+	if err := sessionSubType.SetSessionHandlers(ctx, log); err != nil {
+		return fmt.Errorf("ending with error: %w", err)
 	}
+
+	return nil
 }
 
 // Execute create data channel and start the session.
-func (s *Session) Execute(log log.T) (err error) {
+func (s *Session) Execute(ctx context.Context, log log.T) (err error) {
 	log.Infof("Starting session with SessionId: %s", s.SessionId)
 
 	// sets the display mode
 	s.DisplayMode = sessionutil.NewDisplayMode(log)
 
-	if err = s.OpenDataChannel(log); err != nil {
+	if err = s.OpenDataChannel(ctx, log); err != nil {
 		log.Errorf("Error in Opening data channel: %v", err)
 
-		return
+		return err
 	}
 
-	handleStreamMessageResendTimeout(s, log)
+	handleStreamMessageResendTimeout(ctx, s, log)
 
 	// The session type is set either by handshake or the first packet received.
 	if !<-s.DataChannel.IsSessionTypeSet() {
@@ -249,12 +241,12 @@ func (s *Session) Execute(log log.T) (err error) {
 		s.SessionType = s.DataChannel.GetSessionType()
 		s.SessionProperties = s.DataChannel.GetSessionProperties()
 
-		if err = setSessionHandlersWithSessionType(s, log); err != nil {
+		if err = setSessionHandlersWithSessionType(ctx, s, log); err != nil {
 			log.Errorf("Session ending with error: %v", err)
 
-			return
+			return err
 		}
 	}
 
-	return
+	return err
 }

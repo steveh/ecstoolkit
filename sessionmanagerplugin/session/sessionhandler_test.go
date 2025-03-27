@@ -15,6 +15,7 @@
 package session
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -43,7 +44,7 @@ func TestOpenDataChannel(t *testing.T) {
 	SetupMockActions()
 	mockDataChannel.On("Open", mock.Anything).Return(nil)
 
-	err := sessionMock.OpenDataChannel(logger)
+	err := sessionMock.OpenDataChannel(context.TODO(), logger)
 	assert.NoError(t, err)
 }
 
@@ -61,7 +62,7 @@ func TestOpenDataChannelWithError(t *testing.T) {
 	mockDataChannel.On("Reconnect", mock.Anything).Return(errors.New("error")).Once()
 	mockDataChannel.On("Reconnect", mock.Anything).Return(nil).Once()
 
-	err := sessionMock.OpenDataChannel(logger)
+	err := sessionMock.OpenDataChannel(context.TODO(), logger)
 	assert.NoError(t, err)
 }
 

@@ -15,6 +15,7 @@
 package portsession
 
 import (
+	"context"
 	"io"
 	"os"
 	"time"
@@ -33,6 +34,9 @@ type StandardStreamForwarding struct {
 	session        session.Session
 }
 
+// Ensure StandardStreamForwarding implements IPortSession.
+var _ IPortSession = (*StandardStreamForwarding)(nil)
+
 // IsStreamNotSet checks if streams are not set.
 func (p *StandardStreamForwarding) IsStreamNotSet() (status bool) {
 	return p.inputStream == nil || p.outputStream == nil
@@ -47,7 +51,7 @@ func (p *StandardStreamForwarding) Stop() error {
 }
 
 // InitializeStreams initializes the streams with its file descriptors.
-func (p *StandardStreamForwarding) InitializeStreams(log log.T, agentVersion string) (err error) {
+func (p *StandardStreamForwarding) InitializeStreams(_ context.Context, log log.T, agentVersion string) (err error) {
 	p.inputStream = os.Stdin
 	p.outputStream = os.Stdout
 
@@ -55,7 +59,7 @@ func (p *StandardStreamForwarding) InitializeStreams(log log.T, agentVersion str
 }
 
 // ReadStream reads data from the input stream.
-func (p *StandardStreamForwarding) ReadStream(log log.T) (err error) {
+func (p *StandardStreamForwarding) ReadStream(_ context.Context, log log.T) (err error) {
 	msg := make([]byte, config.StreamDataPayloadSize)
 
 	for {

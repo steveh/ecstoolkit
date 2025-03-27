@@ -52,7 +52,7 @@ func setState(state *bytes.Buffer) error {
 func (s *ShellSession) Stop() error {
 	// Must be closed to avoid errors.
 	if err := s.Session.DataChannel.Close(s.log); err != nil {
-		return fmt.Errorf("closing DataChannel: %v", err)
+		return fmt.Errorf("closing DataChannel: %w", err)
 	}
 
 	s.shutdown()
@@ -73,36 +73,41 @@ func (s *ShellSession) enableEchoAndInputBuffering() {
 }
 
 // handleKeyboardInput handles input entered by customer on terminal.
-func (s *ShellSession) handleKeyboardInput(log log.T) (err error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
+func (s *ShellSession) handleKeyboardInput(ctx context.Context, log log.T) (err error) {
+	ctx, cancelFunc := context.WithCancel(ctx)
 	s.shutdown = cancelFunc
 
-	//handle double echo and disable input buffering
+	// handle double echo and disable input buffering
 	s.disableEchoAndInputBuffering()
 	defer s.enableEchoAndInputBuffering()
 
 	go func() {
 		stdinBytes := make([]byte, StdinBufferLimit)
 		reader := bufio.NewReader(os.Stdin)
+
 		for {
 			var stdinBytesLen int
+
 			if stdinBytesLen, err = reader.Read(stdinBytes); err != nil {
 				log.Errorf("Unable read from Stdin: %v", err)
+
 				break
 			}
 
 			if err = s.Session.DataChannel.SendInputDataMessage(log, message.Output, stdinBytes[:stdinBytesLen]); err != nil {
 				log.Errorf("Failed to send UTF8 char: %v", err)
+
 				break
 			}
 			// sleep to limit the rate of data transfer
 			time.Sleep(time.Millisecond)
 		}
+
 		s.shutdown()
 	}()
 
 	// Wait for context to be canceled by a call to Stop(), or stdin closing
 	<-ctx.Done()
 
-	return
+	return err
 }
