@@ -26,7 +26,7 @@ import (
 	"github.com/steveh/ecstoolkit/message"
 	"github.com/steveh/ecstoolkit/sessionmanagerplugin/session"
 	"github.com/steveh/ecstoolkit/sessionmanagerplugin/session/sessionutil"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 const (
@@ -43,7 +43,7 @@ type ShellSession struct {
 }
 
 var GetTerminalSizeCall = func(fd int) (width int, height int, err error) {
-	return terminal.GetSize(fd)
+	return term.GetSize(fd)
 }
 
 func init() {
