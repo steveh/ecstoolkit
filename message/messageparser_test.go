@@ -178,13 +178,15 @@ func TestPutString(t *testing.T) {
 				tc.offsetStart,
 				tc.offsetEnd,
 				strInput)
-			if tc.expectation == SUCCESS {
+
+			switch tc.expectation {
+			case SUCCESS:
 				assert.NoError(t, err, "%s:%s threw an error when no error was expected.", t.Name(), tc.name)
 				assert.Contains(t, string(tc.byteArray), tc.expected)
-			} else if tc.expectation == ERROR {
+			case ERROR:
 				assert.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
 				assert.Contains(t, err.Error(), tc.expected, "%s:%s does not contain the intended message. Expected: \"%s\", Actual: \"%s\"", tc.expected, err)
-			} else {
+			default:
 				t.Fatal("Test expectation was not correctly set.")
 			}
 		})
@@ -245,13 +247,15 @@ func TestPutBytes(t *testing.T) {
 				tc.offsetStart,
 				tc.offsetEnd,
 				byteInput)
-			if tc.expectation == SUCCESS {
+
+			switch tc.expectation {
+			case SUCCESS:
 				assert.NoError(t, err, "%s:%s threw an error when no error was expected.", t.Name(), tc.name)
 				assert.True(t, reflect.DeepEqual(tc.byteArray, tc.expected))
-			} else if tc.expectation == ERROR {
+			case ERROR:
 				assert.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
 				assert.Contains(t, err.Error(), tc.expected, "%s:%s does not contain the intended message. Expected: \"%s\", Actual: \"%s\"", tc.expected, err)
-			} else {
+			default:
 				t.Fatal("Test expectation was not correctly set.")
 			}
 		})
@@ -279,10 +283,12 @@ func TestLongToBytes(t *testing.T) {
 		testString := "Running test case: " + tc.name
 		t.Run(testString, func(t *testing.T) {
 			bytes, err := longToBytes(mockLogger, tc.input)
-			if tc.expectation == SUCCESS {
+
+			switch tc.expectation {
+			case SUCCESS:
 				assert.NoError(t, err, "An error was thrown when none was expected.")
 				assert.True(t, reflect.DeepEqual(bytes, tc.expected))
-			} else if tc.expectation == ERROR {
+			case ERROR:
 				assert.Error(t, err, "No error was thrown when one was expected.")
 				assert.Contains(t, err, tc.expected)
 			}
@@ -362,13 +368,15 @@ func TestPutLong(t *testing.T) {
 				tc.byteArray,
 				tc.offsetStart,
 				int64(longInput))
-			if tc.expectation == SUCCESS {
+
+			switch tc.expectation {
+			case SUCCESS:
 				assert.NoError(t, err, "%s:%s threw an error when no error was expected.", t.Name(), tc.name)
 				assert.Equal(t, tc.expected, tc.byteArray)
-			} else if tc.expectation == ERROR {
+			case ERROR:
 				assert.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
 				assert.Contains(t, err.Error(), tc.expected, "%s:%s does not contain the intended message. Expected: \"%s\", Actual: \"%s\"", tc.expected, err)
-			} else {
+			default:
 				t.Fatal("Test expectation was not correctly set.")
 			}
 		})
@@ -447,13 +455,15 @@ func TestPutInteger(t *testing.T) {
 				tc.byteArray,
 				tc.offsetStart,
 				int32(intInput))
-			if tc.expectation == SUCCESS {
+
+			switch tc.expectation {
+			case SUCCESS:
 				assert.NoError(t, err, "%s:%s threw an error when no error was expected.", t.Name(), tc.name)
 				assert.Equal(t, tc.expected, tc.byteArray)
-			} else if tc.expectation == ERROR {
+			case ERROR:
 				assert.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
 				assert.Contains(t, err.Error(), tc.expected, "%s:%s does not contain the intended message. Expected: \"%s\", Actual: \"%s\"", tc.expected, err)
-			} else {
+			default:
 				t.Fatal("Test expectation was not correctly set.")
 			}
 		})
@@ -509,13 +519,15 @@ func TestGetString(t *testing.T) {
 				tc.byteArray,
 				tc.offsetStart,
 				tc.offsetEnd)
-			if tc.expectation == SUCCESS {
+
+			switch tc.expectation {
+			case SUCCESS:
 				assert.NoError(t, err, "%s:%s threw an error when no error was expected.", t.Name(), tc.name)
 				assert.Equal(t, tc.expected, strOut)
-			} else if tc.expectation == ERROR {
+			case ERROR:
 				assert.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
 				assert.Contains(t, err.Error(), tc.expected, "%s:%s does not contain the intended message. Expected: \"%s\", Actual: \"%s\"", tc.expected, err)
-			} else {
+			default:
 				t.Fatal("Test expectation was not correctly set.")
 			}
 		})
@@ -571,13 +583,15 @@ func TestGetBytes(t *testing.T) {
 				tc.byteArray,
 				tc.offsetStart,
 				tc.offsetEnd)
-			if tc.expectation == SUCCESS {
+
+			switch tc.expectation {
+			case SUCCESS:
 				assert.NoError(t, err, "%s:%s threw an error when no error was expected.", t.Name(), tc.name)
 				assert.Equal(t, tc.expected, byteOut)
-			} else if tc.expectation == ERROR {
+			case ERROR:
 				assert.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
 				assert.Contains(t, err.Error(), tc.expected, "%s:%s does not contain the intended message. Expected: \"%s\", Actual: \"%s\"", tc.expected, err)
-			} else {
+			default:
 				t.Fatal("Test expectation was not correctly set.")
 			}
 		})
@@ -652,16 +666,17 @@ func TestGetLong(t *testing.T) {
 				tc.offsetStart)
 			assert.IsType(t, int64(1), longOut, "Returned value is not the correct type.")
 
-			if tc.expectation == SUCCESS {
+			switch tc.expectation {
+			case SUCCESS:
 				expectedInt := tc.expected.(int)
 				expectedLong := int64(expectedInt)
 
 				assert.NoError(t, err, "%s:%s threw an error when no error was expected.", t.Name(), tc.name)
 				assert.Equal(t, expectedLong, longOut)
-			} else if tc.expectation == ERROR {
+			case ERROR:
 				assert.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
 				assert.Contains(t, err.Error(), tc.expected, "%s:%s does not contain the intended message. Expected: \"%s\", Actual: \"%s\"", tc.expected, err)
-			} else {
+			default:
 				t.Fatal("Test expectation was not correctly set.")
 			}
 		})
@@ -853,7 +868,9 @@ func TestPutUuid(t *testing.T) {
 				tc.byteArray,
 				tc.offsetStart,
 				uuidInput)
-			if tc.expectation == SUCCESS {
+
+			switch tc.expectation {
+			case SUCCESS:
 				assert.NoError(t, err, "%s:%s threw an error when no error was expected.", t.Name(), tc.name)
 				strExpected := tc.expected.(string)
 				uuidOut, err := uuid.Parse(strExpected)
@@ -862,10 +879,10 @@ func TestPutUuid(t *testing.T) {
 				expectedBuffer := get16ByteBuffer()
 				putUuid(mockLogger, expectedBuffer, 0, uuidOut)
 				assert.Equal(t, expectedBuffer, tc.byteArray)
-			} else if tc.expectation == ERROR {
+			case ERROR:
 				assert.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
 				assert.Contains(t, err.Error(), tc.expected, "%s:%s does not contain the intended message. Expected: \"%s\", Actual: \"%s\"", tc.expected, err)
-			} else {
+			default:
 				t.Fatal("Test expectation was not correctly set.")
 			}
 		})

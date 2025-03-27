@@ -1,11 +1,20 @@
+version: "2"
 linters:
-  enable-all: true
+  default: all
   disable:
-    - varnamelen
+    - cyclop
+    - depguard
     - exhaustruct
     - funlen
-    - depguard
-    - lll
-    - tenv
     - gocognit
-    - cyclop
+    - lll
+  exclusions:
+    generated: lax
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
+  exclusions:
+    generated: lax

@@ -51,7 +51,7 @@ func setState(state *bytes.Buffer) error {
 // Stop restores the terminal settings and exits.
 func (s *ShellSession) Stop() error {
 	// Must be closed to avoid errors.
-	if err := s.Session.DataChannel.Close(s.log); err != nil {
+	if err := s.DataChannel.Close(s.log); err != nil {
 		return fmt.Errorf("closing DataChannel: %w", err)
 	}
 
@@ -94,7 +94,7 @@ func (s *ShellSession) handleKeyboardInput(ctx context.Context, log log.T) (err 
 				break
 			}
 
-			if err = s.Session.DataChannel.SendInputDataMessage(log, message.Output, stdinBytes[:stdinBytesLen]); err != nil {
+			if err = s.DataChannel.SendInputDataMessage(log, message.Output, stdinBytes[:stdinBytesLen]); err != nil {
 				log.Errorf("Failed to send UTF8 char: %v", err)
 
 				break

@@ -109,7 +109,7 @@ func TestHandleDataTransferSrcToDst(t *testing.T) {
 	}()
 
 	handleDataTransfer(in1, out)
-	assert.EqualValues(t, outputMessage.Payload, msg)
+	assert.Equal(t, outputMessage.Payload, msg)
 }
 
 func TestHandleDataTransferDstToSrc(t *testing.T) {
@@ -129,5 +129,5 @@ func TestHandleDataTransferDstToSrc(t *testing.T) {
 	}()
 
 	handleDataTransfer(in, out1)
-	assert.EqualValues(t, outputMessage.Payload, msg)
+	assert.Equal(t, outputMessage.Payload, msg)
 }
