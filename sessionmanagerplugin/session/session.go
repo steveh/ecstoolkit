@@ -74,7 +74,7 @@ type Session struct {
 	Endpoint              string
 	ClientId              string
 	TargetId              string
-	ssmClient             *ssm.Client
+	SSMClient             *ssm.Client
 	retryParams           retry.RepeatableExponentialRetryer
 	SessionType           string
 	SessionProperties     interface{}
@@ -97,7 +97,7 @@ var setSessionHandlersWithSessionType = func(ctx context.Context, session *Sessi
 
 // Set up a scheduler to listen on stream data resend timeout event.
 var handleStreamMessageResendTimeout = func(ctx context.Context, session *Session, log log.T) {
-	log.Tracef("Setting up scheduler to listen on IsStreamMessageResendTimeout event.")
+	log.Debug("Setting up scheduler to listen on IsStreamMessageResendTimeout event.")
 	go func() {
 		for {
 			// Repeat this loop for every 200ms

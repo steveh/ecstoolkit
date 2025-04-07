@@ -35,6 +35,8 @@ type PortSession struct {
 	portSessionType IPortSession
 }
 
+var _ session.ISessionPlugin = (*PortSession)(nil)
+
 type IPortSession interface {
 	IsStreamNotSet() (status bool)
 	InitializeStreams(ctx context.Context, log log.T, agentVersion string) (err error)

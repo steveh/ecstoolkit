@@ -45,6 +45,8 @@ type ShellSession struct {
 	log               log.T
 }
 
+var _ session.ISessionPlugin = (*ShellSession)(nil)
+
 var GetTerminalSizeCall = func(fd int) (width int, height int, err error) {
 	return term.GetSize(fd)
 }
