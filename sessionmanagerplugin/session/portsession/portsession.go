@@ -53,10 +53,6 @@ type PortParameters struct {
 	Type                string `json:"type"`
 }
 
-func init() {
-	session.Register(&PortSession{})
-}
-
 // Name is the session name used inputStream the plugin.
 func (PortSession) Name() string {
 	return config.PortPluginName

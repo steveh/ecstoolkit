@@ -51,10 +51,6 @@ var GetTerminalSizeCall = func(fd int) (width int, height int, err error) {
 	return term.GetSize(fd)
 }
 
-func init() {
-	session.Register(&ShellSession{})
-}
-
 // Name is the session name used in the plugin.
 func (ShellSession) Name() string {
 	return config.ShellPluginName
