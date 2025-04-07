@@ -141,7 +141,7 @@ type StreamingMessage struct {
 
 type OutputStreamDataMessageHandler func(log log.T, streamDataMessage message.ClientMessage) (bool, error)
 
-type Stop func() error
+type Stop func(log log.T) error
 
 var SendAcknowledgeMessageCall = func(log log.T, dataChannel *DataChannel, streamDataMessage message.ClientMessage) error {
 	return dataChannel.SendAcknowledgeMessage(log, streamDataMessage)
@@ -858,7 +858,7 @@ func (dataChannel DataChannel) HandleChannelClosedMessage(log log.T, stopHandler
 		log.Infof("SessionId: %s : %s", sessionId, channelClosedMessage.Output)
 	}
 
-	stopHandler()
+	stopHandler(log)
 }
 
 // AddDataToOutgoingMessageBuffer removes first message from OutgoingMessageBuffer if capacity is full and adds given message at the end.

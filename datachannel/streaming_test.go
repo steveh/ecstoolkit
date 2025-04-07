@@ -307,7 +307,7 @@ func TestDataChannelIncomingMessageHandlerForExpectedInputStreamDataMessage(t *t
 		return true, nil
 	}
 
-	var stopHandler Stop = func() error {
+	var stopHandler Stop = func(log log.T) error {
 		return nil
 	}
 
@@ -350,7 +350,7 @@ func TestDataChannelIncomingMessageHandlerForUnexpectedInputStreamDataMessage(t 
 		return nil
 	}
 
-	var stopHandler Stop = func() error {
+	var stopHandler Stop = func(log log.T) error {
 		return nil
 	}
 
@@ -381,7 +381,7 @@ func TestDataChannelIncomingMessageHandlerForAcknowledgeMessage(t *testing.T) {
 	mockChannel := &communicatorMocks.IWebSocketChannel{}
 	dataChannel.wsChannel = mockChannel
 
-	var stopHandler Stop = func() error {
+	var stopHandler Stop = func(log log.T) error {
 		return nil
 	}
 
@@ -436,7 +436,7 @@ func TestDataChannelIncomingMessageHandlerForPausePublicationessage(t *testing.T
 		return true, nil
 	}
 
-	var stopHandler Stop = func() error {
+	var stopHandler Stop = func(log log.T) error {
 		return nil
 	}
 
@@ -496,7 +496,7 @@ func TestHandshakeRequestHandler(t *testing.T) {
 			reflect.DeepEqual(handshakeResponse.ProcessedClientActions, expectedActions)
 	}
 	mockChannel.On("SendMessage", mock.Anything, mock.MatchedBy(handshakeResponseMatcher), mock.Anything).Return(nil)
-	dataChannel.OutputMessageHandler(context.TODO(), mockLogger, func() error { return nil }, sessionId, handshakeRequestMessageBytes)
+	dataChannel.OutputMessageHandler(context.TODO(), mockLogger, func(log log.T) error { return nil }, sessionId, handshakeRequestMessageBytes)
 	assert.Equal(t, mockEncrypter, dataChannel.encryption)
 }
 

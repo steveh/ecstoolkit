@@ -43,7 +43,7 @@ func (p *StandardStreamForwarding) IsStreamNotSet() (status bool) {
 }
 
 // Stop closes the streams.
-func (p *StandardStreamForwarding) Stop() error {
+func (p *StandardStreamForwarding) Stop(log log.T) error {
 	p.inputStream.Close()
 	p.outputStream.Close()
 

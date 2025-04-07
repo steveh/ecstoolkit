@@ -61,7 +61,7 @@ func (p *BasicPortForwarding) IsStreamNotSet() (status bool) {
 }
 
 // Stop closes the stream.
-func (p *BasicPortForwarding) Stop() error {
+func (p *BasicPortForwarding) Stop(log log.T) error {
 	if p.stream != nil {
 		(*p.stream).Close()
 	}
@@ -196,7 +196,7 @@ func (p *BasicPortForwarding) handleControlSignals(ctx context.Context, log log.
 			}
 
 			log.Infof("Exiting session with sessionId: %s.", p.sessionId)
-			p.Stop()
+			p.Stop(log)
 		} else {
 			p.session.TerminateSession(ctx, log)
 		}

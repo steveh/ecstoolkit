@@ -40,7 +40,7 @@ type IPortSession interface {
 	InitializeStreams(ctx context.Context, log log.T, agentVersion string) (err error)
 	ReadStream(ctx context.Context, log log.T) (err error)
 	WriteStream(outputMessage message.ClientMessage) (err error)
-	Stop() error
+	Stop(log log.T) error
 }
 
 type PortParameters struct {
@@ -111,8 +111,8 @@ func (s *PortSession) Initialize(ctx context.Context, log log.T, sessionVar *ses
 	log.Infof("Connected to instance[%s] on port: %s", sessionVar.TargetId, s.portParameters.PortNumber)
 }
 
-func (s *PortSession) Stop() error {
-	return s.portSessionType.Stop()
+func (s *PortSession) Stop(log log.T) error {
+	return s.portSessionType.Stop(log)
 }
 
 // StartSession redirects inputStream/outputStream data to datachannel.

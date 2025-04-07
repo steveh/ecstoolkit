@@ -83,7 +83,7 @@ func (p *MuxPortForwarding) IsStreamNotSet() (status bool) {
 }
 
 // Stop closes all open stream.
-func (p *MuxPortForwarding) Stop() error {
+func (p *MuxPortForwarding) Stop(log log.T) error {
 	if p.mgsConn != nil {
 		p.mgsConn.close()
 	}
@@ -211,7 +211,7 @@ func (p *MuxPortForwarding) handleControlSignals(log log.T) {
 		}
 
 		log.Infof("Exiting session with sessionId: %s.", p.sessionId)
-		p.Stop()
+		p.Stop(log)
 	}()
 }
 
