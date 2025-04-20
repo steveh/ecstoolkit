@@ -21,7 +21,7 @@ import (
 	"github.com/steveh/ecstoolkit/jsonutil"
 	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
-	"github.com/steveh/ecstoolkit/sessionmanagerplugin/session"
+	"github.com/steveh/ecstoolkit/session"
 	"github.com/steveh/ecstoolkit/version"
 )
 

@@ -25,7 +25,7 @@ import (
 	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
 	"github.com/steveh/ecstoolkit/retry"
-	"github.com/steveh/ecstoolkit/sessionmanagerplugin/session/sessionutil"
+	"github.com/steveh/ecstoolkit/session/sessionutil"
 )
 
 var SessionRegistry = map[string]ISessionPlugin{}

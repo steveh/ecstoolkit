@@ -30,8 +30,8 @@ import (
 	dataChannelMock "github.com/steveh/ecstoolkit/datachannel/mocks"
 	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
-	"github.com/steveh/ecstoolkit/sessionmanagerplugin/session"
-	"github.com/steveh/ecstoolkit/sessionmanagerplugin/session/sessionutil"
+	"github.com/steveh/ecstoolkit/session"
+	"github.com/steveh/ecstoolkit/session/sessionutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )

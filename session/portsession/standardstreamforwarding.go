@@ -23,7 +23,7 @@ import (
 	"github.com/steveh/ecstoolkit/config"
 	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
-	"github.com/steveh/ecstoolkit/sessionmanagerplugin/session"
+	"github.com/steveh/ecstoolkit/session"
 )
 
 type StandardStreamForwarding struct {
