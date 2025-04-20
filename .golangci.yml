@@ -8,6 +8,7 @@ linters:
     - funlen
     - gocognit
     - lll
+    - varnamelen
   exclusions:
     generated: lax
 formatters:

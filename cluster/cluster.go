@@ -1,3 +1,5 @@
+// Package cluster provides functionality for managing AWS ECS clusters, including
+// service management, task definitions, and container operations.
 package cluster
 
 import (
@@ -21,19 +23,29 @@ import (
 )
 
 var (
-	ErrServiceNotFound   = errors.New("service not found")
+	// ErrServiceNotFound is returned when a requested service cannot be found in the cluster.
+	ErrServiceNotFound = errors.New("service not found")
+	// ErrContainerNotFound is returned when a requested container cannot be found in a task.
 	ErrContainerNotFound = errors.New("container not found")
-	ErrTaskNotFound      = errors.New("task not found")
-	ErrNoTasks           = errors.New("no tasks running")
-
-	maxWaitTime = 5 * time.Minute
+	// ErrTaskNotFound is returned when a requested task cannot be found in the cluster.
+	ErrTaskNotFound = errors.New("task not found")
+	// ErrNoTasks is returned when there are no running tasks in the service.
+	ErrNoTasks = errors.New("no tasks running")
+	// ErrInvalidImage is returned when the image format is not valid.
+	ErrInvalidImage = errors.New("invalid image format")
+	// ErrInvalidTaskDefinition is returned when the task definition ARN format is not valid.
+	ErrInvalidTaskDefinition = errors.New("invalid task definition ARN")
 )
 
+const maxWaitTime = 5 * time.Minute
+
+// ServiceTaskDefinition represents a service and its associated task definition.
 type ServiceTaskDefinition struct {
 	Service        types.Service
 	TaskDefinition types.TaskDefinition
 }
 
+// Cluster represents an AWS ECS cluster with methods for managing services and tasks.
 type Cluster struct {
 	ecsClient   *ecs.Client
 	stsClient   *sts.Client
@@ -42,6 +54,7 @@ type Cluster struct {
 	executor    *executor.Executor
 }
 
+// NewCluster creates a new Cluster instance with the provided AWS configuration and cluster name.
 func NewCluster(awsCfg aws.Config, clusterName string) *Cluster {
 	ecsClient := ecs.NewFromConfig(awsCfg)
 	kmsClient := kms.NewFromConfig(awsCfg)
@@ -58,6 +71,7 @@ func NewCluster(awsCfg aws.Config, clusterName string) *Cluster {
 	}
 }
 
+// DescribeAllServices returns a list of all services in the cluster.
 func (c *Cluster) DescribeAllServices(ctx context.Context) ([]types.Service, error) {
 	const (
 		MaxListServices     = 100
@@ -95,6 +109,7 @@ func (c *Cluster) DescribeAllServices(ctx context.Context) ([]types.Service, err
 	return services, nil
 }
 
+// RunConsole starts a new task with an interactive console session.
 func (c *Cluster) RunConsole(ctx context.Context, serviceName string, containerName string) (arn.ARN, error) {
 	service, err := c.describeService(ctx, serviceName)
 	if err != nil {
@@ -125,7 +140,7 @@ func (c *Cluster) RunConsole(ctx context.Context, serviceName string, containerN
 			ContainerOverrides: []types.ContainerOverride{
 				{
 					Name:    aws.String(containerName),
-					Command: []string{"sleep", "3600"}, // TODO: inf?
+					Command: []string{"sleep", "86400"}, // Sleep for 24 hours to keep container running
 				},
 			},
 		},
@@ -162,6 +177,7 @@ func (c *Cluster) RunConsole(ctx context.Context, serviceName string, containerN
 	return taskARN, nil
 }
 
+// ReplaceTaskDefinitionTag updates the image tag in a task definition.
 func (c *Cluster) ReplaceTaskDefinitionTag(ctx context.Context, taskDefinitionARN arn.ARN, replacer func(repo, image, tag string) string) (arn.ARN, error) {
 	family, _, err := splitTaskDefinitionARN(taskDefinitionARN)
 	if err != nil {
@@ -221,6 +237,7 @@ func (c *Cluster) ReplaceTaskDefinitionTag(ctx context.Context, taskDefinitionAR
 	return replacementARN, nil
 }
 
+// Attach attaches to a running container and executes a command.
 func (c *Cluster) Attach(ctx context.Context, taskARN arn.ARN, containerName string, command string) error {
 	describe, err := c.ecsClient.DescribeTasks(ctx, &ecs.DescribeTasksInput{
 		Cluster: aws.String(c.clusterName),
@@ -252,6 +269,7 @@ func (c *Cluster) Attach(ctx context.Context, taskARN arn.ARN, containerName str
 	return nil
 }
 
+// Deploy updates a service with a new task definition.
 func (c *Cluster) Deploy(ctx context.Context, serviceName string, taskDefinitionARN arn.ARN) error {
 	_, err := c.ecsClient.UpdateService(ctx, &ecs.UpdateServiceInput{
 		Cluster:            aws.String(c.clusterName),
@@ -266,6 +284,7 @@ func (c *Cluster) Deploy(ctx context.Context, serviceName string, taskDefinition
 	return nil
 }
 
+// GetFirstTaskARN returns the ARN of the first running task for a service.
 func (c *Cluster) GetFirstTaskARN(ctx context.Context, serviceName string) (arn.ARN, error) {
 	listTasks, err := c.ecsClient.ListTasks(ctx, &ecs.ListTasksInput{
 		Cluster:       aws.String(c.clusterName),
@@ -288,6 +307,7 @@ func (c *Cluster) GetFirstTaskARN(ctx context.Context, serviceName string) (arn.
 	return parsedARN, nil
 }
 
+// DescribeServiceTaskDefinitions returns all services and their associated task definitions.
 func (c *Cluster) DescribeServiceTaskDefinitions(ctx context.Context) ([]ServiceTaskDefinition, error) {
 	services, err := c.DescribeAllServices(ctx)
 	if err != nil {
@@ -361,14 +381,14 @@ func detectContainerRuntimeID(tasks []types.Task, containerName string) (string,
 }
 
 func splitImage(uri string) (string, string, string, error) {
-	firstParts := strings.SplitN(uri, "/", 2)
-	if len(firstParts) < 2 {
-		return "", "", "", fmt.Errorf("splitting repo and image: %s", uri)
+	firstParts := strings.SplitN(uri, "/", 2) //nolint:mnd
+	if len(firstParts) < 2 {                  //nolint:mnd
+		return "", "", "", fmt.Errorf("%w: splitting repo and image: %s", ErrInvalidImage, uri)
 	}
 
 	secondParts := strings.Split(firstParts[1], ":")
-	if len(secondParts) < 2 {
-		return "", "", "", fmt.Errorf("splitting image and tag: %s", uri)
+	if len(secondParts) < 2 { //nolint:mnd
+		return "", "", "", fmt.Errorf("%w: splitting image and tag: %s", ErrInvalidImage, uri)
 	}
 
 	repo := firstParts[0]
@@ -380,13 +400,13 @@ func splitImage(uri string) (string, string, string, error) {
 
 func splitTaskDefinitionARN(taskDefinitionARN arn.ARN) (string, int, error) {
 	taskDefinitionResource := strings.Split(taskDefinitionARN.Resource, "/")
-	if len(taskDefinitionResource) < 2 {
-		return "", 0, fmt.Errorf("splitting resource: %s", taskDefinitionARN.Resource)
+	if len(taskDefinitionResource) < 2 { //nolint:mnd
+		return "", 0, fmt.Errorf("%w: splitting resource: %s", ErrInvalidTaskDefinition, taskDefinitionARN.Resource)
 	}
 
 	resourceParts := strings.Split(taskDefinitionResource[1], ":")
-	if len(resourceParts) < 2 {
-		return "", 0, fmt.Errorf("splitting family and revision: %s", taskDefinitionResource[1])
+	if len(resourceParts) < 2 { //nolint:mnd
+		return "", 0, fmt.Errorf("%w: splitting family and revision: %s", ErrInvalidTaskDefinition, taskDefinitionResource[1])
 	}
 
 	family := resourceParts[0]
