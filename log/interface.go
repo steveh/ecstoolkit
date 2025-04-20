@@ -1,8 +1,12 @@
 // Package log is used to initialize the logger.
 package log
 
+import "github.com/aws/smithy-go/logging"
+
 // T represents structs capable of logging messages.
 type T interface {
+	Logf(classification logging.Classification, format string, params ...any)
+
 	// Tracef formats message according to format specifier
 	// and writes to log with level Trace.
 	Tracef(format string, params ...any)
