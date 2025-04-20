@@ -30,50 +30,84 @@ func init() {
 }
 
 type ExecuteSessionOptions struct {
-	Cluster            string
+	ClusterName        string
 	TaskARN            string
 	ContainerName      string
 	ContainerRuntimeID string
 	Command            string
 }
 
-// ExecuteSession runs an ECS Exec command.
-func ExecuteSession(ctx context.Context, ecsClient *ecs.Client, ssmClient *ssm.Client, kmsClient *kms.Client, logger *slog.Logger, options ExecuteSessionOptions) error {
-	parsedARN, err := arn.Parse(options.TaskARN)
+type Executor struct {
+	ecsClient *ecs.Client
+	kmsClient *kms.Client
+	ssmClient *ssm.Client
+	logger    log.Slogger
+}
+
+func NewExecutor(ecsClient *ecs.Client, kmsClient *kms.Client, ssmClient *ssm.Client, logger *slog.Logger) *Executor {
+	return &Executor{
+		ecsClient: ecsClient,
+		kmsClient: kmsClient,
+		ssmClient: ssmClient,
+		logger:    log.NewSlogger(logger),
+	}
+}
+
+func NewFromConfig(cfg aws.Config, logger *slog.Logger) *Executor {
+	ecsClient := ecs.NewFromConfig(cfg)
+	kmsClient := kms.NewFromConfig(cfg)
+	ssmClient := ssm.NewFromConfig(cfg)
+
+	return NewExecutor(ecsClient, kmsClient, ssmClient, logger)
+}
+
+func (e *Executor) parseARN(taskARN string) (string, string, error) {
+	parsedARN, err := arn.Parse(taskARN)
 	if err != nil {
-		return fmt.Errorf("invalid ARN: %w", err)
+		return "", "", fmt.Errorf("invalid ARN: %w", err)
 	}
 
 	// if we could guarantee the task ARN was in the newer long format we could extract the cluster name from there
 	taskResourceParts := strings.Split(parsedARN.Resource, "/")
 	if len(taskResourceParts) < 3 {
-		return fmt.Errorf("invalid resource ID: %s", parsedARN.Resource)
+		return "", "", fmt.Errorf("invalid resource ID: %s", parsedARN.Resource)
 	}
 
 	taskID := taskResourceParts[2]
 
-	execute, err := ecsClient.ExecuteCommand(ctx, &ecs.ExecuteCommandInput{
-		Cluster:     aws.String(options.Cluster),
-		Task:        aws.String(parsedARN.String()),
+	return parsedARN.Region, taskID, nil
+}
+
+func (e *Executor) executeCommand(ctx context.Context, options *ExecuteSessionOptions) (*ecs.ExecuteCommandOutput, error) {
+	execute, err := e.ecsClient.ExecuteCommand(ctx, &ecs.ExecuteCommandInput{
+		Cluster:     aws.String(options.ClusterName),
+		Task:        aws.String(options.TaskARN),
 		Container:   aws.String(options.ContainerName),
 		Command:     aws.String(options.Command),
 		Interactive: true,
 	})
 	if err != nil {
-		return fmt.Errorf("execute command: %w", err)
+		return nil, fmt.Errorf("execute command: %w", err)
 	}
 
-	endpoint := url.URL{Scheme: "https", Host: fmt.Sprintf("ssm.%s.amazonaws.com", parsedARN.Region)}
+	return execute, nil
+}
+
+func (e *Executor) newSession(options *ExecuteSessionOptions, execute *ecs.ExecuteCommandOutput) (*session.Session, error) {
+	region, taskID, err := e.parseARN(options.TaskARN)
+	if err != nil {
+		return nil, err
+	}
+
+	endpoint := url.URL{Scheme: "https", Host: fmt.Sprintf("ssm.%s.amazonaws.com", region)}
 
 	clientID, err := uuid.NewRandom()
 	if err != nil {
-		return fmt.Errorf("generate UUID: %w", err)
+		return nil, fmt.Errorf("generate UUID: %w", err)
 	}
 
-	log := log.NewSlogger(logger)
-
 	dc := datachannel.DataChannel{
-		KMSClient: kmsClient,
+		KMSClient: e.kmsClient,
 	}
 
 	sess := session.Session{
@@ -83,12 +117,16 @@ func ExecuteSession(ctx context.Context, ecsClient *ecs.Client, ssmClient *ssm.C
 		TokenValue:  *execute.Session.TokenValue,
 		Endpoint:    endpoint.String(),
 		ClientId:    clientID.String(),
-		TargetId:    fmt.Sprintf("ecs:%s_%s_%s", options.Cluster, taskID, options.ContainerRuntimeID),
-		DisplayMode: sessionutil.NewDisplayMode(log),
-		SSMClient:   ssmClient,
+		TargetId:    fmt.Sprintf("ecs:%s_%s_%s", options.ClusterName, taskID, options.ContainerRuntimeID),
+		DisplayMode: sessionutil.NewDisplayMode(e.logger),
+		SSMClient:   e.ssmClient,
 	}
 
-	if err := sess.OpenDataChannel(ctx, log); err != nil {
+	return &sess, nil
+}
+
+func (e *Executor) initSession(ctx context.Context, sess *session.Session) error {
+	if err := sess.OpenDataChannel(ctx, e.logger); err != nil {
 		return fmt.Errorf("open data channel: %w", err)
 	}
 
@@ -100,10 +138,10 @@ func ExecuteSession(ctx context.Context, ecsClient *ecs.Client, ssmClient *ssm.C
 			time.Sleep(config.ResendSleepInterval)
 
 			if <-sess.DataChannel.IsStreamMessageResendTimeout() {
-				log.Errorf("terminating session as the stream data was not processed before timeout: sessionID: %s", sess.SessionId)
+				e.logger.Errorf("terminating session as the stream data was not processed before timeout: sessionID: %s", sess.SessionId)
 
-				if err := sess.TerminateSession(ctx, log); err != nil {
-					log.Errorf("unable to terminate session upon stream data timeout: %v", err)
+				if err := sess.TerminateSession(ctx, e.logger); err != nil {
+					e.logger.Errorf("unable to terminate session upon stream data timeout: %v", err)
 				}
 
 				return
@@ -124,10 +162,28 @@ func ExecuteSession(ctx context.Context, ecsClient *ecs.Client, ssmClient *ssm.C
 		return fmt.Errorf("unknown session type %s", sess.SessionType)
 	}
 
-	sessionSubType.Initialize(ctx, log, &sess)
+	sessionSubType.Initialize(ctx, e.logger, sess)
 
-	if err := sessionSubType.SetSessionHandlers(ctx, log); err != nil {
+	if err := sessionSubType.SetSessionHandlers(ctx, e.logger); err != nil {
 		return fmt.Errorf("ending with error: %w", err)
+	}
+
+	return nil
+}
+
+func (e *Executor) ExecuteSession(ctx context.Context, options *ExecuteSessionOptions) error {
+	execute, err := e.executeCommand(ctx, options)
+	if err != nil {
+		return err
+	}
+
+	sess, err := e.newSession(options, execute)
+	if err != nil {
+		return err
+	}
+
+	if err := e.initSession(ctx, sess); err != nil {
+		return err
 	}
 
 	return nil
