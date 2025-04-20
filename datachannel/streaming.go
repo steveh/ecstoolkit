@@ -925,7 +925,7 @@ func (dataChannel *DataChannel) ProcessKMSEncryptionHandshakeAction(ctx context.
 
 	kmsEncRequest := message.KMSEncryptionRequest{}
 	json.Unmarshal(actionParams, &kmsEncRequest)
-	log.Infof("%+v", actionParams)
+	log.Infof("%+v", kmsEncRequest)
 
 	kmsKeyId := kmsEncRequest.KMSKeyID
 
