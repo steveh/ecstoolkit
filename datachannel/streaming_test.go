@@ -403,12 +403,19 @@ func TestDataChannelIncomingMessageHandlerForAcknowledgeMessage(t *testing.T) {
 		SequenceNumber:      1,
 		IsSequentialMessage: true,
 	}
-	payload, _ = json.Marshal(acknowledgeContent)
-	clientMessage := getClientMessage(0, message.AcknowledgeMessage, uint32(message.Output), payload)
-	serializedClientMessage, _ := clientMessage.SerializeClientMessage(logger)
-	err := dataChannel.OutputMessageHandler(context.TODO(), logger, stopHandler, sessionId, serializedClientMessage)
 
-	assert.NoError(t, err)
+	payload, err := json.Marshal(acknowledgeContent)
+	if err != nil {
+		t.Fatalf("Failed to marshal acknowledge content: %v", err)
+	}
+
+	clientMessage := getClientMessage(0, message.AcknowledgeMessage, uint32(message.Output), payload)
+
+	serializedClientMessage, _ := clientMessage.SerializeClientMessage(logger)
+	if err := dataChannel.OutputMessageHandler(context.TODO(), logger, stopHandler, sessionId, serializedClientMessage); err != nil {
+		t.Fatal(err)
+	}
+
 	assert.Equal(t, 1, ProcessAcknowledgedMessageCallCount)
 	assert.Equal(t, 3, dataChannel.OutgoingMessageBuffer.Messages.Len())
 }
@@ -452,7 +459,11 @@ func TestHandshakeRequestHandler(t *testing.T) {
 	dataChannel.wsChannel = mockChannel
 	mockEncrypter := &mocks.IEncrypter{}
 
-	handshakeRequestBytes, _ := json.Marshal(buildHandshakeRequest())
+	handshakeRequestBytes, err := json.Marshal(buildHandshakeRequest(t))
+	if err != nil {
+		t.Fatalf("Failed to marshal handshake request: %v", err)
+	}
+
 	clientMessage := getClientMessage(0, message.OutputStreamMessage,
 		uint32(message.HandshakeRequestPayloadType), handshakeRequestBytes)
 	handshakeRequestMessageBytes, _ := clientMessage.SerializeClientMessage(mockLogger)
@@ -539,12 +550,16 @@ func TestHandleOutputMessageForExitCodePayloadTypeWithError(t *testing.T) {
 
 func TestHandleHandshakeRequestWithMessageDeserializeError(t *testing.T) {
 	dataChannel := getDataChannel()
-	handshakeRequestBytes, _ := json.Marshal(buildHandshakeRequest())
+
+	handshakeRequestBytes, err := json.Marshal(buildHandshakeRequest(t))
+	if err != nil {
+		t.Fatalf("Failed to marshal handshake request: %v", err)
+	}
 	// Using HandshakeCompletePayloadType to trigger the type check error
 	clientMessage := getClientMessage(0, message.OutputStreamMessage,
 		uint32(message.HandshakeCompletePayloadType), handshakeRequestBytes)
 
-	err := dataChannel.handleHandshakeRequest(context.TODO(), mockLogger, clientMessage)
+	err = dataChannel.handleHandshakeRequest(context.TODO(), mockLogger, clientMessage)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "ClientMessage PayloadType is not of type HandshakeRequestPayloadType")
 }
@@ -560,7 +575,11 @@ func TestProcessOutputMessageWithHandlers(t *testing.T) {
 
 	dataChannel.RegisterOutputStreamHandler(handler, true)
 
-	handshakeRequestBytes, _ := json.Marshal(buildHandshakeRequest())
+	handshakeRequestBytes, err := json.Marshal(buildHandshakeRequest(t))
+	if err != nil {
+		t.Fatalf("Failed to marshal handshake request: %v", err)
+	}
+
 	clientMessage := getClientMessage(0, message.OutputStreamMessage,
 		uint32(message.HandshakeCompletePayloadType), handshakeRequestBytes)
 
@@ -593,19 +612,26 @@ func TestProcessSessionTypeHandshakeActionForNonInteractiveCommands(t *testing.T
 	assert.Equal(t, config.ShellPluginName, dataChannel.sessionType)
 }
 
-func buildHandshakeRequest() message.HandshakeRequestPayload {
+func buildHandshakeRequest(t *testing.T) message.HandshakeRequestPayload {
+	t.Helper()
+
 	handshakeRquest := message.HandshakeRequestPayload{}
 	handshakeRquest.AgentVersion = "10.0.0.1"
 	handshakeRquest.RequestedClientActions = []message.RequestedClientAction{}
 
 	requestedAction := message.RequestedClientAction{}
 	requestedAction.ActionType = message.KMSEncryption
-	requestedAction.ActionParameters, _ = json.Marshal(message.KMSEncryptionRequest{KMSKeyID: kmsKeyId})
+
+	var err error
+	requestedAction.ActionParameters, err = json.Marshal(message.KMSEncryptionRequest{KMSKeyID: kmsKeyId})
+	assert.NoError(t, err)
+
 	handshakeRquest.RequestedClientActions = append(handshakeRquest.RequestedClientActions, requestedAction)
 
 	requestedAction = message.RequestedClientAction{}
 	requestedAction.ActionType = message.SessionType
-	requestedAction.ActionParameters, _ = json.Marshal(message.SessionTypeRequest{SessionType: config.ShellPluginName})
+	requestedAction.ActionParameters, err = json.Marshal(message.SessionTypeRequest{SessionType: config.ShellPluginName})
+	assert.NoError(t, err)
 
 	handshakeRquest.RequestedClientActions = append(handshakeRquest.RequestedClientActions, requestedAction)
 

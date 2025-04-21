@@ -100,7 +100,12 @@ func TestSendInputDataMessageWithPayloadTypeSize(t *testing.T) {
 		Cols: 100,
 		Rows: 100,
 	}
-	sizeDataBytes, _ := json.Marshal(sizeData)
+
+	sizeDataBytes, err := json.Marshal(sizeData)
+	if err != nil {
+		t.Fatalf("Failed to marshal size data: %v", err)
+	}
+
 	dataChannel := getDataChannel()
 	mockChannel := &mocks.IWebSocketChannel{}
 	dataChannel.SetWsChannel(mockChannel)
@@ -112,7 +117,7 @@ func TestSendInputDataMessageWithPayloadTypeSize(t *testing.T) {
 		return nil
 	}
 
-	err := dataChannel.SendInputDataMessage(logger, message.Size, sizeDataBytes)
+	err = dataChannel.SendInputDataMessage(logger, message.Size, sizeDataBytes)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedSequenceNumber, dataChannel.ExpectedSequenceNumber)
 	assert.Equal(t, 1, SendMessageCallCount)

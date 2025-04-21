@@ -1051,7 +1051,10 @@ func TestDeserializeAgentMessageWithChannelClosed(t *testing.T) {
 	u, err := uuid.Parse(messageId)
 	assert.NoError(t, err)
 
-	channelClosedJson, _ := json.Marshal(channelClosed)
+	channelClosedJson, err := json.Marshal(channelClosed)
+	if err != nil {
+		t.Fatalf("Failed to marshal channel closed: %v", err)
+	}
 
 	agentMessage := ClientMessage{
 		MessageType:    ChannelClosedMessage,
