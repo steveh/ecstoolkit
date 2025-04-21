@@ -33,10 +33,6 @@ type T interface {
 	// Error logs a message at Error level.
 	Error(msg string, args ...any)
 
-	// Warnf formats message according to format specifier
-	// and writes to log with level Warn.
-	Warnf(format string, args ...any)
-
 	// Errorf formats message according to format specifier
 	// and writes to log with level Error.
 	Errorf(format string, args ...any)

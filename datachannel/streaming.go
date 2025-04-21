@@ -357,7 +357,7 @@ func (dataChannel *DataChannel) ResendStreamDataMessageScheduler(log log.T) (err
 				log.Debug("Resend stream data message", "sequenceNumber", streamMessage.SequenceNumber, "attempt", *streamMessage.ResendAttempt)
 
 				if *streamMessage.ResendAttempt >= config.ResendMaxAttempt {
-					log.Warnf("Message %d was resent over %d times.", streamMessage.SequenceNumber, config.ResendMaxAttempt)
+					log.Warn("Message resent too many times", "sequenceNumber", streamMessage.SequenceNumber, "maxAttempts", config.ResendMaxAttempt)
 					dataChannel.isStreamMessageResendTimeout <- true
 				}
 
@@ -448,7 +448,7 @@ func (dataChannel *DataChannel) OutputMessageHandler(ctx context.Context, log lo
 	case message.StartPublicationMessage, message.PausePublicationMessage:
 		return nil
 	default:
-		log.Warnf("Invalid message type received: %s", outputMessage.MessageType)
+		log.Warn("Invalid message type received", "messageType", outputMessage.MessageType)
 	}
 
 	return nil
@@ -731,7 +731,7 @@ func (dataChannel *DataChannel) HandleOutputMessage(
 			}
 
 			if !isHandlerReady {
-				log.Warnf("Stream data message with sequence number %d is not processed as session handler is not ready.", outputMessage.SequenceNumber)
+				log.Warn("Stream data message not processed", "sequenceNumber", outputMessage.SequenceNumber, "reason", "session handler not ready")
 
 				return nil
 			} else {
