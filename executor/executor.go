@@ -17,7 +17,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/steveh/ecstoolkit/config"
 	"github.com/steveh/ecstoolkit/datachannel"
-	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/session"
 	"github.com/steveh/ecstoolkit/session/portsession"
 	"github.com/steveh/ecstoolkit/session/sessionutil"
@@ -41,7 +40,7 @@ type Executor struct {
 	ecsClient *ecs.Client
 	kmsClient *kms.Client
 	ssmClient *ssm.Client
-	logger    log.Slogger
+	logger    *slog.Logger
 }
 
 func NewExecutor(ecsClient *ecs.Client, kmsClient *kms.Client, ssmClient *ssm.Client, logger *slog.Logger) *Executor {
@@ -49,7 +48,7 @@ func NewExecutor(ecsClient *ecs.Client, kmsClient *kms.Client, ssmClient *ssm.Cl
 		ecsClient: ecsClient,
 		kmsClient: kmsClient,
 		ssmClient: ssmClient,
-		logger:    log.NewSlogger(logger),
+		logger:    logger,
 	}
 }
 

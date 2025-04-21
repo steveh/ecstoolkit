@@ -18,12 +18,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"log/slog"
 	"os"
 	"os/signal"
 	"time"
 
 	"github.com/steveh/ecstoolkit/config"
-	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
 	"github.com/steveh/ecstoolkit/session"
 	"github.com/steveh/ecstoolkit/session/sessionutil"
@@ -42,7 +42,7 @@ type ShellSession struct {
 	SizeData          message.SizeData
 	originalSttyState bytes.Buffer
 	shutdown          context.CancelFunc
-	log               log.T
+	log               *slog.Logger
 }
 
 var _ session.ISessionPlugin = (*ShellSession)(nil)
@@ -56,7 +56,7 @@ func (ShellSession) Name() string {
 	return config.ShellPluginName
 }
 
-func (s *ShellSession) Initialize(ctx context.Context, log log.T, sessionVar *session.Session) {
+func (s *ShellSession) Initialize(ctx context.Context, log *slog.Logger, sessionVar *session.Session) {
 	s.Session = *sessionVar
 	s.DataChannel.RegisterOutputStreamHandler(s.ProcessStreamMessagePayload, true)
 	s.DataChannel.GetWsChannel().SetOnMessage(
@@ -66,7 +66,7 @@ func (s *ShellSession) Initialize(ctx context.Context, log log.T, sessionVar *se
 }
 
 // StartSession takes input and write it to data channel.
-func (s *ShellSession) SetSessionHandlers(ctx context.Context, log log.T) error {
+func (s *ShellSession) SetSessionHandlers(ctx context.Context, log *slog.Logger) error {
 	// handle re-size
 	s.handleTerminalResize(log)
 
@@ -78,7 +78,7 @@ func (s *ShellSession) SetSessionHandlers(ctx context.Context, log log.T) error 
 }
 
 // handleControlSignals handles control signals when given by user.
-func (s *ShellSession) handleControlSignals(log log.T) {
+func (s *ShellSession) handleControlSignals(log *slog.Logger) {
 	go func() {
 		signals := make(chan os.Signal, 1)
 		signal.Notify(signals, sessionutil.ControlSignals...)
@@ -95,7 +95,7 @@ func (s *ShellSession) handleControlSignals(log log.T) {
 }
 
 // handleTerminalResize checks size of terminal every 500ms and sends size data.
-func (s *ShellSession) handleTerminalResize(log log.T) {
+func (s *ShellSession) handleTerminalResize(log *slog.Logger) {
 	var (
 		width         int
 		height        int
@@ -136,7 +136,7 @@ func (s *ShellSession) handleTerminalResize(log log.T) {
 }
 
 // ProcessStreamMessagePayload prints payload received on datachannel to console.
-func (s ShellSession) ProcessStreamMessagePayload(log log.T, outputMessage message.ClientMessage) (isHandlerReady bool, err error) {
+func (s ShellSession) ProcessStreamMessagePayload(log *slog.Logger, outputMessage message.ClientMessage) (isHandlerReady bool, err error) {
 	s.DisplayMode.DisplayMessage(log, outputMessage)
 
 	return true, nil

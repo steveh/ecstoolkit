@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"io"
+	"log/slog"
 	"net"
 	"os"
 	"os/signal"
@@ -31,7 +32,6 @@ import (
 	"time"
 
 	"github.com/steveh/ecstoolkit/config"
-	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
 	"github.com/steveh/ecstoolkit/session"
 	"github.com/steveh/ecstoolkit/session/sessionutil"
@@ -83,7 +83,7 @@ func (p *MuxPortForwarding) IsStreamNotSet() (status bool) {
 }
 
 // Stop closes all open stream.
-func (p *MuxPortForwarding) Stop(log log.T) error {
+func (p *MuxPortForwarding) Stop(log *slog.Logger) error {
 	if p.mgsConn != nil {
 		p.mgsConn.close()
 	}
@@ -98,7 +98,7 @@ func (p *MuxPortForwarding) Stop(log log.T) error {
 }
 
 // InitializeStreams initializes i/o streams.
-func (p *MuxPortForwarding) InitializeStreams(_ context.Context, log log.T, agentVersion string) (err error) {
+func (p *MuxPortForwarding) InitializeStreams(_ context.Context, log *slog.Logger, agentVersion string) (err error) {
 	p.handleControlSignals(log)
 	p.socketFile = getUnixSocketPath(p.sessionId, os.TempDir(), "session_manager_plugin_mux.sock")
 
@@ -110,7 +110,7 @@ func (p *MuxPortForwarding) InitializeStreams(_ context.Context, log log.T, agen
 }
 
 // ReadStream reads data from different connections.
-func (p *MuxPortForwarding) ReadStream(ctx context.Context, log log.T) (err error) {
+func (p *MuxPortForwarding) ReadStream(ctx context.Context, log *slog.Logger) (err error) {
 	g, ctx := errgroup.WithContext(ctx)
 
 	// reads data from smux client and transfers to server over datachannel
@@ -153,7 +153,7 @@ func (p *MuxPortForwarding) cleanUp() {
 }
 
 // initialize opens a network connection that acts as smux client.
-func (p *MuxPortForwarding) initialize(log log.T, agentVersion string) (err error) {
+func (p *MuxPortForwarding) initialize(log *slog.Logger, agentVersion string) (err error) {
 	// open a network listener
 	var listener net.Listener
 
@@ -198,7 +198,7 @@ func (p *MuxPortForwarding) initialize(log log.T, agentVersion string) (err erro
 }
 
 // handleControlSignals handles terminate signals.
-func (p *MuxPortForwarding) handleControlSignals(log log.T) {
+func (p *MuxPortForwarding) handleControlSignals(log *slog.Logger) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, sessionutil.ControlSignals...)
 
@@ -216,7 +216,7 @@ func (p *MuxPortForwarding) handleControlSignals(log log.T) {
 }
 
 // transferDataToServer reads from smux client connection and sends on data channel.
-func (p *MuxPortForwarding) transferDataToServer(log log.T, ctx context.Context) (err error) {
+func (p *MuxPortForwarding) transferDataToServer(log *slog.Logger, ctx context.Context) (err error) {
 	msg := make([]byte, config.StreamDataPayloadSize)
 
 	for {
@@ -246,7 +246,7 @@ func (p *MuxPortForwarding) transferDataToServer(log log.T, ctx context.Context)
 }
 
 // handleClientConnections sets up network server on local ssm port to accept connections from clients (browser/terminal).
-func (p *MuxPortForwarding) handleClientConnections(log log.T, ctx context.Context) (err error) {
+func (p *MuxPortForwarding) handleClientConnections(log *slog.Logger, ctx context.Context) (err error) {
 	var (
 		listener   net.Listener
 		displayMsg string

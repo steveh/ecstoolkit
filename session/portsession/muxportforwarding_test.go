@@ -16,12 +16,12 @@ package portsession
 
 import (
 	"context"
+	"log/slog"
 	"net"
 	"testing"
 	"time"
 
 	"github.com/steveh/ecstoolkit/datachannel"
-	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
 	"github.com/stretchr/testify/assert"
 )
@@ -49,7 +49,7 @@ func TestReadStream(t *testing.T) {
 
 	var actualPayload []byte
 
-	datachannel.SendMessageCall = func(log log.T, dataChannel *datachannel.DataChannel, input []byte, inputType int) error {
+	datachannel.SendMessageCall = func(log *slog.Logger, dataChannel *datachannel.DataChannel, input []byte, inputType int) error {
 		actualPayload = input
 
 		return nil

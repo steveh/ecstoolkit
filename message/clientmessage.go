@@ -15,8 +15,9 @@
 package message
 
 import (
+	"log/slog"
+
 	"github.com/google/uuid"
-	"github.com/steveh/ecstoolkit/log"
 )
 
 const (
@@ -102,12 +103,12 @@ type SizeData struct {
 
 type IClientMessage interface {
 	Validate() error
-	DeserializeClientMessage(log log.T, input []byte) (err error)
-	SerializeClientMessage(log log.T) (result []byte, err error)
-	DeserializeDataStreamAcknowledgeContent(log log.T) (dataStreamAcknowledge AcknowledgeContent, err error)
-	DeserializeChannelClosedMessage(log log.T) (channelClosed ChannelClosed, err error)
-	DeserializeHandshakeRequest(log log.T) (handshakeRequest HandshakeRequestPayload, err error)
-	DeserializeHandshakeComplete(log log.T) (handshakeComplete HandshakeCompletePayload, err error)
+	DeserializeClientMessage(log *slog.Logger, input []byte) (err error)
+	SerializeClientMessage(log *slog.Logger) (result []byte, err error)
+	DeserializeDataStreamAcknowledgeContent(log *slog.Logger) (dataStreamAcknowledge AcknowledgeContent, err error)
+	DeserializeChannelClosedMessage(log *slog.Logger) (channelClosed ChannelClosed, err error)
+	DeserializeHandshakeRequest(log *slog.Logger) (handshakeRequest HandshakeRequestPayload, err error)
+	DeserializeHandshakeComplete(log *slog.Logger) (handshakeComplete HandshakeCompletePayload, err error)
 }
 
 // ClientMessage represents a message for client to send/receive. ClientMessage Message in MGS is equivalent to MDS' InstanceMessage.

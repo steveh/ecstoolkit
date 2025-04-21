@@ -15,28 +15,29 @@
 package version
 
 import (
+	"log/slog"
+
 	"github.com/steveh/ecstoolkit/config"
-	"github.com/steveh/ecstoolkit/log"
 )
 
 // DoesAgentSupportTCPMultiplexing returns true if given agentVersion supports TCP multiplexing in port plugin, false otherwise.
-func DoesAgentSupportTCPMultiplexing(log log.T, agentVersion string) (supported bool) {
+func DoesAgentSupportTCPMultiplexing(log *slog.Logger, agentVersion string) (supported bool) {
 	return isAgentVersionGreaterThanSupportedVersion(log, agentVersion, config.TCPMultiplexingSupportedAfterThisAgentVersion)
 }
 
 // DoesAgentSupportDisableSmuxKeepAlive returns true if given agentVersion disables smux KeepAlive in TCP multiplexing in port plugin, false otherwise.
-func DoesAgentSupportDisableSmuxKeepAlive(log log.T, agentVersion string) (supported bool) {
+func DoesAgentSupportDisableSmuxKeepAlive(log *slog.Logger, agentVersion string) (supported bool) {
 	return isAgentVersionGreaterThanSupportedVersion(log, agentVersion, config.TCPMultiplexingWithSmuxKeepAliveDisabledAfterThisAgentVersion)
 }
 
 // DoesAgentSupportTerminateSessionFlag returns true if given agentVersion supports TerminateSession flag, false otherwise.
-func DoesAgentSupportTerminateSessionFlag(log log.T, agentVersion string) (supported bool) {
+func DoesAgentSupportTerminateSessionFlag(log *slog.Logger, agentVersion string) (supported bool) {
 	return isAgentVersionGreaterThanSupportedVersion(log, agentVersion, config.TerminateSessionFlagSupportedAfterThisAgentVersion)
 }
 
 // isAgentVersionGreaterThanSupportedVersion returns true if agentVersion is greater than supportedVersion,
 // false in case of any error and agentVersion is equalTo or less than supportedVersion.
-func isAgentVersionGreaterThanSupportedVersion(log log.T, agentVersionString string, supportedVersionString string) (supported bool) {
+func isAgentVersionGreaterThanSupportedVersion(log *slog.Logger, agentVersionString string, supportedVersionString string) (supported bool) {
 	var (
 		supportedVersion version
 		agentVersion     version

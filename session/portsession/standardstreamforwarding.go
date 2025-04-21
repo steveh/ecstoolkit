@@ -18,11 +18,11 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log/slog"
 	"os"
 	"time"
 
 	"github.com/steveh/ecstoolkit/config"
-	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
 	"github.com/steveh/ecstoolkit/session"
 )
@@ -44,7 +44,7 @@ func (p *StandardStreamForwarding) IsStreamNotSet() (status bool) {
 }
 
 // Stop closes the streams.
-func (p *StandardStreamForwarding) Stop(log log.T) error {
+func (p *StandardStreamForwarding) Stop(log *slog.Logger) error {
 	p.inputStream.Close()
 	p.outputStream.Close()
 
@@ -52,7 +52,7 @@ func (p *StandardStreamForwarding) Stop(log log.T) error {
 }
 
 // InitializeStreams initializes the streams with its file descriptors.
-func (p *StandardStreamForwarding) InitializeStreams(_ context.Context, log log.T, agentVersion string) (err error) {
+func (p *StandardStreamForwarding) InitializeStreams(_ context.Context, log *slog.Logger, agentVersion string) (err error) {
 	p.inputStream = os.Stdin
 	p.outputStream = os.Stdout
 
@@ -60,7 +60,7 @@ func (p *StandardStreamForwarding) InitializeStreams(_ context.Context, log log.
 }
 
 // ReadStream reads data from the input stream.
-func (p *StandardStreamForwarding) ReadStream(_ context.Context, log log.T) (err error) {
+func (p *StandardStreamForwarding) ReadStream(_ context.Context, log *slog.Logger) (err error) {
 	msg := make([]byte, config.StreamDataPayloadSize)
 
 	for {
@@ -89,7 +89,7 @@ func (p *StandardStreamForwarding) WriteStream(outputMessage message.ClientMessa
 }
 
 // handleReadError handles read error.
-func (p *StandardStreamForwarding) handleReadError(log log.T, err error) error {
+func (p *StandardStreamForwarding) handleReadError(log *slog.Logger, err error) error {
 	if errors.Is(err, io.EOF) {
 		log.Debug("Session to instance was closed", "targetId", p.session.TargetId, "port", p.portParameters.PortNumber)
 

@@ -14,9 +14,9 @@
 // Package sessionutil provides utility for sessions.
 package sessionutil
 
-import "github.com/steveh/ecstoolkit/log"
+import "log/slog"
 
-func NewDisplayMode(log log.T) DisplayMode {
+func NewDisplayMode(log *slog.Logger) DisplayMode {
 	displayMode := DisplayMode{}
 	displayMode.InitDisplayMode(log)
 

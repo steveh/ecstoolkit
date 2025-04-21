@@ -20,9 +20,9 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io"
+	"log/slog"
 
 	"github.com/aws/aws-sdk-go-v2/service/kms"
-	"github.com/steveh/ecstoolkit/log"
 )
 
 const (
@@ -34,8 +34,8 @@ type KMSKeyProvider interface {
 }
 
 type IEncrypter interface {
-	Encrypt(log log.T, plainText []byte) (cipherText []byte, err error)
-	Decrypt(log log.T, cipherText []byte) (plainText []byte, err error)
+	Encrypt(log *slog.Logger, plainText []byte) (cipherText []byte, err error)
+	Decrypt(log *slog.Logger, cipherText []byte) (plainText []byte, err error)
 	GetEncryptedDataKey() (ciptherTextBlob []byte)
 }
 
@@ -48,7 +48,7 @@ type Encrypter struct {
 	decryptionKey []byte
 }
 
-var NewEncrypter = func(ctx context.Context, log log.T, kmsKeyId string, encryptionContext map[string]string, KMSService *kms.Client) (*Encrypter, error) {
+var NewEncrypter = func(ctx context.Context, log *slog.Logger, kmsKeyId string, encryptionContext map[string]string, KMSService *kms.Client) (*Encrypter, error) {
 	encrypter := Encrypter{kmsKeyId: kmsKeyId, KMSService: KMSService}
 	err := encrypter.generateEncryptionKey(ctx, log, kmsKeyId, encryptionContext)
 
@@ -56,7 +56,7 @@ var NewEncrypter = func(ctx context.Context, log log.T, kmsKeyId string, encrypt
 }
 
 // generateEncryptionKey calls KMS to generate a new encryption key.
-func (encrypter *Encrypter) generateEncryptionKey(ctx context.Context, log log.T, kmsKeyId string, encryptionContext map[string]string) error {
+func (encrypter *Encrypter) generateEncryptionKey(ctx context.Context, log *slog.Logger, kmsKeyId string, encryptionContext map[string]string) error {
 	cipherTextKey, plainTextKey, err := KMSGenerateDataKey(ctx, kmsKeyId, encrypter.KMSService, encryptionContext)
 	if err != nil {
 		log.Error("Error generating data key from KMS", "error", err)
@@ -98,7 +98,7 @@ func getAEAD(plainTextKey []byte) (aesgcm cipher.AEAD, err error) {
 }
 
 // Encrypt encrypts a byte slice and returns the encrypted slice.
-func (encrypter *Encrypter) Encrypt(log log.T, plainText []byte) (cipherText []byte, err error) {
+func (encrypter *Encrypter) Encrypt(log *slog.Logger, plainText []byte) (cipherText []byte, err error) {
 	var aesgcm cipher.AEAD
 
 	if aesgcm, err = getAEAD(encrypter.encryptionKey); err != nil {
@@ -127,7 +127,7 @@ func (encrypter *Encrypter) Encrypt(log log.T, plainText []byte) (cipherText []b
 }
 
 // Decrypt decrypts a byte slice and returns the decrypted slice.
-func (encrypter *Encrypter) Decrypt(log log.T, cipherText []byte) (plainText []byte, err error) {
+func (encrypter *Encrypter) Decrypt(log *slog.Logger, cipherText []byte) (plainText []byte, err error) {
 	var aesgcm cipher.AEAD
 
 	if aesgcm, err = getAEAD(encrypter.decryptionKey); err != nil {

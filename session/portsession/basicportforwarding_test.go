@@ -17,6 +17,7 @@ package portsession
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net"
 	"os"
 	"os/signal"
@@ -24,7 +25,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/steveh/ecstoolkit/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -66,7 +66,7 @@ func TestSetSessionHandlers(t *testing.T) {
 	}()
 
 	go func() {
-		acceptConnection = func(log log.T, listener net.Listener) (tcpConn net.Conn, err error) {
+		acceptConnection = func(log *slog.Logger, listener net.Listener) (tcpConn net.Conn, err error) {
 			return in, nil
 		}
 
@@ -84,7 +84,7 @@ func TestSetSessionHandlers(t *testing.T) {
 }
 
 func TestStartSessionTCPLocalPortFromDocument(t *testing.T) {
-	acceptConnection = func(log log.T, listener net.Listener) (tcpConn net.Conn, err error) {
+	acceptConnection = func(log *slog.Logger, listener net.Listener) (tcpConn net.Conn, err error) {
 		return nil, errors.New("accept failed")
 	}
 	portSession := PortSession{
@@ -101,7 +101,7 @@ func TestStartSessionTCPLocalPortFromDocument(t *testing.T) {
 
 func TestStartSessionTCPAcceptFailed(t *testing.T) {
 	connErr := errors.New("accept failed")
-	acceptConnection = func(log log.T, listener net.Listener) (tcpConn net.Conn, err error) {
+	acceptConnection = func(log *slog.Logger, listener net.Listener) (tcpConn net.Conn, err error) {
 		return nil, connErr
 	}
 	portSession := PortSession{

@@ -24,7 +24,7 @@ import (
 // First half 32 bytes key is used by agent for encryption and second half 32 bytes by clients like cli/console.
 const KMSKeySizeInBytes int32 = 64
 
-// func KMSDecrypt(ctx context.Context, log log.T, svc *kms.Client, ciptherTextBlob []byte, encryptionContext map[string]string) (plainText []byte, err error) {
+// func KMSDecrypt(ctx context.Context, log *slog.Logger, svc *kms.Client, ciptherTextBlob []byte, encryptionContext map[string]string) (plainText []byte, err error) {
 // 	output, err := svc.Decrypt(ctx, &kms.DecryptInput{
 // 		CiphertextBlob:    ciptherTextBlob,
 // 		EncryptionContext: encryptionContext,

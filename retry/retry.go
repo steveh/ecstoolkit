@@ -15,15 +15,14 @@
 package retry
 
 import (
+	"log/slog"
 	"time"
-
-	"github.com/steveh/ecstoolkit/log"
 )
 
 const sleepConstant = 2
 
 // Retry implements back off retry strategy for reconnect web socket connection.
-func Retry(log log.T, attempts int, sleep time.Duration, fn func() error) (err error) {
+func Retry(log *slog.Logger, attempts int, sleep time.Duration, fn func() error) (err error) {
 	log.Debug("Retrying connection to channel")
 
 	for attempts > 0 {

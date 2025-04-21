@@ -16,10 +16,10 @@ package portsession
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/steveh/ecstoolkit/config"
 	"github.com/steveh/ecstoolkit/jsonutil"
-	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
 	"github.com/steveh/ecstoolkit/session"
 	"github.com/steveh/ecstoolkit/version"
@@ -39,10 +39,10 @@ var _ session.ISessionPlugin = (*PortSession)(nil)
 
 type IPortSession interface {
 	IsStreamNotSet() (status bool)
-	InitializeStreams(ctx context.Context, log log.T, agentVersion string) (err error)
-	ReadStream(ctx context.Context, log log.T) (err error)
+	InitializeStreams(ctx context.Context, log *slog.Logger, agentVersion string) (err error)
+	ReadStream(ctx context.Context, log *slog.Logger) (err error)
 	WriteStream(outputMessage message.ClientMessage) (err error)
-	Stop(log log.T) error
+	Stop(log *slog.Logger) error
 }
 
 type PortParameters struct {
@@ -58,7 +58,7 @@ func (PortSession) Name() string {
 	return config.PortPluginName
 }
 
-func (s *PortSession) Initialize(ctx context.Context, log log.T, sessionVar *session.Session) {
+func (s *PortSession) Initialize(ctx context.Context, log *slog.Logger, sessionVar *session.Session) {
 	s.Session = *sessionVar
 	if err := jsonutil.Remarshal(s.SessionProperties, &s.portParameters); err != nil {
 		log.Error("Invalid format", "error", err)
@@ -109,12 +109,12 @@ func (s *PortSession) Initialize(ctx context.Context, log log.T, sessionVar *ses
 	log.Debug("Connected to instance", "targetId", sessionVar.TargetId, "port", s.portParameters.PortNumber)
 }
 
-func (s *PortSession) Stop(log log.T) error {
+func (s *PortSession) Stop(log *slog.Logger) error {
 	return s.portSessionType.Stop(log)
 }
 
 // StartSession redirects inputStream/outputStream data to datachannel.
-func (s *PortSession) SetSessionHandlers(ctx context.Context, log log.T) (err error) {
+func (s *PortSession) SetSessionHandlers(ctx context.Context, log *slog.Logger) (err error) {
 	if err = s.portSessionType.InitializeStreams(ctx, log, s.DataChannel.GetAgentVersion()); err != nil {
 		return err
 	}
@@ -127,7 +127,7 @@ func (s *PortSession) SetSessionHandlers(ctx context.Context, log log.T) (err er
 }
 
 // ProcessStreamMessagePayload writes messages received on datachannel to stdout.
-func (s *PortSession) ProcessStreamMessagePayload(log log.T, outputMessage message.ClientMessage) (isHandlerReady bool, err error) {
+func (s *PortSession) ProcessStreamMessagePayload(log *slog.Logger, outputMessage message.ClientMessage) (isHandlerReady bool, err error) {
 	if s.portSessionType.IsStreamNotSet() {
 		log.Debug("Waiting for streams to be established before processing incoming messages")
 

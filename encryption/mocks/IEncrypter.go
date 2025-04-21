@@ -3,7 +3,8 @@
 package mocks
 
 import (
-	log "github.com/steveh/ecstoolkit/log"
+	slog "log/slog"
+
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -20,9 +21,9 @@ func (_m *IEncrypter) EXPECT() *IEncrypter_Expecter {
 	return &IEncrypter_Expecter{mock: &_m.Mock}
 }
 
-// Decrypt provides a mock function with given fields: _a0, cipherText
-func (_m *IEncrypter) Decrypt(_a0 log.T, cipherText []byte) ([]byte, error) {
-	ret := _m.Called(_a0, cipherText)
+// Decrypt provides a mock function with given fields: log, cipherText
+func (_m *IEncrypter) Decrypt(log *slog.Logger, cipherText []byte) ([]byte, error) {
+	ret := _m.Called(log, cipherText)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Decrypt")
@@ -30,19 +31,19 @@ func (_m *IEncrypter) Decrypt(_a0 log.T, cipherText []byte) ([]byte, error) {
 
 	var r0 []byte
 	var r1 error
-	if rf, ok := ret.Get(0).(func(log.T, []byte) ([]byte, error)); ok {
-		return rf(_a0, cipherText)
+	if rf, ok := ret.Get(0).(func(*slog.Logger, []byte) ([]byte, error)); ok {
+		return rf(log, cipherText)
 	}
-	if rf, ok := ret.Get(0).(func(log.T, []byte) []byte); ok {
-		r0 = rf(_a0, cipherText)
+	if rf, ok := ret.Get(0).(func(*slog.Logger, []byte) []byte); ok {
+		r0 = rf(log, cipherText)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]byte)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(log.T, []byte) error); ok {
-		r1 = rf(_a0, cipherText)
+	if rf, ok := ret.Get(1).(func(*slog.Logger, []byte) error); ok {
+		r1 = rf(log, cipherText)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -56,15 +57,15 @@ type IEncrypter_Decrypt_Call struct {
 }
 
 // Decrypt is a helper method to define mock.On call
-//   - _a0 log.T
+//   - log *slog.Logger
 //   - cipherText []byte
-func (_e *IEncrypter_Expecter) Decrypt(_a0 interface{}, cipherText interface{}) *IEncrypter_Decrypt_Call {
-	return &IEncrypter_Decrypt_Call{Call: _e.mock.On("Decrypt", _a0, cipherText)}
+func (_e *IEncrypter_Expecter) Decrypt(log interface{}, cipherText interface{}) *IEncrypter_Decrypt_Call {
+	return &IEncrypter_Decrypt_Call{Call: _e.mock.On("Decrypt", log, cipherText)}
 }
 
-func (_c *IEncrypter_Decrypt_Call) Run(run func(_a0 log.T, cipherText []byte)) *IEncrypter_Decrypt_Call {
+func (_c *IEncrypter_Decrypt_Call) Run(run func(log *slog.Logger, cipherText []byte)) *IEncrypter_Decrypt_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(log.T), args[1].([]byte))
+		run(args[0].(*slog.Logger), args[1].([]byte))
 	})
 	return _c
 }
@@ -74,14 +75,14 @@ func (_c *IEncrypter_Decrypt_Call) Return(plainText []byte, err error) *IEncrypt
 	return _c
 }
 
-func (_c *IEncrypter_Decrypt_Call) RunAndReturn(run func(log.T, []byte) ([]byte, error)) *IEncrypter_Decrypt_Call {
+func (_c *IEncrypter_Decrypt_Call) RunAndReturn(run func(*slog.Logger, []byte) ([]byte, error)) *IEncrypter_Decrypt_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// Encrypt provides a mock function with given fields: _a0, plainText
-func (_m *IEncrypter) Encrypt(_a0 log.T, plainText []byte) ([]byte, error) {
-	ret := _m.Called(_a0, plainText)
+// Encrypt provides a mock function with given fields: log, plainText
+func (_m *IEncrypter) Encrypt(log *slog.Logger, plainText []byte) ([]byte, error) {
+	ret := _m.Called(log, plainText)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Encrypt")
@@ -89,19 +90,19 @@ func (_m *IEncrypter) Encrypt(_a0 log.T, plainText []byte) ([]byte, error) {
 
 	var r0 []byte
 	var r1 error
-	if rf, ok := ret.Get(0).(func(log.T, []byte) ([]byte, error)); ok {
-		return rf(_a0, plainText)
+	if rf, ok := ret.Get(0).(func(*slog.Logger, []byte) ([]byte, error)); ok {
+		return rf(log, plainText)
 	}
-	if rf, ok := ret.Get(0).(func(log.T, []byte) []byte); ok {
-		r0 = rf(_a0, plainText)
+	if rf, ok := ret.Get(0).(func(*slog.Logger, []byte) []byte); ok {
+		r0 = rf(log, plainText)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]byte)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(log.T, []byte) error); ok {
-		r1 = rf(_a0, plainText)
+	if rf, ok := ret.Get(1).(func(*slog.Logger, []byte) error); ok {
+		r1 = rf(log, plainText)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -115,15 +116,15 @@ type IEncrypter_Encrypt_Call struct {
 }
 
 // Encrypt is a helper method to define mock.On call
-//   - _a0 log.T
+//   - log *slog.Logger
 //   - plainText []byte
-func (_e *IEncrypter_Expecter) Encrypt(_a0 interface{}, plainText interface{}) *IEncrypter_Encrypt_Call {
-	return &IEncrypter_Encrypt_Call{Call: _e.mock.On("Encrypt", _a0, plainText)}
+func (_e *IEncrypter_Expecter) Encrypt(log interface{}, plainText interface{}) *IEncrypter_Encrypt_Call {
+	return &IEncrypter_Encrypt_Call{Call: _e.mock.On("Encrypt", log, plainText)}
 }
 
-func (_c *IEncrypter_Encrypt_Call) Run(run func(_a0 log.T, plainText []byte)) *IEncrypter_Encrypt_Call {
+func (_c *IEncrypter_Encrypt_Call) Run(run func(log *slog.Logger, plainText []byte)) *IEncrypter_Encrypt_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(log.T), args[1].([]byte))
+		run(args[0].(*slog.Logger), args[1].([]byte))
 	})
 	return _c
 }
@@ -133,7 +134,7 @@ func (_c *IEncrypter_Encrypt_Call) Return(cipherText []byte, err error) *IEncryp
 	return _c
 }
 
-func (_c *IEncrypter_Encrypt_Call) RunAndReturn(run func(log.T, []byte) ([]byte, error)) *IEncrypter_Encrypt_Call {
+func (_c *IEncrypter_Encrypt_Call) RunAndReturn(run func(*slog.Logger, []byte) ([]byte, error)) *IEncrypter_Encrypt_Call {
 	_c.Call.Return(run)
 	return _c
 }

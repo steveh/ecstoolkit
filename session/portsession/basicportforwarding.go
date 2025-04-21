@@ -17,6 +17,7 @@ package portsession
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net"
 	"os"
 	"os/signal"
@@ -24,7 +25,6 @@ import (
 	"time"
 
 	"github.com/steveh/ecstoolkit/config"
-	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
 	"github.com/steveh/ecstoolkit/session"
 	"github.com/steveh/ecstoolkit/session/sessionutil"
@@ -51,7 +51,7 @@ var getNewListener = func(listenerType string, listenerAddress string) (listener
 }
 
 // acceptConnection returns connection to the listener.
-var acceptConnection = func(log log.T, listener net.Listener) (tcpConn net.Conn, err error) {
+var acceptConnection = func(log *slog.Logger, listener net.Listener) (tcpConn net.Conn, err error) {
 	return listener.Accept()
 }
 
@@ -61,7 +61,7 @@ func (p *BasicPortForwarding) IsStreamNotSet() (status bool) {
 }
 
 // Stop closes the stream.
-func (p *BasicPortForwarding) Stop(log log.T) error {
+func (p *BasicPortForwarding) Stop(log *slog.Logger) error {
 	if p.stream != nil {
 		(*p.stream).Close()
 	}
@@ -70,7 +70,7 @@ func (p *BasicPortForwarding) Stop(log log.T) error {
 }
 
 // InitializeStreams establishes connection and initializes the stream.
-func (p *BasicPortForwarding) InitializeStreams(ctx context.Context, log log.T, agentVersion string) (err error) {
+func (p *BasicPortForwarding) InitializeStreams(ctx context.Context, log *slog.Logger, agentVersion string) (err error) {
 	p.handleControlSignals(ctx, log)
 
 	if err = p.startLocalConn(log); err != nil {
@@ -81,7 +81,7 @@ func (p *BasicPortForwarding) InitializeStreams(ctx context.Context, log log.T, 
 }
 
 // ReadStream reads data from the stream.
-func (p *BasicPortForwarding) ReadStream(ctx context.Context, log log.T) (err error) {
+func (p *BasicPortForwarding) ReadStream(ctx context.Context, log *slog.Logger) (err error) {
 	msg := make([]byte, config.StreamDataPayloadSize)
 
 	for {
@@ -124,7 +124,7 @@ func (p *BasicPortForwarding) WriteStream(outputMessage message.ClientMessage) e
 }
 
 // startLocalConn establishes a new local connection to forward remote server packets to.
-func (p *BasicPortForwarding) startLocalConn(log log.T) (err error) {
+func (p *BasicPortForwarding) startLocalConn(log *slog.Logger) (err error) {
 	// When localPortNumber is not specified, set port number to 0 to let net.conn choose an open port at random
 	localPortNumber := p.portParameters.LocalPortNumber
 	if p.portParameters.LocalPortNumber == "" {
@@ -156,7 +156,7 @@ func (p *BasicPortForwarding) startLocalConn(log log.T) (err error) {
 }
 
 // startLocalListener starts a local listener to given address.
-func (p *BasicPortForwarding) startLocalListener(log log.T, portNumber string) (listener net.Listener, err error) {
+func (p *BasicPortForwarding) startLocalListener(log *slog.Logger, portNumber string) (listener net.Listener, err error) {
 	var displayMessage string
 
 	switch p.portParameters.LocalConnectionType {
@@ -181,7 +181,7 @@ func (p *BasicPortForwarding) startLocalListener(log log.T, portNumber string) (
 }
 
 // handleControlSignals handles terminate signals.
-func (p *BasicPortForwarding) handleControlSignals(ctx context.Context, log log.T) {
+func (p *BasicPortForwarding) handleControlSignals(ctx context.Context, log *slog.Logger) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, sessionutil.ControlSignals...)
 
@@ -203,7 +203,7 @@ func (p *BasicPortForwarding) handleControlSignals(ctx context.Context, log log.
 }
 
 // reconnect closes existing connection, listens to new connection and accept it.
-func (p *BasicPortForwarding) reconnect(log log.T) (err error) {
+func (p *BasicPortForwarding) reconnect(log *slog.Logger) (err error) {
 	// close existing connection as it is in a state from which data cannot be read
 	(*p.stream).Close()
 

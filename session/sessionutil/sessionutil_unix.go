@@ -20,26 +20,26 @@ package sessionutil
 import (
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"os"
 
-	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
 )
 
 type DisplayMode struct{}
 
-func (d *DisplayMode) InitDisplayMode(log log.T) {
+func (d *DisplayMode) InitDisplayMode(log *slog.Logger) {
 }
 
 // DisplayMessage function displays the output on the screen.
-func (d *DisplayMode) DisplayMessage(log log.T, message message.ClientMessage) {
+func (d *DisplayMode) DisplayMessage(log *slog.Logger, message message.ClientMessage) {
 	var out io.Writer = os.Stdout
 
 	fmt.Fprint(out, string(message.Payload))
 }
 
 // NewListener starts a new socket listener on the address.
-func NewListener(log log.T, address string) (net.Listener, error) {
+func NewListener(log *slog.Logger, address string) (net.Listener, error) {
 	return net.Listen("unix", address)
 }

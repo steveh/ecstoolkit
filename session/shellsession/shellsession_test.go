@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"os"
 	"os/signal"
 	"sync"
@@ -105,7 +106,7 @@ func TestSendInputDataMessageWithPayloadTypeSize(t *testing.T) {
 	dataChannel.SetWsChannel(mockChannel)
 
 	SendMessageCallCount := 0
-	datachannel.SendMessageCall = func(log log.T, dataChannel *datachannel.DataChannel, input []byte, inputType int) error {
+	datachannel.SendMessageCall = func(log *slog.Logger, dataChannel *datachannel.DataChannel, input []byte, inputType int) error {
 		SendMessageCallCount++
 
 		return nil
@@ -149,7 +150,7 @@ func TestTerminalResizeWhenSessionSizeDataIsNotEqualToActualSize(t *testing.T) {
 	}()
 
 	SendMessageCallCount := 0
-	datachannel.SendMessageCall = func(log log.T, dataChannel *datachannel.DataChannel, input []byte, inputType int) error {
+	datachannel.SendMessageCall = func(log *slog.Logger, dataChannel *datachannel.DataChannel, input []byte, inputType int) error {
 		SendMessageCallCount++
 
 		return nil
