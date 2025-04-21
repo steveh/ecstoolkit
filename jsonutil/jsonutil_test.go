@@ -206,11 +206,11 @@ func TestRemarshalInvalidInput(t *testing.T) {
 
 	var output Output
 	// Save an copy of output to compare to after Remarshal has been called to confirm no changes were made
-	copy := output
+	originalOutput := output
 	err := Remarshal(badInput, &output)
 	assert.Error(t, err)
 
-	if !assert.ObjectsAreEqual(copy, output) {
+	if !assert.ObjectsAreEqual(originalOutput, output) {
 		t.Fatalf("Object was modified by call to Remarshal")
 	}
 }
