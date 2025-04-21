@@ -55,7 +55,7 @@ type PortParameters struct {
 }
 
 // Name is the session name used inputStream the plugin.
-func (PortSession) Name() string {
+func (s *PortSession) Name() string {
 	return config.PortPluginName
 }
 

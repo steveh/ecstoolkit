@@ -52,7 +52,7 @@ var GetTerminalSizeCall = func(fd int) (width int, height int, err error) {
 }
 
 // Name is the session name used in the plugin.
-func (ShellSession) Name() string {
+func (s *ShellSession) Name() string {
 	return config.ShellPluginName
 }
 
@@ -138,7 +138,7 @@ func (s *ShellSession) handleTerminalResize(log *slog.Logger) {
 }
 
 // ProcessStreamMessagePayload prints payload received on datachannel to console.
-func (s ShellSession) ProcessStreamMessagePayload(log *slog.Logger, outputMessage message.ClientMessage) (isHandlerReady bool, err error) {
+func (s *ShellSession) ProcessStreamMessagePayload(log *slog.Logger, outputMessage message.ClientMessage) (isHandlerReady bool, err error) {
 	s.DisplayMode.DisplayMessage(log, outputMessage)
 
 	return true, nil
