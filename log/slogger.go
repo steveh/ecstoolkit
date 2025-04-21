@@ -1,7 +1,6 @@
 package log
 
 import (
-	"context"
 	"log/slog"
 )
 
@@ -12,11 +11,6 @@ type Slogger struct {
 
 // Ensure Slogger implements the T interface.
 var _ T = Slogger{}
-
-// Log logs a message at the specified level with the given message and args.
-func (s Slogger) Log(ctx context.Context, level slog.Level, msg string, args ...any) {
-	s.logger.Log(ctx, level, msg, args...)
-}
 
 // Debug logs a message at Debug level.
 func (s Slogger) Debug(msg string, args ...any) {

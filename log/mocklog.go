@@ -1,16 +1,8 @@
 package log
 
-import (
-	"context"
-	"log/slog"
-)
-
 type MockLog struct{}
 
 var _ T = MockLog{}
-
-func (m MockLog) Log(ctx context.Context, level slog.Level, msg string, args ...any) {
-}
 
 func (m MockLog) Debug(msg string, args ...any) {
 }
