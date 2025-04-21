@@ -50,11 +50,6 @@ func (s Slogger) Error(msg string, args ...any) {
 	s.logger.Error(msg, args...)
 }
 
-// Trace writes to log with level Trace.
-func (s Slogger) Trace(message string) {
-	// s.logger.Debug(message)
-}
-
 func NewSlogger(logger *slog.Logger) Slogger {
 	return Slogger{
 		logger: logger,

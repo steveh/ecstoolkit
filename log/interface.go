@@ -28,7 +28,4 @@ type T interface {
 
 	// Error logs a message at Error level.
 	Error(msg string, args ...any)
-
-	// Trace writes to log with level Trace.
-	Trace(message string)
 }
