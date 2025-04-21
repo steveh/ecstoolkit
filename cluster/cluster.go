@@ -18,7 +18,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
-	"github.com/samber/lo"
 	"github.com/steveh/ecstoolkit/executor"
 )
 
@@ -71,6 +70,20 @@ func NewCluster(awsCfg aws.Config, clusterName string) *Cluster {
 	}
 }
 
+// chunk splits a slice into chunks of the specified size
+func chunk[T any](slice []T, size int) [][]T {
+	if size <= 0 {
+		return [][]T{slice}
+	}
+
+	var chunks [][]T
+	for i := 0; i < len(slice); i += size {
+		end := min(i+size, len(slice))
+		chunks = append(chunks, slice[i:end])
+	}
+	return chunks
+}
+
 // DescribeAllServices returns a list of all services in the cluster.
 func (c *Cluster) DescribeAllServices(ctx context.Context) ([]types.Service, error) {
 	const (
@@ -92,7 +105,7 @@ func (c *Cluster) DescribeAllServices(ctx context.Context) ([]types.Service, err
 			return nil, fmt.Errorf("getting next page: %w", err)
 		}
 
-		chunks := lo.Chunk(page.ServiceArns, MaxDescribeServices)
+		chunks := chunk(page.ServiceArns, MaxDescribeServices)
 		for _, chunk := range chunks {
 			describe, err := c.ecsClient.DescribeServices(ctx, &ecs.DescribeServicesInput{
 				Cluster:  aws.String(c.clusterName),
