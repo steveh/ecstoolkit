@@ -146,6 +146,10 @@ func TestMarshal(t *testing.T) {
 	}
 
 	correct, err := ioutil.ReadFile(filepath.Join("testdata", t.Name()+".golden"))
+	if err != nil {
+		t.Errorf("error reading golden file in %s: %v", t.Name(), err)
+	}
+
 	assert.Equal(t, string(correct), out)
 }
 

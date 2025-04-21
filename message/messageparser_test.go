@@ -1025,9 +1025,9 @@ func TestSerializeAndDeserializeClientMessageWithAcknowledgeContent(t *testing.T
 		IsSequentialMessage: true,
 	}
 
-	serializedClientMsg, err := SerializeClientMessageWithAcknowledgeContent(log.NewMockLog(), acknowledgeContent)
+	serializedClientMsg, _ := SerializeClientMessageWithAcknowledgeContent(log.NewMockLog(), acknowledgeContent)
 	deserializedClientMsg := &ClientMessage{}
-	err = deserializedClientMsg.DeserializeClientMessage(log.NewMockLog(), serializedClientMsg)
+	err := deserializedClientMsg.DeserializeClientMessage(log.NewMockLog(), serializedClientMsg)
 	assert.NoError(t, err)
 	deserializedAcknowledgeContent, err := deserializedClientMsg.DeserializeDataStreamAcknowledgeContent(log.NewMockLog())
 
@@ -1050,7 +1050,9 @@ func TestDeserializeAgentMessageWithChannelClosed(t *testing.T) {
 
 	u, err := uuid.Parse(messageId)
 	assert.NoError(t, err)
-	channelClosedJson, err := json.Marshal(channelClosed)
+
+	channelClosedJson, _ := json.Marshal(channelClosed)
+
 	agentMessage := ClientMessage{
 		MessageType:    ChannelClosedMessage,
 		SchemaVersion:  schemaVersion,
