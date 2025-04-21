@@ -363,7 +363,13 @@ func (dataChannel *DataChannel) ResendStreamDataMessageScheduler(log *slog.Logge
 				continue
 			}
 
-			streamMessage := streamMessageElement.Value.(StreamingMessage)
+			streamMessage, ok := streamMessageElement.Value.(StreamingMessage)
+			if !ok {
+				log.Error("Failed to type assert streamMessageElement.Value to StreamingMessage")
+
+				continue
+			}
+
 			if time.Since(streamMessage.LastSentTime) > dataChannel.RetransmissionTimeout {
 				log.Debug("Resend stream data message", "sequenceNumber", streamMessage.SequenceNumber, "attempt", *streamMessage.ResendAttempt)
 
@@ -390,7 +396,13 @@ func (dataChannel *DataChannel) ProcessAcknowledgedMessage(log *slog.Logger, ack
 	acknowledgeSequenceNumber := acknowledgeMessageContent.SequenceNumber
 
 	for streamMessageElement := dataChannel.OutgoingMessageBuffer.Messages.Front(); streamMessageElement != nil; streamMessageElement = streamMessageElement.Next() {
-		streamMessage := streamMessageElement.Value.(StreamingMessage)
+		streamMessage, ok := streamMessageElement.Value.(StreamingMessage)
+		if !ok {
+			log.Error("Failed to type assert streamMessageElement.Value to StreamingMessage")
+
+			continue
+		}
+
 		if streamMessage.SequenceNumber == acknowledgeSequenceNumber {
 			// Calculate retransmission timeout based on latest round trip time of message
 			dataChannel.CalculateRetransmissionTimeout(log, streamMessage)

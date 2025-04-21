@@ -328,7 +328,12 @@ func (p *MuxPortForwarding) handleClientConnections(log *slog.Logger, ctx contex
 			return fmt.Errorf("listening on TCP port: %w", err)
 		}
 
-		p.portParameters.LocalPortNumber = strconv.Itoa(listener.Addr().(*net.TCPAddr).Port)
+		tcpAddr, ok := listener.Addr().(*net.TCPAddr)
+		if !ok {
+			return errors.New("failed to type assert listener.Addr() to *net.TCPAddr")
+		}
+
+		p.portParameters.LocalPortNumber = strconv.Itoa(tcpAddr.Port)
 		displayMsg = fmt.Sprintf("Port %s opened for sessionId %s.", p.portParameters.LocalPortNumber, p.sessionId)
 	}
 

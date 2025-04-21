@@ -199,21 +199,32 @@ func TestAddDataToOutgoingMessageBuffer(t *testing.T) {
 
 	dataChannel.AddDataToOutgoingMessageBuffer(streamingMessages[0])
 	assert.Equal(t, 1, dataChannel.OutgoingMessageBuffer.Messages.Len())
-	bufferedStreamMessage := dataChannel.OutgoingMessageBuffer.Messages.Front().Value.(StreamingMessage)
+	bufferedStreamMessage, ok := dataChannel.OutgoingMessageBuffer.Messages.Front().Value.(StreamingMessage)
+	assert.True(t, ok, "Failed to type assert to StreamingMessage")
 	assert.Equal(t, int64(0), bufferedStreamMessage.SequenceNumber)
 
 	dataChannel.AddDataToOutgoingMessageBuffer(streamingMessages[1])
 	assert.Equal(t, 2, dataChannel.OutgoingMessageBuffer.Messages.Len())
-	bufferedStreamMessage = dataChannel.OutgoingMessageBuffer.Messages.Front().Value.(StreamingMessage)
+	value := dataChannel.OutgoingMessageBuffer.Messages.Front().Value
+	bufferedStreamMessage, ok = value.(StreamingMessage)
+	assert.True(t, ok, "Failed to type assert to StreamingMessage")
 	assert.Equal(t, int64(0), bufferedStreamMessage.SequenceNumber)
-	bufferedStreamMessage = dataChannel.OutgoingMessageBuffer.Messages.Back().Value.(StreamingMessage)
+
+	value = dataChannel.OutgoingMessageBuffer.Messages.Back().Value
+	bufferedStreamMessage, ok = value.(StreamingMessage)
+	assert.True(t, ok, "Failed to type assert to StreamingMessage")
 	assert.Equal(t, int64(1), bufferedStreamMessage.SequenceNumber)
 
 	dataChannel.AddDataToOutgoingMessageBuffer(streamingMessages[2])
 	assert.Equal(t, 2, dataChannel.OutgoingMessageBuffer.Messages.Len())
-	bufferedStreamMessage = dataChannel.OutgoingMessageBuffer.Messages.Front().Value.(StreamingMessage)
+	value = dataChannel.OutgoingMessageBuffer.Messages.Front().Value
+	bufferedStreamMessage, ok = value.(StreamingMessage)
+	assert.True(t, ok, "Failed to type assert to StreamingMessage")
 	assert.Equal(t, int64(1), bufferedStreamMessage.SequenceNumber)
-	bufferedStreamMessage = dataChannel.OutgoingMessageBuffer.Messages.Back().Value.(StreamingMessage)
+
+	value = dataChannel.OutgoingMessageBuffer.Messages.Back().Value
+	bufferedStreamMessage, ok = value.(StreamingMessage)
+	assert.True(t, ok, "Failed to type assert to StreamingMessage")
 	assert.Equal(t, int64(2), bufferedStreamMessage.SequenceNumber)
 }
 

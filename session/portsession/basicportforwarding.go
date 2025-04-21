@@ -16,6 +16,7 @@ package portsession
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -176,7 +177,12 @@ func (p *BasicPortForwarding) startLocalListener(log *slog.Logger, portNumber st
 			return
 		}
 		// get port number the TCP listener opened
-		p.portParameters.LocalPortNumber = strconv.Itoa(listener.Addr().(*net.TCPAddr).Port)
+		tcpAddr, ok := listener.Addr().(*net.TCPAddr)
+		if !ok {
+			return nil, errors.New("failed to type assert listener.Addr() to *net.TCPAddr")
+		}
+
+		p.portParameters.LocalPortNumber = strconv.Itoa(tcpAddr.Port)
 		displayMessage = fmt.Sprintf("Port %s opened for sessionId %s.", p.portParameters.LocalPortNumber, p.sessionId)
 	}
 
