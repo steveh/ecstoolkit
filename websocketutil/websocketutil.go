@@ -54,7 +54,7 @@ func NewWebsocketUtil(logger log.T, dialerInput *websocket.Dialer) *WebsocketUti
 
 // OpenConnection opens a websocket connection provided an input url.
 func (u *WebsocketUtil) OpenConnection(url string) (*websocket.Conn, error) {
-	u.log.Infof("Opening websocket connection to: ", url)
+	u.log.Debugf("Opening websocket connection to: ", url)
 
 	conn, _, err := u.dialer.Dial(url, nil)
 	if err != nil {
@@ -63,7 +63,7 @@ func (u *WebsocketUtil) OpenConnection(url string) (*websocket.Conn, error) {
 		return nil, err
 	}
 
-	u.log.Infof("Successfully opened websocket connection to: ", url)
+	u.log.Debugf("Successfully opened websocket connection to: ", url)
 
 	return conn, err
 }

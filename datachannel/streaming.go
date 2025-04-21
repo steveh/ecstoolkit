@@ -204,7 +204,7 @@ func (dataChannel *DataChannel) SetWebsocket(log log.T, channelUrl string, chann
 func (dataChannel *DataChannel) FinalizeDataChannelHandshake(log log.T, tokenValue string) (err error) {
 	uid := uuid.New().String()
 
-	log.Infof("Sending token through data channel %s to acknowledge connection", dataChannel.wsChannel.GetStreamUrl())
+	log.Debugf("Sending token through data channel %s to acknowledge connection", dataChannel.wsChannel.GetStreamUrl())
 	openDataChannelInput := service.OpenDataChannelInput{
 		MessageSchemaVersion: aws.String(config.MessageSchemaVersion),
 		RequestId:            aws.String(uid),
@@ -244,7 +244,7 @@ func (dataChannel *DataChannel) Open(log log.T) (err error) {
 
 // Close closes datachannel - its web socket connection.
 func (dataChannel *DataChannel) Close(log log.T) error {
-	log.Infof("Closing datachannel with url %s", dataChannel.wsChannel.GetStreamUrl())
+	log.Debugf("Closing datachannel with url %s", dataChannel.wsChannel.GetStreamUrl())
 
 	return dataChannel.wsChannel.Close(log)
 }
@@ -259,7 +259,7 @@ func (dataChannel *DataChannel) Reconnect(log log.T) (err error) {
 		return fmt.Errorf("failed to reconnect data channel %s with error: %w", dataChannel.wsChannel.GetStreamUrl(), err)
 	}
 
-	log.Infof("Successfully reconnected to data channel: %s", dataChannel.wsChannel.GetStreamUrl())
+	log.Debugf("Successfully reconnected to data channel: %s", dataChannel.wsChannel.GetStreamUrl())
 
 	return
 }
@@ -548,8 +548,8 @@ func (dataChannel *DataChannel) handleHandshakeComplete(log log.T, clientMessage
 		handshakeComplete.HandshakeTimeToComplete.Seconds())
 
 	if handshakeComplete.CustomerMessage != "" {
-		log.Infof("Exiting session with sessionId: %s.", dataChannel.SessionId)
-		log.Infof("SessionId: %s : %s", dataChannel.SessionId, handshakeComplete.CustomerMessage)
+		log.Debugf("Exiting session with sessionId: %s.", dataChannel.SessionId)
+		log.Debugf("SessionId: %s : %s", dataChannel.SessionId, handshakeComplete.CustomerMessage)
 	}
 
 	return err
@@ -850,12 +850,12 @@ func (dataChannel DataChannel) HandleChannelClosedMessage(log log.T, stopHandler
 		log.Errorf("Cannot deserialize payload to ChannelClosedMessage: %v.", err)
 	}
 
-	log.Infof("Exiting session with sessionId: %s.", sessionId)
+	log.Debugf("Exiting session with sessionId: %s.", sessionId)
 
 	if channelClosedMessage.Output == "" {
-		log.Infof("SessionId: %s : %s", sessionId, channelClosedMessage.Output)
+		log.Debugf("SessionId: %s : %s", sessionId, channelClosedMessage.Output)
 	} else {
-		log.Infof("SessionId: %s : %s", sessionId, channelClosedMessage.Output)
+		log.Debugf("SessionId: %s : %s", sessionId, channelClosedMessage.Output)
 	}
 
 	stopHandler(log)
@@ -925,7 +925,7 @@ func (dataChannel *DataChannel) ProcessKMSEncryptionHandshakeAction(ctx context.
 
 	kmsEncRequest := message.KMSEncryptionRequest{}
 	json.Unmarshal(actionParams, &kmsEncRequest)
-	log.Infof("%+v", kmsEncRequest)
+	log.Debugf("%+v", kmsEncRequest)
 
 	kmsKeyId := kmsEncRequest.KMSKeyID
 

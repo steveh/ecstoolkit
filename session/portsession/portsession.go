@@ -100,13 +100,13 @@ func (s *PortSession) Initialize(ctx context.Context, log log.T, sessionVar *ses
 
 				return
 			} else {
-				log.Infof("Received %s message while establishing connection", outputMessage.MessageType)
+				log.Debugf("Received %s message while establishing connection", outputMessage.MessageType)
 			}
 		}
 
 		s.DataChannel.OutputMessageHandler(ctx, log, s.Stop, s.SessionId, input)
 	})
-	log.Infof("Connected to instance[%s] on port: %s", sessionVar.TargetId, s.portParameters.PortNumber)
+	log.Debugf("Connected to instance[%s] on port: %s", sessionVar.TargetId, s.portParameters.PortNumber)
 }
 
 func (s *PortSession) Stop(log log.T) error {

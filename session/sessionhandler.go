@@ -122,7 +122,7 @@ func (s *Session) ResumeSessionHandler(ctx context.Context, log log.T) (err erro
 
 		return
 	} else if s.TokenValue == "" {
-		log.Infof("Session: %s timed out.", s.SessionId)
+		log.Debugf("Session: %s timed out.", s.SessionId)
 
 		return errors.New("session timed out")
 	}

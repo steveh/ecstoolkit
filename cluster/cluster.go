@@ -162,7 +162,7 @@ func (c *Cluster) RunConsole(ctx context.Context, serviceName string, containerN
 		return arn.ARN{}, fmt.Errorf("parsing running task arn: %w", err)
 	}
 
-	slog.Info("waiting for task to start", "maxWaitTime", maxWaitTime)
+	slog.Info("Waiting for task to start", "maxWaitTime", maxWaitTime)
 
 	waiter := ecs.NewTasksRunningWaiter(c.ecsClient, func(o *ecs.TasksRunningWaiterOptions) {
 		o.LogWaitAttempts = true
@@ -238,7 +238,7 @@ func (c *Cluster) ReplaceTaskDefinitionTag(ctx context.Context, taskDefinitionAR
 }
 
 // Attach attaches to a running container and executes a command.
-func (c *Cluster) Attach(ctx context.Context, taskARN arn.ARN, containerName string, command string) error {
+func (c *Cluster) Attach(ctx context.Context, taskARN arn.ARN, containerName string, command []string) error {
 	describe, err := c.ecsClient.DescribeTasks(ctx, &ecs.DescribeTasksInput{
 		Cluster: aws.String(c.clusterName),
 		Tasks:   []string{taskARN.String()},
@@ -261,7 +261,7 @@ func (c *Cluster) Attach(ctx context.Context, taskARN arn.ARN, containerName str
 		TaskARN:            taskARN.String(),
 		ContainerName:      containerName,
 		ContainerRuntimeID: containerRuntimeID,
-		Command:            command,
+		Command:            strings.Join(command, " "),
 	}); err != nil {
 		return fmt.Errorf("executing command: %w", err)
 	}
