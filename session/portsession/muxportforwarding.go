@@ -67,14 +67,38 @@ type MuxPortForwarding struct {
 // Ensure MuxPortForwarding implements IPortSession.
 var _ IPortSession = (*MuxPortForwarding)(nil)
 
-func (c *MgsConn) close() {
-	c.listener.Close()
-	c.conn.Close()
+func (c *MgsConn) close() error {
+	var errs []error
+	if err := c.listener.Close(); err != nil {
+		errs = append(errs, fmt.Errorf("closing listener: %w", err))
+	}
+
+	if err := c.conn.Close(); err != nil {
+		errs = append(errs, fmt.Errorf("closing connection: %w", err))
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("closing MgsConn: %v", errs)
+	}
+
+	return nil
 }
 
-func (c *MuxClient) close() {
-	c.session.Close()
-	c.conn.Close()
+func (c *MuxClient) close() error {
+	var errs []error
+	if err := c.session.Close(); err != nil {
+		errs = append(errs, fmt.Errorf("closing session: %w", err))
+	}
+
+	if err := c.conn.Close(); err != nil {
+		errs = append(errs, fmt.Errorf("closing connection: %w", err))
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("closing MuxClient: %v", errs)
+	}
+
+	return nil
 }
 
 // IsStreamNotSet checks if stream is not set.
@@ -84,15 +108,27 @@ func (p *MuxPortForwarding) IsStreamNotSet() (status bool) {
 
 // Stop closes all open stream.
 func (p *MuxPortForwarding) Stop(log *slog.Logger) error {
+	var errs []error
+
 	if p.mgsConn != nil {
-		p.mgsConn.close()
+		if err := p.mgsConn.close(); err != nil {
+			errs = append(errs, fmt.Errorf("closing MGS connection: %w", err))
+		}
 	}
 
 	if p.muxClient != nil {
-		p.muxClient.close()
+		if err := p.muxClient.close(); err != nil {
+			errs = append(errs, fmt.Errorf("closing mux client: %w", err))
+		}
 	}
 
-	p.cleanUp()
+	if err := p.cleanUp(); err != nil {
+		errs = append(errs, fmt.Errorf("cleaning up: %w", err))
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("stopping mux port forwarding: %v", errs)
+	}
 
 	return nil
 }
@@ -103,10 +139,14 @@ func (p *MuxPortForwarding) InitializeStreams(_ context.Context, log *slog.Logge
 	p.socketFile = getUnixSocketPath(p.sessionId, os.TempDir(), "session_manager_plugin_mux.sock")
 
 	if err = p.initialize(log, agentVersion); err != nil {
-		p.cleanUp()
+		if cleanErr := p.cleanUp(); cleanErr != nil {
+			log.Error("Failed to clean up after initialization error", "error", cleanErr)
+		}
+
+		return fmt.Errorf("initializing streams: %w", err)
 	}
 
-	return
+	return nil
 }
 
 // ReadStream reads data from different connections.
@@ -124,7 +164,7 @@ func (p *MuxPortForwarding) ReadStream(ctx context.Context, log *slog.Logger) (e
 	})
 
 	if err := g.Wait(); err != nil {
-		return fmt.Errorf("failed to wait for goroutine group: %w", err)
+		return fmt.Errorf("waiting for goroutine group: %w", err)
 	}
 
 	return nil
@@ -136,7 +176,7 @@ func (p *MuxPortForwarding) WriteStream(outputMessage message.ClientMessage) err
 	case message.Output:
 		_, err := p.mgsConn.conn.Write(outputMessage.Payload)
 		if err != nil {
-			return fmt.Errorf("failed to write to MGS connection: %w", err)
+			return fmt.Errorf("writing to MGS connection: %w", err)
 		}
 
 		return nil
@@ -145,11 +185,11 @@ func (p *MuxPortForwarding) WriteStream(outputMessage message.ClientMessage) err
 
 		buf := bytes.NewBuffer(outputMessage.Payload)
 		if err := binary.Read(buf, binary.BigEndian, &flag); err != nil {
-			return fmt.Errorf("failed to read flag from buffer: %w", err)
+			return fmt.Errorf("reading flag from buffer: %w", err)
 		}
 
 		if message.ConnectToPortError == flag {
-			return errors.New("connection to destination port failed, check SSM Agent logs.")
+			return errors.New("connection to destination port failed")
 		}
 	}
 
@@ -157,8 +197,12 @@ func (p *MuxPortForwarding) WriteStream(outputMessage message.ClientMessage) err
 }
 
 // cleanUp deletes unix socket file.
-func (p *MuxPortForwarding) cleanUp() {
-	os.Remove(p.socketFile)
+func (p *MuxPortForwarding) cleanUp() error {
+	if err := os.Remove(p.socketFile); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("removing socket file: %w", err)
+	}
+
+	return nil
 }
 
 // initialize opens a network connection that acts as smux client.
@@ -167,14 +211,14 @@ func (p *MuxPortForwarding) initialize(log *slog.Logger, agentVersion string) (e
 	var listener net.Listener
 
 	if listener, err = sessionutil.NewListener(log, p.socketFile); err != nil {
-		return fmt.Errorf("failed to create new listener: %w", err)
+		return fmt.Errorf("creating new listener: %w", err)
 	}
 
 	var g errgroup.Group
 	// start a go routine to accept connections on the network listener
 	g.Go(func() error {
 		if conn, err := listener.Accept(); err != nil {
-			return fmt.Errorf("failed to accept connection: %w", err)
+			return fmt.Errorf("accepting connection: %w", err)
 		} else {
 			p.mgsConn = &MgsConn{listener, conn}
 		}
@@ -185,7 +229,7 @@ func (p *MuxPortForwarding) initialize(log *slog.Logger, agentVersion string) (e
 	// start a connection to the local network listener and set up client side of mux
 	g.Go(func() error {
 		if muxConn, err := net.Dial(listener.Addr().Network(), listener.Addr().String()); err != nil {
-			return fmt.Errorf("failed to dial listener: %w", err)
+			return fmt.Errorf("dialing listener: %w", err)
 		} else {
 			smuxConfig := smux.DefaultConfig()
 			if version.DoesAgentSupportDisableSmuxKeepAlive(log, agentVersion) {
@@ -194,7 +238,7 @@ func (p *MuxPortForwarding) initialize(log *slog.Logger, agentVersion string) (e
 			}
 
 			if muxSession, err := smux.Client(muxConn, smuxConfig); err != nil {
-				return fmt.Errorf("failed to create smux client: %w", err)
+				return fmt.Errorf("creating smux client: %w", err)
 			} else {
 				p.muxClient = &MuxClient{muxConn, muxSession}
 			}
@@ -204,7 +248,7 @@ func (p *MuxPortForwarding) initialize(log *slog.Logger, agentVersion string) (e
 	})
 
 	if err := g.Wait(); err != nil {
-		return fmt.Errorf("failed to initialize mux port forwarding: %w", err)
+		return fmt.Errorf("initializing mux port forwarding: %w", err)
 	}
 
 	return nil
@@ -220,11 +264,14 @@ func (p *MuxPortForwarding) handleControlSignals(log *slog.Logger) {
 		log.Debug("Terminate signal received, exiting.")
 
 		if err := p.session.DataChannel.SendFlag(log, message.TerminateSession); err != nil {
-			log.Error("Failed to send TerminateSession flag", "error", err)
+			log.Error("sending TerminateSession flag", "error", err)
 		}
 
 		log.Debug("Exiting session", "sessionId", p.sessionId)
-		p.Stop(log)
+
+		if err := p.Stop(log); err != nil {
+			log.Error("Failed to stop session", "error", err)
+		}
 	}()
 }
 
@@ -242,15 +289,15 @@ func (p *MuxPortForwarding) transferDataToServer(log *slog.Logger, ctx context.C
 			if numBytes, err = p.mgsConn.conn.Read(msg); err != nil {
 				log.Debug("Reading from port failed", "error", err)
 
-				return fmt.Errorf("failed to read from MGS connection: %w", err)
+				return fmt.Errorf("reading from MGS connection: %w", err)
 			}
 
 			log.Debug("Received message from mux client", "size", numBytes)
 
 			if err = p.session.DataChannel.SendInputDataMessage(log, message.Output, msg[:numBytes]); err != nil {
-				log.Error("Failed to send packet on data channel", "error", err)
+				log.Error("sending packet on data channel", "error", err)
 
-				return fmt.Errorf("failed to send input data message: %w", err)
+				return fmt.Errorf("sending input data message: %w", err)
 			}
 			// sleep to process more data
 			time.Sleep(time.Millisecond)
@@ -267,7 +314,7 @@ func (p *MuxPortForwarding) handleClientConnections(log *slog.Logger, ctx contex
 
 	if p.portParameters.LocalConnectionType == "unix" {
 		if listener, err = net.Listen(p.portParameters.LocalConnectionType, p.portParameters.LocalUnixSocket); err != nil {
-			return fmt.Errorf("failed to listen on unix socket: %w", err)
+			return fmt.Errorf("listening on unix socket: %w", err)
 		}
 
 		displayMsg = fmt.Sprintf("Unix socket %s opened for sessionId %s.", p.portParameters.LocalUnixSocket, p.sessionId)
@@ -278,14 +325,22 @@ func (p *MuxPortForwarding) handleClientConnections(log *slog.Logger, ctx contex
 		}
 
 		if listener, err = net.Listen("tcp", "localhost:"+localPortNumber); err != nil {
-			return fmt.Errorf("failed to listen on TCP port: %w", err)
+			return fmt.Errorf("listening on TCP port: %w", err)
 		}
 
 		p.portParameters.LocalPortNumber = strconv.Itoa(listener.Addr().(*net.TCPAddr).Port)
 		displayMsg = fmt.Sprintf("Port %s opened for sessionId %s.", p.portParameters.LocalPortNumber, p.sessionId)
 	}
 
-	defer listener.Close()
+	defer func() {
+		if closeErr := listener.Close(); closeErr != nil {
+			log.Error("Failed to close listener", "error", closeErr)
+
+			if err == nil {
+				err = closeErr
+			}
+		}
+	}()
 
 	log.Debug(displayMsg)
 	log.Debug("Waiting for connections")
@@ -308,7 +363,7 @@ func (p *MuxPortForwarding) handleClientConnections(log *slog.Logger, ctx contex
 
 				stream, err := p.muxClient.session.OpenStream()
 				if err != nil {
-					log.Error("Failed to open stream", "error", err)
+					log.Error("opening stream", "error", err)
 
 					continue
 				}
@@ -325,21 +380,40 @@ func (p *MuxPortForwarding) handleClientConnections(log *slog.Logger, ctx contex
 func handleDataTransfer(dst io.ReadWriteCloser, src io.ReadWriteCloser) {
 	var wait sync.WaitGroup
 
+	errChan := make(chan error, 2)
+
 	wait.Add(2)
 
 	go func() {
-		io.Copy(dst, src)
-		dst.Close()
-		wait.Done()
+		defer wait.Done()
+
+		if _, err := io.Copy(dst, src); err != nil {
+			errChan <- fmt.Errorf("error copying from src to dst: %w", err)
+
+			return
+		}
+
+		if err := dst.Close(); err != nil {
+			errChan <- fmt.Errorf("error closing dst: %w", err)
+		}
 	}()
 
 	go func() {
-		io.Copy(src, dst)
-		src.Close()
-		wait.Done()
+		defer wait.Done()
+
+		if _, err := io.Copy(src, dst); err != nil {
+			errChan <- fmt.Errorf("error copying from dst to src: %w", err)
+
+			return
+		}
+
+		if err := src.Close(); err != nil {
+			errChan <- fmt.Errorf("error closing src: %w", err)
+		}
 	}()
 
 	wait.Wait()
+	close(errChan)
 }
 
 // getUnixSocketPath generates the unix socket file name based on sessionId and returns the path.

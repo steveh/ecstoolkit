@@ -37,7 +37,7 @@ func getState(state *bytes.Buffer) error {
 	cmd.Stdout = state
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to get terminal state: %w", err)
+		return fmt.Errorf("getting terminal state: %w", err)
 	}
 
 	return nil
@@ -50,7 +50,7 @@ func setState(state *bytes.Buffer) error {
 	cmd.Stdout = os.Stdout
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to set terminal state: %w", err)
+		return fmt.Errorf("setting terminal state: %w", err)
 	}
 
 	return nil
@@ -69,15 +69,32 @@ func (s *ShellSession) Stop(log *slog.Logger) error {
 }
 
 // disableEchoAndInputBuffering disables echo to avoid double echo and disable input buffering.
-func (s *ShellSession) disableEchoAndInputBuffering() {
-	getState(&s.originalSttyState)
-	setState(bytes.NewBufferString("cbreak"))
-	setState(bytes.NewBufferString("-echo"))
+func (s *ShellSession) disableEchoAndInputBuffering() error {
+	if err := getState(&s.originalSttyState); err != nil {
+		return fmt.Errorf("getting terminal state: %w", err)
+	}
+
+	if err := setState(bytes.NewBufferString("cbreak")); err != nil {
+		return fmt.Errorf("setting cbreak mode: %w", err)
+	}
+
+	if err := setState(bytes.NewBufferString("-echo")); err != nil {
+		return fmt.Errorf("disabling echo: %w", err)
+	}
+
+	return nil
 }
 
-func (s *ShellSession) enableEchoAndInputBuffering() {
-	setState(&s.originalSttyState)
-	setState(bytes.NewBufferString("echo")) // for linux
+func (s *ShellSession) enableEchoAndInputBuffering() error {
+	if err := setState(&s.originalSttyState); err != nil {
+		return fmt.Errorf("restoring original terminal state: %w", err)
+	}
+
+	if err := setState(bytes.NewBufferString("echo")); err != nil { // for linux
+		return fmt.Errorf("enabling echo: %w", err)
+	}
+
+	return nil
 }
 
 // handleKeyboardInput handles input entered by customer on terminal.
@@ -86,8 +103,15 @@ func (s *ShellSession) handleKeyboardInput(ctx context.Context, log *slog.Logger
 	s.shutdown = cancelFunc
 
 	// handle double echo and disable input buffering
-	s.disableEchoAndInputBuffering()
-	defer s.enableEchoAndInputBuffering()
+	if err := s.disableEchoAndInputBuffering(); err != nil {
+		return fmt.Errorf("disabling echo and input buffering: %w", err)
+	}
+
+	defer func() {
+		if enableErr := s.enableEchoAndInputBuffering(); enableErr != nil {
+			log.Error("Failed to enable echo and input buffering", "error", enableErr)
+		}
+	}()
 
 	go func() {
 		stdinBytes := make([]byte, StdinBufferLimit)
@@ -103,7 +127,7 @@ func (s *ShellSession) handleKeyboardInput(ctx context.Context, log *slog.Logger
 			}
 
 			if err = s.DataChannel.SendInputDataMessage(log, message.Output, stdinBytes[:stdinBytesLen]); err != nil {
-				log.Error("Failed to send UTF8 char", "error", err)
+				log.Error("sending UTF8 char", "error", err)
 
 				break
 			}
@@ -118,7 +142,7 @@ func (s *ShellSession) handleKeyboardInput(ctx context.Context, log *slog.Logger
 	<-ctx.Done()
 
 	if err := ctx.Err(); err != nil {
-		return fmt.Errorf("failed to send input data message: %w", err)
+		return fmt.Errorf("sending input data message: %w", err)
 	}
 
 	return nil

@@ -105,14 +105,16 @@ func (s *PortSession) Initialize(ctx context.Context, log *slog.Logger, sessionV
 			}
 		}
 
-		s.DataChannel.OutputMessageHandler(ctx, log, s.Stop, s.SessionId, input)
+		if err := s.DataChannel.OutputMessageHandler(ctx, log, s.Stop, s.SessionId, input); err != nil {
+			log.Error("Failed to handle output message", "error", err)
+		}
 	})
 	log.Debug("Connected to instance", "targetId", sessionVar.TargetId, "port", s.portParameters.PortNumber)
 }
 
 func (s *PortSession) Stop(log *slog.Logger) error {
 	if err := s.portSessionType.Stop(log); err != nil {
-		return fmt.Errorf("failed to stop port session: %w", err)
+		return fmt.Errorf("stopping port session: %w", err)
 	}
 
 	return nil
@@ -121,11 +123,11 @@ func (s *PortSession) Stop(log *slog.Logger) error {
 // StartSession redirects inputStream/outputStream data to datachannel.
 func (s *PortSession) SetSessionHandlers(ctx context.Context, log *slog.Logger) (err error) {
 	if err = s.portSessionType.InitializeStreams(ctx, log, s.DataChannel.GetAgentVersion()); err != nil {
-		return fmt.Errorf("failed to initialize streams: %w", err)
+		return fmt.Errorf("initializing streams: %w", err)
 	}
 
 	if err = s.portSessionType.ReadStream(ctx, log); err != nil {
-		return fmt.Errorf("failed to read stream: %w", err)
+		return fmt.Errorf("reading stream: %w", err)
 	}
 
 	return nil
@@ -142,7 +144,7 @@ func (s *PortSession) ProcessStreamMessagePayload(log *slog.Logger, outputMessag
 	log.Debug("Received payload from datachannel", "size", outputMessage.PayloadLength)
 
 	if err := s.portSessionType.WriteStream(outputMessage); err != nil {
-		return true, fmt.Errorf("failed to write stream: %w", err)
+		return true, fmt.Errorf("writing stream: %w", err)
 	}
 
 	return true, nil

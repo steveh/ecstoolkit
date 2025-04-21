@@ -32,7 +32,7 @@ type ioU struct{}
 func (ioU) ReadFile(filename string) ([]byte, error) {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read file %s: %w", filename, err)
+		return nil, fmt.Errorf("reading file %s: %w", filename, err)
 	}
 
 	return data, nil

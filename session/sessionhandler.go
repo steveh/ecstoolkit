@@ -41,7 +41,9 @@ func (s *Session) OpenDataChannel(ctx context.Context, log *slog.Logger) (err er
 	s.DataChannel.SetWebsocket(log, s.StreamUrl, s.TokenValue)
 	s.DataChannel.GetWsChannel().SetOnMessage(
 		func(input []byte) {
-			s.DataChannel.OutputMessageHandler(ctx, log, s.Stop, s.SessionId, input)
+			if err := s.DataChannel.OutputMessageHandler(ctx, log, s.Stop, s.SessionId, input); err != nil {
+				log.Error("Failed to handle output message", "error", err)
+			}
 		})
 	s.DataChannel.RegisterOutputStreamHandler(s.ProcessFirstMessage, false)
 
@@ -65,7 +67,9 @@ func (s *Session) OpenDataChannel(ctx context.Context, log *slog.Logger) (err er
 		})
 
 	// Scheduler for resending of data
-	s.DataChannel.ResendStreamDataMessageScheduler(log)
+	if err := s.DataChannel.ResendStreamDataMessageScheduler(log); err != nil {
+		log.Error("Failed to schedule resend of stream data messages", "error", err)
+	}
 
 	return nil
 }
@@ -106,7 +110,7 @@ func (s *Session) GetResumeSessionParams(ctx context.Context, log *slog.Logger) 
 	if err != nil {
 		log.Error("Resume Session failed", "error", err)
 
-		return "", fmt.Errorf("failed to resume session: %w", err)
+		return "", fmt.Errorf("resume session: %w", err)
 	}
 
 	if resumeSessionOutput.TokenValue == nil {
@@ -120,9 +124,9 @@ func (s *Session) GetResumeSessionParams(ctx context.Context, log *slog.Logger) 
 func (s *Session) ResumeSessionHandler(ctx context.Context, log *slog.Logger) (err error) {
 	s.TokenValue, err = s.GetResumeSessionParams(ctx, log)
 	if err != nil {
-		log.Error("Failed to get token", "error", err)
+		log.Error("getting token", "error", err)
 
-		return
+		return fmt.Errorf("resume session: %w", err)
 	} else if s.TokenValue == "" {
 		log.Debug("Session timed out", "sessionId", s.SessionId)
 
@@ -146,7 +150,7 @@ func (s *Session) TerminateSession(ctx context.Context, log *slog.Logger) error 
 	if _, err := s.SSMClient.TerminateSession(ctx, &terminateSessionInput); err != nil {
 		log.Error("Terminate Session failed", "error", err)
 
-		return fmt.Errorf("failed to terminate session: %w", err)
+		return fmt.Errorf("terminate session: %w", err)
 	}
 
 	return nil

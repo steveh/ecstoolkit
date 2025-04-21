@@ -16,6 +16,7 @@ package portsession
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"testing"
@@ -28,30 +29,43 @@ import (
 
 // Test StartSession.
 func TestStartSessionForStandardStreamForwarding(t *testing.T) {
-	in, out, _ := os.Pipe()
-	out.Write(outputMessage.Payload)
+	in, out, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("Failed to create pipe: %v", err)
+	}
 
-	oldStdin := os.Stdin
+	// Ensure cleanup
+	defer func() {
+		if err := in.Close(); err != nil {
+			t.Logf("Error closing in: %v", err)
+		}
+
+		if err := out.Close(); err != nil {
+			t.Logf("Error closing out: %v", err)
+		}
+		// Restore original stdin
+	}()
+
+	if _, err := out.Write(outputMessage.Payload); err != nil {
+		t.Errorf("Failed to write to out: %v", err)
+
+		return
+	}
+
 	os.Stdin = in
 
 	var actualPayload []byte
 
+	done := make(chan struct{})
+	errChan := make(chan error, 1)
+
 	datachannel.SendMessageCall = func(log *slog.Logger, dataChannel *datachannel.DataChannel, input []byte, inputType int) error {
 		actualPayload = input
 
+		close(done)
+
 		return nil
 	}
-
-	// Spawning a separate go routine to close files after a few seconds.
-	// This is required as startSession has a for loop which will continuously reads data.
-	go func() {
-		time.Sleep(time.Second)
-
-		os.Stdin = oldStdin
-
-		in.Close()
-		out.Close()
-	}()
 
 	portSession := PortSession{
 		Session:        getSessionMock(),
@@ -61,10 +75,28 @@ func TestStartSessionForStandardStreamForwarding(t *testing.T) {
 			portParameters: PortParameters{PortNumber: "22"},
 		},
 	}
-	portSession.SetSessionHandlers(context.TODO(), mockLog)
+
+	// Start session handlers in a goroutine
+	go func() {
+		if err := portSession.SetSessionHandlers(context.TODO(), mockLog); err != nil {
+			errChan <- fmt.Errorf("failed to set session handlers: %w", err)
+
+			return
+		}
+	}()
+
+	// Wait for message to be processed or timeout
+	select {
+	case <-done:
+		// Message processed successfully
+	case err := <-errChan:
+		t.Fatal(err)
+	case <-time.After(2 * time.Second):
+		t.Fatal("Timeout waiting for message processing")
+	}
 
 	deserializedMsg := &message.ClientMessage{}
-	err := deserializedMsg.DeserializeClientMessage(mockLog, actualPayload)
+	err = deserializedMsg.DeserializeClientMessage(mockLog, actualPayload)
 	assert.NoError(t, err)
 	assert.Equal(t, outputMessage.Payload, deserializedMsg.Payload)
 }

@@ -29,7 +29,11 @@ import (
 // test readStream.
 func TestReadStream(t *testing.T) {
 	out, in := net.Pipe()
-	defer out.Close()
+	defer func() {
+		if err := out.Close(); err != nil {
+			t.Errorf("Failed to close out: %v", err)
+		}
+	}()
 
 	session := getSessionMock()
 
@@ -43,8 +47,15 @@ func TestReadStream(t *testing.T) {
 	}
 
 	go func() {
-		in.Write(outputMessage.Payload)
-		in.Close()
+		if _, err := in.Write(outputMessage.Payload); err != nil {
+			t.Errorf("Failed to write to in: %v", err)
+
+			return
+		}
+
+		if err := in.Close(); err != nil {
+			t.Errorf("Failed to close in: %v", err)
+		}
 	}()
 
 	var actualPayload []byte
@@ -56,7 +67,9 @@ func TestReadStream(t *testing.T) {
 	}
 
 	go func() {
-		portSession.portSessionType.ReadStream(context.TODO(), mockLog)
+		if err := portSession.portSessionType.ReadStream(context.TODO(), mockLog); err != nil {
+			t.Errorf("Failed to read stream: %v", err)
+		}
 	}()
 
 	time.Sleep(time.Second)
@@ -70,8 +83,15 @@ func TestReadStream(t *testing.T) {
 // test writeStream.
 func TestWriteStream(t *testing.T) {
 	out, in := net.Pipe()
-	defer in.Close()
-	defer out.Close()
+	defer func() {
+		if err := in.Close(); err != nil {
+			t.Errorf("Failed to close in: %v", err)
+		}
+
+		if err := out.Close(); err != nil {
+			t.Errorf("Failed to close out: %v", err)
+		}
+	}()
 
 	portSession := PortSession{
 		portSessionType: &MuxPortForwarding{
@@ -81,11 +101,20 @@ func TestWriteStream(t *testing.T) {
 	}
 
 	go func() {
-		portSession.portSessionType.WriteStream(outputMessage)
+		if err := portSession.portSessionType.WriteStream(outputMessage); err != nil {
+			t.Errorf("Failed to write stream: %v", err)
+		}
 	}()
 
 	msg := make([]byte, 20)
-	n, _ := out.Read(msg)
+
+	n, err := out.Read(msg)
+	if err != nil {
+		t.Errorf("Failed to read from out: %v", err)
+
+		return
+	}
+
 	msg = msg[:n]
 
 	assert.Equal(t, outputMessage.Payload, msg)
@@ -97,14 +126,31 @@ func TestHandleDataTransferSrcToDst(t *testing.T) {
 	out, in := net.Pipe()
 	out1, in1 := net.Pipe()
 
-	defer out1.Close()
+	defer func() {
+		if err := out1.Close(); err != nil {
+			t.Errorf("Failed to close out1: %v", err)
+		}
+	}()
 
 	go func() {
-		in.Write(outputMessage.Payload)
-		in.Close()
+		if _, err := in.Write(outputMessage.Payload); err != nil {
+			t.Errorf("Failed to write to in: %v", err)
+
+			return
+		}
+
+		if err := in.Close(); err != nil {
+			t.Errorf("Failed to close in: %v", err)
+		}
 	}()
 	go func() {
-		n, _ := out1.Read(msg)
+		n, err := out1.Read(msg)
+		if err != nil {
+			t.Errorf("Failed to read from out1: %v", err)
+
+			return
+		}
+
 		msg = msg[:n]
 	}()
 
@@ -117,14 +163,31 @@ func TestHandleDataTransferDstToSrc(t *testing.T) {
 	out, in := net.Pipe()
 	out1, in1 := net.Pipe()
 
-	defer out.Close()
+	defer func() {
+		if err := out.Close(); err != nil {
+			t.Errorf("Failed to close out: %v", err)
+		}
+	}()
 
 	go func() {
-		in1.Write(outputMessage.Payload)
-		in1.Close()
+		if _, err := in1.Write(outputMessage.Payload); err != nil {
+			t.Errorf("Failed to write to in1: %v", err)
+
+			return
+		}
+
+		if err := in1.Close(); err != nil {
+			t.Errorf("Failed to close in1: %v", err)
+		}
 	}()
 	go func() {
-		n, _ := out.Read(msg)
+		n, err := out.Read(msg)
+		if err != nil {
+			t.Errorf("Failed to read from out: %v", err)
+
+			return
+		}
+
 		msg = msg[:n]
 	}()
 

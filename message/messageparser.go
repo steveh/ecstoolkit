@@ -111,7 +111,7 @@ func getString(log *slog.Logger, byteArray []byte, offset int, stringLength int)
 	if offset > byteArrayLength-1 || offset+stringLength-1 > byteArrayLength-1 || offset < 0 {
 		log.Error("getString failed: Offset is invalid.")
 
-		return "", errors.New("Offset is outside the byte array.")
+		return "", errors.New("offset outside byte array")
 	}
 
 	// remove nulls from the bytes array
@@ -134,7 +134,7 @@ func getInteger(log *slog.Logger, byteArray []byte, offset int) (result int32, e
 	if offset > byteArrayLength-1 || offset+4 > byteArrayLength || offset < 0 {
 		log.Error("getInteger failed: Offset is invalid.")
 
-		return 0, errors.New("Offset is bigger than the byte array.")
+		return 0, errors.New("offset outside byte array")
 	}
 
 	return bytesToInteger(log, byteArray[offset:offset+4])
@@ -148,12 +148,12 @@ func bytesToInteger(log *slog.Logger, input []byte) (result int32, err error) {
 	if inputLength != 4 {
 		log.Error("bytesToInteger failed: input array size is not equal to 4.")
 
-		return 0, errors.New("Input array size is not equal to 4.")
+		return 0, errors.New("input array size not equal to 4")
 	}
 
 	buf := bytes.NewBuffer(input)
 	if err := binary.Read(buf, binary.BigEndian, &res); err != nil {
-		return 0, fmt.Errorf("failed to read integer from bytes: %w", err)
+		return 0, fmt.Errorf("reading integer from bytes: %w", err)
 	}
 
 	return res, nil
@@ -187,12 +187,12 @@ func bytesToLong(log *slog.Logger, input []byte) (result int64, err error) {
 	if inputLength != 8 {
 		log.Error("bytesToLong failed: input array size is not equal to 8.")
 
-		return 0, errors.New("Input array size is not equal to 8.")
+		return 0, errors.New("input array size not equal to 8")
 	}
 
 	buf := bytes.NewBuffer(input)
 	if err := binary.Read(buf, binary.BigEndian, &res); err != nil {
-		return 0, fmt.Errorf("failed to read long from bytes: %w", err)
+		return 0, fmt.Errorf("reading long from bytes: %w", err)
 	}
 
 	return res, nil
@@ -204,42 +204,42 @@ func getUuid(log *slog.Logger, byteArray []byte, offset int) (uuid.UUID, error) 
 	if offset > byteArrayLength-1 || offset+16-1 > byteArrayLength-1 || offset < 0 {
 		log.Error("getUuid failed: Offset is invalid.")
 
-		return uuid.Nil, errors.New("Offset is outside the byte array.")
+		return uuid.Nil, errors.New("offset outside byte array")
 	}
 
 	leastSignificantLong, err := getLong(log, byteArray, offset)
 	if err != nil {
-		log.Error("getUuid failed: failed to get uuid LSBs Long value.")
+		log.Error("getUuid failed: getting uuid LSBs Long value")
 
-		return uuid.Nil, errors.New("Failed to get uuid LSBs long value.")
+		return uuid.Nil, errors.New("getting uuid LSBs")
 	}
 
 	leastSignificantBytes, err := longToBytes(log, leastSignificantLong)
 	if err != nil {
-		log.Error("getUuid failed: failed to get uuid LSBs bytes value.")
+		log.Error("getUuid failed: getting uuid LSBs bytes value")
 
-		return uuid.Nil, errors.New("Failed to get uuid LSBs bytes value.")
+		return uuid.Nil, errors.New("getting uuid LSBs bytes")
 	}
 
 	mostSignificantLong, err := getLong(log, byteArray, offset+8)
 	if err != nil {
-		log.Error("getUuid failed: failed to get uuid MSBs Long value.")
+		log.Error("getUuid failed: getting uuid MSBs Long value")
 
-		return uuid.Nil, errors.New("Failed to get uuid MSBs long value.")
+		return uuid.Nil, errors.New("getting uuid MSBs")
 	}
 
 	mostSignificantBytes, err := longToBytes(log, mostSignificantLong)
 	if err != nil {
-		log.Error("getUuid failed: failed to get uuid MSBs bytes value.")
+		log.Error("getUuid failed: getting uuid MSBs bytes value")
 
-		return uuid.Nil, errors.New("Failed to get uuid MSBs bytes value.")
+		return uuid.Nil, errors.New("getting uuid MSBs bytes")
 	}
 
 	uuidBytes := append(mostSignificantBytes, leastSignificantBytes...)
 
 	result, err := uuid.FromBytes(uuidBytes)
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("failed to create UUID from bytes: %w", err)
+		return uuid.Nil, fmt.Errorf("creating UUID from bytes: %w", err)
 	}
 
 	return result, nil
@@ -249,7 +249,7 @@ func getUuid(log *slog.Logger, byteArray []byte, offset int) (uuid.UUID, error) 
 func longToBytes(log *slog.Logger, input int64) (result []byte, err error) {
 	buf := new(bytes.Buffer)
 	if err := binary.Write(buf, binary.BigEndian, input); err != nil {
-		return nil, fmt.Errorf("failed to write long to bytes: %w", err)
+		return nil, fmt.Errorf("writing long to bytes: %w", err)
 	}
 
 	if buf.Len() != 8 {
@@ -322,7 +322,7 @@ func (clientMessage *ClientMessage) SerializeClientMessage(log *slog.Logger) (re
 	if err != nil {
 		log.Error("Could not serialize HeaderLength", "error", err)
 
-		return make([]byte, 1), fmt.Errorf("failed to serialize header length: %w", err)
+		return make([]byte, 1), fmt.Errorf("serializing header length: %w", err)
 	}
 
 	startPosition := ClientMessage_MessageTypeOffset
@@ -332,42 +332,42 @@ func (clientMessage *ClientMessage) SerializeClientMessage(log *slog.Logger) (re
 	if err != nil {
 		log.Error("Could not serialize MessageType", "error", err)
 
-		return make([]byte, 1), fmt.Errorf("failed to serialize message type: %w", err)
+		return make([]byte, 1), fmt.Errorf("serializing message type: %w", err)
 	}
 
 	err = putUInteger(log, result, ClientMessage_SchemaVersionOffset, clientMessage.SchemaVersion)
 	if err != nil {
 		log.Error("Could not serialize SchemaVersion", "error", err)
 
-		return make([]byte, 1), fmt.Errorf("failed to serialize schema version: %w", err)
+		return make([]byte, 1), fmt.Errorf("serializing schema version: %w", err)
 	}
 
 	err = putULong(log, result, ClientMessage_CreatedDateOffset, clientMessage.CreatedDate)
 	if err != nil {
 		log.Error("Could not serialize CreatedDate", "error", err)
 
-		return make([]byte, 1), fmt.Errorf("failed to serialize created date: %w", err)
+		return make([]byte, 1), fmt.Errorf("serializing created date: %w", err)
 	}
 
 	err = putLong(log, result, ClientMessage_SequenceNumberOffset, clientMessage.SequenceNumber)
 	if err != nil {
 		log.Error("Could not serialize SequenceNumber", "error", err)
 
-		return make([]byte, 1), fmt.Errorf("failed to serialize sequence number: %w", err)
+		return make([]byte, 1), fmt.Errorf("serializing sequence number: %w", err)
 	}
 
 	err = putULong(log, result, ClientMessage_FlagsOffset, clientMessage.Flags)
 	if err != nil {
 		log.Error("Could not serialize Flags", "error", err)
 
-		return make([]byte, 1), fmt.Errorf("failed to serialize flags: %w", err)
+		return make([]byte, 1), fmt.Errorf("serializing flags: %w", err)
 	}
 
 	err = putUuid(log, result, ClientMessage_MessageIdOffset, clientMessage.MessageId)
 	if err != nil {
 		log.Error("Could not serialize MessageId", "error", err)
 
-		return make([]byte, 1), fmt.Errorf("failed to serialize message ID: %w", err)
+		return make([]byte, 1), fmt.Errorf("serializing message ID: %w", err)
 	}
 
 	hasher := sha256.New()
@@ -380,21 +380,21 @@ func (clientMessage *ClientMessage) SerializeClientMessage(log *slog.Logger) (re
 	if err != nil {
 		log.Error("Could not serialize PayloadDigest", "error", err)
 
-		return make([]byte, 1), fmt.Errorf("failed to serialize payload digest: %w", err)
+		return make([]byte, 1), fmt.Errorf("serializing payload digest: %w", err)
 	}
 
 	err = putUInteger(log, result, ClientMessage_PayloadTypeOffset, clientMessage.PayloadType)
 	if err != nil {
 		log.Error("Could not serialize PayloadType", "error", err)
 
-		return make([]byte, 1), fmt.Errorf("failed to serialize payload type: %w", err)
+		return make([]byte, 1), fmt.Errorf("serializing payload type: %w", err)
 	}
 
 	err = putUInteger(log, result, ClientMessage_PayloadLengthOffset, clientMessage.PayloadLength)
 	if err != nil {
 		log.Error("Could not serialize PayloadLength", "error", err)
 
-		return make([]byte, 1), fmt.Errorf("failed to serialize payload length: %w", err)
+		return make([]byte, 1), fmt.Errorf("serializing payload length: %w", err)
 	}
 
 	startPosition = ClientMessage_PayloadOffset
@@ -404,7 +404,7 @@ func (clientMessage *ClientMessage) SerializeClientMessage(log *slog.Logger) (re
 	if err != nil {
 		log.Error("Could not serialize Payload", "error", err)
 
-		return make([]byte, 1), fmt.Errorf("failed to serialize payload: %w", err)
+		return make([]byte, 1), fmt.Errorf("serializing payload: %w", err)
 	}
 
 	return result, nil
@@ -440,7 +440,7 @@ func putInteger(log *slog.Logger, byteArray []byte, offset int, value int32) (er
 func integerToBytes(log *slog.Logger, input int32) (result []byte, err error) {
 	buf := new(bytes.Buffer)
 	if err := binary.Write(buf, binary.BigEndian, input); err != nil {
-		return nil, fmt.Errorf("failed to write integer to bytes: %w", err)
+		return nil, fmt.Errorf("writing integer to bytes: %w", err)
 	}
 
 	if buf.Len() != 4 {
@@ -514,37 +514,37 @@ func putUuid(log *slog.Logger, byteArray []byte, offset int, input uuid.UUID) (e
 
 	uuidBytes, err := input.MarshalBinary()
 	if err != nil {
-		log.Error("putUuid failed: Failed to marshal UUID to bytes")
+		log.Error("putUuid failed: marshaling UUID to bytes")
 
-		return fmt.Errorf("failed to marshal UUID to bytes: %w", err)
+		return fmt.Errorf("marshaling UUID to bytes: %w", err)
 	}
 
 	leastSignificantLong, err := bytesToLong(log, uuidBytes[8:16])
 	if err != nil {
-		log.Error("putUuid failed: Failed to get leastSignificant Long value.")
+		log.Error("putUuid failed: getting leastSignificant Long value")
 
-		return errors.New("Failed to get leastSignificant Long value.")
+		return errors.New("getting leastSignificant Long value")
 	}
 
 	mostSignificantLong, err := bytesToLong(log, uuidBytes[0:8])
 	if err != nil {
-		log.Error("putUuid failed: Failed to get mostSignificantLong Long value.")
+		log.Error("putUuid failed: getting mostSignificantLong Long value")
 
-		return errors.New("Failed to get mostSignificantLong Long value.")
+		return errors.New("getting mostSignificantLong Long value")
 	}
 
 	err = putLong(log, byteArray, offset, leastSignificantLong)
 	if err != nil {
-		log.Error("putUuid failed: Failed to put leastSignificantLong Long value.")
+		log.Error("putUuid failed: putting leastSignificantLong Long value")
 
-		return errors.New("Failed to put leastSignificantLong Long value.")
+		return errors.New("putting leastSignificantLong Long value")
 	}
 
 	err = putLong(log, byteArray, offset+8, mostSignificantLong)
 	if err != nil {
-		log.Error("putUuid failed: Failed to put mostSignificantLong Long value.")
+		log.Error("putUuid failed: putting mostSignificantLong Long value")
 
-		return errors.New("Failed to put mostSignificantLong Long value.")
+		return errors.New("putting mostSignificantLong Long value")
 	}
 
 	return nil

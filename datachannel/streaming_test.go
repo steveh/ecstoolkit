@@ -158,7 +158,8 @@ func TestSendInputDataMessage(t *testing.T) {
 
 	mockWsChannel.On("SendMessage", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	dataChannel.SendInputDataMessage(mockLogger, message.Output, payload)
+	err := dataChannel.SendInputDataMessage(mockLogger, message.Output, payload)
+	assert.NoError(t, err, "Error sending input data message")
 
 	assert.Equal(t, streamDataSequenceNumber+1, dataChannel.StreamDataSequenceNumber)
 	assert.Equal(t, 1, dataChannel.OutgoingMessageBuffer.Messages.Len())
@@ -175,7 +176,8 @@ func TestProcessAcknowledgedMessage(t *testing.T) {
 		SequenceNumber:      0,
 		IsSequentialMessage: true,
 	}
-	dataChannel.ProcessAcknowledgedMessage(mockLogger, dataStreamAcknowledgeContent)
+	err := dataChannel.ProcessAcknowledgedMessage(mockLogger, dataStreamAcknowledgeContent)
+	assert.NoError(t, err, "Error processing acknowledged message")
 	assert.Equal(t, 0, dataChannel.OutgoingMessageBuffer.Messages.Len())
 }
 
@@ -287,7 +289,10 @@ func TestResendStreamDataMessageScheduler(t *testing.T) {
 		return nil
 	}
 
-	dataChannel.ResendStreamDataMessageScheduler(mockLogger)
+	if err := dataChannel.ResendStreamDataMessageScheduler(mockLogger); err != nil {
+		t.Errorf("Failed to resend stream data message scheduler: %v", err)
+	}
+
 	wg.Wait()
 	assert.Greater(t, SendMessageCallCount, 1)
 }
@@ -406,7 +411,7 @@ func TestDataChannelIncomingMessageHandlerForAcknowledgeMessage(t *testing.T) {
 
 	payload, err := json.Marshal(acknowledgeContent)
 	if err != nil {
-		t.Fatalf("Failed to marshal acknowledge content: %v", err)
+		t.Fatalf("marshaling acknowledge content: %v", err)
 	}
 
 	clientMessage := getClientMessage(0, message.AcknowledgeMessage, uint32(message.Output), payload)
@@ -461,7 +466,7 @@ func TestHandshakeRequestHandler(t *testing.T) {
 
 	handshakeRequestBytes, err := json.Marshal(buildHandshakeRequest(t))
 	if err != nil {
-		t.Fatalf("Failed to marshal handshake request: %v", err)
+		t.Fatalf("marshaling handshake request: %v", err)
 	}
 
 	clientMessage := getClientMessage(0, message.OutputStreamMessage,
@@ -480,11 +485,19 @@ func TestHandshakeRequestHandler(t *testing.T) {
 	// Mock sending of encryption challenge
 	handshakeResponseMatcher := func(sentData []byte) bool {
 		clientMessage := &message.ClientMessage{}
-		clientMessage.DeserializeClientMessage(mockLogger, sentData)
+		if err := clientMessage.DeserializeClientMessage(mockLogger, sentData); err != nil {
+			t.Errorf("Failed to deserialize client message: %v", err)
+
+			return false
+		}
 
 		handshakeResponse := message.HandshakeResponsePayload{}
 
-		json.Unmarshal(clientMessage.Payload, &handshakeResponse)
+		if err := json.Unmarshal(clientMessage.Payload, &handshakeResponse); err != nil {
+			t.Errorf("Failed to unmarshal handshake response: %v", err)
+
+			return false
+		}
 		// Return true if any other message type (typically to account for acknowledge)
 		if clientMessage.MessageType != message.OutputStreamMessage {
 			return true
@@ -508,7 +521,11 @@ func TestHandshakeRequestHandler(t *testing.T) {
 			reflect.DeepEqual(handshakeResponse.ProcessedClientActions, expectedActions)
 	}
 	mockChannel.On("SendMessage", mock.Anything, mock.MatchedBy(handshakeResponseMatcher), mock.Anything).Return(nil)
-	dataChannel.OutputMessageHandler(context.TODO(), mockLogger, func(log *slog.Logger) error { return nil }, sessionId, handshakeRequestMessageBytes)
+
+	if err := dataChannel.OutputMessageHandler(context.TODO(), mockLogger, func(log *slog.Logger) error { return nil }, sessionId, handshakeRequestMessageBytes); err != nil {
+		t.Errorf("Failed to handle output message: %v", err)
+	}
+
 	assert.Equal(t, mockEncrypter, dataChannel.encryption)
 }
 
@@ -553,7 +570,7 @@ func TestHandleHandshakeRequestWithMessageDeserializeError(t *testing.T) {
 
 	handshakeRequestBytes, err := json.Marshal(buildHandshakeRequest(t))
 	if err != nil {
-		t.Fatalf("Failed to marshal handshake request: %v", err)
+		t.Fatalf("marshaling handshake request: %v", err)
 	}
 	// Using HandshakeCompletePayloadType to trigger the type check error
 	clientMessage := getClientMessage(0, message.OutputStreamMessage,
@@ -577,7 +594,7 @@ func TestProcessOutputMessageWithHandlers(t *testing.T) {
 
 	handshakeRequestBytes, err := json.Marshal(buildHandshakeRequest(t))
 	if err != nil {
-		t.Fatalf("Failed to marshal handshake request: %v", err)
+		t.Fatalf("marshaling handshake request: %v", err)
 	}
 
 	clientMessage := getClientMessage(0, message.OutputStreamMessage,

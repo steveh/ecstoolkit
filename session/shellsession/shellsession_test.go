@@ -81,11 +81,22 @@ func TestHandleControlSignals(t *testing.T) {
 
 	signalCh := make(chan os.Signal, 1)
 	go func() {
-		p, _ := os.FindProcess(os.Getpid())
+		p, err := os.FindProcess(os.Getpid())
+		if err != nil {
+			t.Errorf("Failed to find process: %v", err)
+
+			return
+		}
 
 		signal.Notify(signalCh, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTSTP)
 		shellSession.handleControlSignals(logger)
-		p.Signal(syscall.SIGINT)
+
+		if err := p.Signal(syscall.SIGINT); err != nil {
+			t.Errorf("Failed to send signal: %v", err)
+
+			return
+		}
+
 		time.Sleep(200 * time.Millisecond)
 		close(waitCh)
 	}()
@@ -103,7 +114,7 @@ func TestSendInputDataMessageWithPayloadTypeSize(t *testing.T) {
 
 	sizeDataBytes, err := json.Marshal(sizeData)
 	if err != nil {
-		t.Fatalf("Failed to marshal size data: %v", err)
+		t.Fatalf("marshaling size data: %v", err)
 	}
 
 	dataChannel := getDataChannel()

@@ -16,6 +16,8 @@ package portsession
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"log/slog"
 	"os"
@@ -33,7 +35,11 @@ import (
 func TestInitializePortSession(t *testing.T) {
 	var portParameters PortParameters
 
-	jsonutil.Remarshal(properties, &portParameters)
+	if err := jsonutil.Remarshal(properties, &portParameters); err != nil {
+		t.Errorf("Failed to remarshal properties: %v", err)
+
+		return
+	}
 
 	mockWebSocketChannel.On("SetOnMessage", mock.Anything)
 
@@ -50,7 +56,11 @@ func TestInitializePortSession(t *testing.T) {
 func TestInitializePortSessionForPortForwardingWithOldAgent(t *testing.T) {
 	var portParameters PortParameters
 
-	jsonutil.Remarshal(map[string]interface{}{"portNumber": "8080", "type": "LocalPortForwarding"}, &portParameters)
+	if err := jsonutil.Remarshal(map[string]interface{}{"portNumber": "8080", "type": "LocalPortForwarding"}, &portParameters); err != nil {
+		t.Errorf("Failed to remarshal properties: %v", err)
+
+		return
+	}
 
 	mockWebSocketChannel.On("SetOnMessage", mock.Anything)
 
@@ -67,7 +77,11 @@ func TestInitializePortSessionForPortForwardingWithOldAgent(t *testing.T) {
 func TestInitializePortSessionForPortForwarding(t *testing.T) {
 	var portParameters PortParameters
 
-	jsonutil.Remarshal(map[string]interface{}{"portNumber": "8080", "type": "LocalPortForwarding"}, &portParameters)
+	if err := jsonutil.Remarshal(map[string]interface{}{"portNumber": "8080", "type": "LocalPortForwarding"}, &portParameters); err != nil {
+		t.Errorf("Failed to remarshal properties: %v", err)
+
+		return
+	}
 
 	mockWebSocketChannel.On("SetOnMessage", mock.Anything)
 
@@ -82,30 +96,43 @@ func TestInitializePortSessionForPortForwarding(t *testing.T) {
 }
 
 func TestStartSessionWithClosedWsConn(t *testing.T) {
-	in, out, _ := os.Pipe()
-	out.Write(outputMessage.Payload)
+	in, out, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("Failed to create pipe: %v", err)
+	}
 
-	oldStdin := os.Stdin
+	// Ensure cleanup
+	defer func() {
+		if err := in.Close(); err != nil {
+			t.Logf("Error closing in: %v", err)
+		}
+
+		if err := out.Close(); err != nil {
+			t.Logf("Error closing out: %v", err)
+		}
+		// Restore original stdin
+	}()
+
+	if _, err := out.Write(outputMessage.Payload); err != nil {
+		t.Errorf("Failed to write to out: %v", err)
+
+		return
+	}
+
 	os.Stdin = in
 
 	var actualPayload []byte
 
+	done := make(chan struct{})
+	errChan := make(chan error, 1)
+
 	datachannel.SendMessageCall = func(log *slog.Logger, dataChannel *datachannel.DataChannel, input []byte, inputType int) error {
 		actualPayload = input
 
+		close(done)
+
 		return nil
 	}
-
-	// Spawning a separate go routine to close files after a few seconds.
-	// This is required as startSession has a for loop which will continuously reads data.
-	go func() {
-		time.Sleep(time.Second)
-
-		os.Stdin = oldStdin
-
-		in.Close()
-		out.Close()
-	}()
 
 	portSession := PortSession{
 		Session:        getSessionMock(),
@@ -116,35 +143,141 @@ func TestStartSessionWithClosedWsConn(t *testing.T) {
 			session:      getSessionMock(),
 		},
 	}
-	portSession.SetSessionHandlers(context.TODO(), mockLog)
+
+	// Start session handlers in a goroutine
+	go func() {
+		if err := portSession.SetSessionHandlers(context.TODO(), mockLog); err != nil {
+			errChan <- fmt.Errorf("failed to set session handlers: %w", err)
+
+			return
+		}
+	}()
+
+	// Wait for message to be processed or timeout
+	select {
+	case <-done:
+		// Message processed successfully
+	case err := <-errChan:
+		t.Fatal(err)
+	case <-time.After(2 * time.Second):
+		t.Fatal("Timeout waiting for message processing")
+	}
 
 	deserializedMsg := &message.ClientMessage{}
-	err := deserializedMsg.DeserializeClientMessage(mockLog, actualPayload)
+	err = deserializedMsg.DeserializeClientMessage(mockLog, actualPayload)
 	assert.NoError(t, err)
 	assert.Equal(t, outputMessage.Payload, deserializedMsg.Payload)
 }
 
 // Test ProcessStreamMessagePayload.
 func TestProcessStreamMessagePayload(t *testing.T) {
-	in, out, _ := os.Pipe()
-	defer func() {
-		in.Close()
-		out.Close()
-	}()
+	outR, outW, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("Failed to create output pipe: %v", err)
+	}
+
+	// Create a dummy input pipe since the method requires it
+	inR, inW, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("Failed to create input pipe: %v", err)
+	}
+
+	// Create a StandardStreamForwarding instance with our test streams
+	ssf := &StandardStreamForwarding{
+		inputStream:  inR, // Required to pass IsStreamNotSet check
+		outputStream: outW,
+	}
+
+	// Create channels for synchronization
+	done := make(chan struct{})
+	errChan := make(chan error, 1)
+	readyChan := make(chan struct{})
+
+	var payload []byte
 
 	go func() {
 		portSession := PortSession{
-			Session:        getSessionMock(),
-			portParameters: PortParameters{PortNumber: "22"},
-			portSessionType: &StandardStreamForwarding{
-				inputStream:  in,
-				outputStream: out,
-			},
+			Session:         getSessionMock(),
+			portParameters:  PortParameters{PortNumber: "22"},
+			portSessionType: ssf,
 		}
-		portSession.ProcessStreamMessagePayload(mockLog, outputMessage)
-		out.Close()
+
+		t.Log("Calling ProcessStreamMessagePayload")
+
+		isReady, err := portSession.ProcessStreamMessagePayload(mockLog, outputMessage)
+		if err != nil {
+			errChan <- fmt.Errorf("failed to process stream message payload: %w", err)
+
+			return
+		}
+
+		if !isReady {
+			errChan <- errors.New("handler was not ready")
+
+			return
+		}
+
+		t.Log("ProcessStreamMessagePayload succeeded")
+
+		// Signal that we're ready to read
+		close(readyChan)
+
+		// Read the payload from the output pipe
+		t.Log("Reading from output pipe")
+
+		payload, err = ioutil.ReadAll(outR)
+		if err != nil {
+			errChan <- fmt.Errorf("failed to read from output pipe: %w", err)
+
+			return
+		}
+
+		t.Log("Successfully read from output pipe")
+		close(done)
 	}()
 
-	payload, _ := ioutil.ReadAll(in)
-	assert.Equal(t, outputMessage.Payload, payload)
+	// Close pipes when we're done
+	defer func() {
+		if err := inR.Close(); err != nil {
+			t.Logf("Error closing inR: %v", err)
+		}
+
+		if err := inW.Close(); err != nil {
+			t.Logf("Error closing inW: %v", err)
+		}
+
+		if err := outR.Close(); err != nil {
+			t.Logf("Error closing outR: %v", err)
+		}
+
+		if err := outW.Close(); err != nil {
+			t.Logf("Error closing outW: %v", err)
+		}
+	}()
+
+	// Wait for the goroutine to be ready to read
+	select {
+	case <-readyChan:
+		// Ready to read
+	case err := <-errChan:
+		t.Fatal(err)
+	case <-time.After(time.Second):
+		t.Fatal("Timeout waiting for handler to be ready")
+	}
+
+	// Close the write end of the pipe after writing
+	if err := outW.Close(); err != nil {
+		t.Fatalf("Failed to close output pipe: %v", err)
+	}
+
+	// Wait for processing to complete or timeout
+	select {
+	case <-done:
+		t.Log("Test completed successfully")
+		assert.Equal(t, outputMessage.Payload, payload)
+	case err := <-errChan:
+		t.Fatal(err)
+	case <-time.After(2 * time.Second):
+		t.Fatal("Timeout waiting for stream processing")
+	}
 }

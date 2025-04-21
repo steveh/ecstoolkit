@@ -42,7 +42,9 @@ func handlerToBeTested(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	conn.WriteMessage(mt, []byte("hello "+string(p)))
+	if err := conn.WriteMessage(mt, []byte("hello "+string(p))); err != nil {
+		log.NewMockLog().Error("Failed to write message", "error", err)
+	}
 }
 
 func TestWebsocketUtilOpenCloseConnection(t *testing.T) {
@@ -85,7 +87,10 @@ func TestSendMessage(t *testing.T) {
 	ws := NewWebsocketUtil(log, nil)
 	conn, _ := ws.OpenConnection(u.String())
 	assert.NotNil(t, conn, "Open connection failed.")
-	conn.WriteMessage(websocket.TextMessage, []byte("testing"))
+
+	if err := conn.WriteMessage(websocket.TextMessage, []byte("testing")); err != nil {
+		t.Errorf("Failed to write message: %v", err)
+	}
 
 	err := ws.CloseConnection(conn)
 	assert.NoError(t, err, "Error closing the websocket connection.")

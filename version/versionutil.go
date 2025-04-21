@@ -49,11 +49,11 @@ func (thisVersion version) compare(otherVersion version) (int, error) {
 
 	for i := range thisVersion.version {
 		if thisVersionSlice, err = strconv.Atoi(thisVersion.version[i]); err != nil {
-			return -1, fmt.Errorf("failed to convert version slice to integer: %w", err)
+			return -1, fmt.Errorf("converting version slice to integer: %w", err)
 		}
 
 		if otherVersionSlice, err = strconv.Atoi(otherVersion.version[i]); err != nil {
-			return -1, fmt.Errorf("failed to convert other version slice to integer: %w", err)
+			return -1, fmt.Errorf("converting other version slice to integer: %w", err)
 		}
 
 		if thisVersionSlice > otherVersionSlice {

@@ -63,7 +63,9 @@ func (p *BasicPortForwarding) IsStreamNotSet() (status bool) {
 // Stop closes the stream.
 func (p *BasicPortForwarding) Stop(log *slog.Logger) error {
 	if p.stream != nil {
-		(*p.stream).Close()
+		if err := (*p.stream).Close(); err != nil {
+			return fmt.Errorf("closing stream: %w", err)
+		}
 	}
 
 	return nil
@@ -91,13 +93,13 @@ func (p *BasicPortForwarding) ReadStream(ctx context.Context, log *slog.Logger) 
 
 			// Send DisconnectToPort flag to agent when client tcp connection drops to ensure agent closes tcp connection too with server port
 			if err = p.session.DataChannel.SendFlag(log, message.DisconnectToPort); err != nil {
-				log.Error("Failed to send packet", "error", err)
+				log.Error("sending packet", "error", err)
 
-				return fmt.Errorf("failed to send disconnect flag: %w", err)
+				return fmt.Errorf("sending disconnect flag: %w", err)
 			}
 
 			if err = p.reconnect(log); err != nil {
-				return fmt.Errorf("failed to reconnect: %w", err)
+				return fmt.Errorf("reconnecting: %w", err)
 			}
 
 			// continue to read from connection as it has been re-established
@@ -107,9 +109,9 @@ func (p *BasicPortForwarding) ReadStream(ctx context.Context, log *slog.Logger) 
 		log.Debug("Received message from stdin", "size", numBytes)
 
 		if err = p.session.DataChannel.SendInputDataMessage(log, message.Output, msg[:numBytes]); err != nil {
-			log.Error("Failed to send packet", "error", err)
+			log.Error("sending packet", "error", err)
 
-			return fmt.Errorf("failed to send input data message: %w", err)
+			return fmt.Errorf("sending input data message: %w", err)
 		}
 		// Sleep to process more data
 		time.Sleep(time.Millisecond)
@@ -120,7 +122,7 @@ func (p *BasicPortForwarding) ReadStream(ctx context.Context, log *slog.Logger) 
 func (p *BasicPortForwarding) WriteStream(outputMessage message.ClientMessage) error {
 	_, err := (*p.stream).Write(outputMessage.Payload)
 	if err != nil {
-		return fmt.Errorf("failed to write to stream: %w", err)
+		return fmt.Errorf("writing to stream: %w", err)
 	}
 
 	return nil
@@ -139,15 +141,15 @@ func (p *BasicPortForwarding) startLocalConn(log *slog.Logger) (err error) {
 	if listener, err = p.startLocalListener(log, localPortNumber); err != nil {
 		log.Error("Unable to open tcp connection to port", "error", err)
 
-		return fmt.Errorf("failed to start local listener: %w", err)
+		return fmt.Errorf("starting local listener: %w", err)
 	}
 
 	var tcpConn net.Conn
 
 	if tcpConn, err = acceptConnection(log, listener); err != nil {
-		log.Error("Failed to accept connection", "error", err)
+		log.Error("accepting connection", "error", err)
 
-		return fmt.Errorf("failed to accept connection: %w", err)
+		return fmt.Errorf("accepting connection: %w", err)
 	}
 
 	log.Debug("Connection accepted", "sessionId", p.sessionId)
@@ -194,13 +196,18 @@ func (p *BasicPortForwarding) handleControlSignals(ctx context.Context, log *slo
 
 		if version.DoesAgentSupportTerminateSessionFlag(log, p.session.DataChannel.GetAgentVersion()) {
 			if err := p.session.DataChannel.SendFlag(log, message.TerminateSession); err != nil {
-				log.Error("Failed to send TerminateSession flag", "error", err)
+				log.Error("sending TerminateSession flag", "error", err)
 			}
 
 			log.Debug("Exiting session", "sessionId", p.sessionId)
-			p.Stop(log)
+
+			if err := p.Stop(log); err != nil {
+				log.Error("stopping session", "error", err)
+			}
 		} else {
-			p.session.TerminateSession(ctx, log)
+			if err := p.session.TerminateSession(ctx, log); err != nil {
+				log.Error("terminating session", "error", err)
+			}
 		}
 	}()
 }
@@ -208,16 +215,19 @@ func (p *BasicPortForwarding) handleControlSignals(ctx context.Context, log *slo
 // reconnect closes existing connection, listens to new connection and accept it.
 func (p *BasicPortForwarding) reconnect(log *slog.Logger) (err error) {
 	// close existing connection as it is in a state from which data cannot be read
-	(*p.stream).Close()
+	if err := (*p.stream).Close(); err != nil {
+		log.Error("closing existing stream", "error", err)
+		// Continue even if close fails since we want to establish a new connection
+	}
 
 	// wait for new connection on listener and accept it
 	var conn net.Conn
 
 	if conn, err = acceptConnection(log, *p.listener); err != nil {
-		return fmt.Errorf("Failed to accept connection with error. %w", err)
+		return fmt.Errorf("accepting connection: %w", err)
 	}
 
 	p.stream = &conn
 
-	return
+	return nil
 }

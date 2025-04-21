@@ -34,8 +34,16 @@ func TestSetSessionHandlers(t *testing.T) {
 	mockLog.Info("Test session started", "message", "TestStartSession!!!!!")
 
 	out, in := net.Pipe()
-	defer out.Close()
-	defer in.Close()
+	defer func() {
+		if err := out.Close(); err != nil {
+			t.Logf("Error closing out: %v", err)
+		}
+	}()
+	defer func() {
+		if err := in.Close(); err != nil {
+			t.Logf("Error closing in: %v", err)
+		}
+	}()
 
 	counter := 0
 	countTimes := func() error {
@@ -73,8 +81,13 @@ func TestSetSessionHandlers(t *testing.T) {
 		signal.Notify(signalCh, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTSTP)
 
 		process, _ := os.FindProcess(os.Getpid())
-		process.Signal(syscall.SIGINT)
-		portSession.SetSessionHandlers(context.TODO(), mockLog)
+		if err := process.Signal(syscall.SIGINT); err != nil {
+			t.Logf("Error sending signal: %v", err)
+		}
+
+		if err := portSession.SetSessionHandlers(context.TODO(), mockLog); err != nil {
+			t.Logf("Error setting session handlers: %v", err)
+		}
 	}()
 
 	time.Sleep(time.Second)
@@ -87,6 +100,7 @@ func TestStartSessionTCPLocalPortFromDocument(t *testing.T) {
 	acceptConnection = func(log *slog.Logger, listener net.Listener) (tcpConn net.Conn, err error) {
 		return nil, errors.New("accept failed")
 	}
+
 	portSession := PortSession{
 		Session:        getSessionMock(),
 		portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding", LocalPortNumber: "54321"},
@@ -95,7 +109,10 @@ func TestStartSessionTCPLocalPortFromDocument(t *testing.T) {
 			portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding"},
 		},
 	}
-	portSession.SetSessionHandlers(context.TODO(), mockLog)
+	if err := portSession.SetSessionHandlers(context.TODO(), mockLog); err != nil {
+		t.Logf("Error setting session handlers: %v", err)
+	}
+
 	assert.Equal(t, "54321", portSession.portParameters.LocalPortNumber)
 }
 

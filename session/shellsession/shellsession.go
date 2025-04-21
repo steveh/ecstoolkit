@@ -61,7 +61,9 @@ func (s *ShellSession) Initialize(ctx context.Context, log *slog.Logger, session
 	s.DataChannel.RegisterOutputStreamHandler(s.ProcessStreamMessagePayload, true)
 	s.DataChannel.GetWsChannel().SetOnMessage(
 		func(input []byte) {
-			s.DataChannel.OutputMessageHandler(ctx, log, s.Stop, s.SessionId, input)
+			if err := s.DataChannel.OutputMessageHandler(ctx, log, s.Stop, s.SessionId, input); err != nil {
+				log.Error("Failed to handle output message", "error", err)
+			}
 		})
 }
 
@@ -87,7 +89,7 @@ func (s *ShellSession) handleControlSignals(log *slog.Logger) {
 			sig := <-signals
 			if b, ok := sessionutil.SignalsByteMap[sig]; ok {
 				if err := s.DataChannel.SendInputDataMessage(log, message.Output, []byte{b}); err != nil {
-					log.Error("Failed to send control signals", "error", err)
+					log.Error("sending control signals", "error", err)
 				}
 			}
 		}
@@ -126,7 +128,7 @@ func (s *ShellSession) handleTerminalResize(log *slog.Logger) {
 				log.Debug("Sending input size data", "data", string(inputSizeData))
 
 				if err = s.DataChannel.SendInputDataMessage(log, message.Size, inputSizeData); err != nil {
-					log.Error("Failed to send size data", "error", err)
+					log.Error("sending size data", "error", err)
 				}
 			}
 			// repeating this loop for every 500ms

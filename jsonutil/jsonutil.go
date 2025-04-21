@@ -28,7 +28,7 @@ func Indent(jsonStr string) (string, error) {
 	var dst bytes.Buffer
 
 	if err := json.Indent(&dst, []byte(jsonStr), "", jsonFormat); err != nil {
-		return "", fmt.Errorf("failed to indent JSON: %w", err)
+		return "", fmt.Errorf("indenting JSON: %w", err)
 	}
 
 	return dst.String(), nil

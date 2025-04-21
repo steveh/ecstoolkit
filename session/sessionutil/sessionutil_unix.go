@@ -36,14 +36,16 @@ func (d *DisplayMode) InitDisplayMode(log *slog.Logger) {
 func (d *DisplayMode) DisplayMessage(log *slog.Logger, message message.ClientMessage) {
 	var out io.Writer = os.Stdout
 
-	fmt.Fprint(out, string(message.Payload))
+	if _, err := fmt.Fprint(out, string(message.Payload)); err != nil {
+		log.Error("Failed to write message to output", "error", err)
+	}
 }
 
 // NewListener starts a new socket listener on the address.
 func NewListener(log *slog.Logger, address string) (net.Listener, error) {
 	listener, err := net.Listen("unix", address)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create unix socket listener: %w", err)
+		return nil, fmt.Errorf("creating unix socket listener: %w", err)
 	}
 
 	return listener, nil

@@ -46,8 +46,19 @@ func (p *StandardStreamForwarding) IsStreamNotSet() (status bool) {
 
 // Stop closes the streams.
 func (p *StandardStreamForwarding) Stop(log *slog.Logger) error {
-	p.inputStream.Close()
-	p.outputStream.Close()
+	var errs []error
+
+	if err := p.inputStream.Close(); err != nil {
+		errs = append(errs, fmt.Errorf("closing input stream: %w", err))
+	}
+
+	if err := p.outputStream.Close(); err != nil {
+		errs = append(errs, fmt.Errorf("closing output stream: %w", err))
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("stopping standard stream forwarding: %v", errs)
+	}
 
 	return nil
 }
@@ -73,9 +84,9 @@ func (p *StandardStreamForwarding) ReadStream(_ context.Context, log *slog.Logge
 		log.Debug("Received message from stdin", "size", numBytes)
 
 		if err = p.session.DataChannel.SendInputDataMessage(log, message.Output, msg[:numBytes]); err != nil {
-			log.Error("Failed to send packet", "error", err)
+			log.Error("sending packet", "error", err)
 
-			return fmt.Errorf("failed to send input data message: %w", err)
+			return fmt.Errorf("sending input data message: %w", err)
 		}
 		// Sleep to process more data
 		time.Sleep(time.Millisecond)
@@ -86,7 +97,7 @@ func (p *StandardStreamForwarding) ReadStream(_ context.Context, log *slog.Logge
 func (p *StandardStreamForwarding) WriteStream(outputMessage message.ClientMessage) error {
 	_, err := p.outputStream.Write(outputMessage.Payload)
 	if err != nil {
-		return fmt.Errorf("failed to write to output stream: %w", err)
+		return fmt.Errorf("writing to output stream: %w", err)
 	}
 
 	return nil
@@ -102,5 +113,5 @@ func (p *StandardStreamForwarding) handleReadError(log *slog.Logger, err error) 
 
 	log.Error("Reading input failed", "error", err)
 
-	return fmt.Errorf("failed to read input: %w", err)
+	return fmt.Errorf("reading input: %w", err)
 }

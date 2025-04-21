@@ -499,7 +499,7 @@ func TestGetString(t *testing.T) {
 			-1,
 			0,
 			nil,
-			"Offset is outside",
+			"offset outside byte array",
 		},
 		{
 			"Offset out of bounds",
@@ -508,7 +508,7 @@ func TestGetString(t *testing.T) {
 			10,
 			2,
 			nil,
-			"Offset is outside",
+			"offset outside byte array",
 		},
 	}
 	for _, tc := range testCases {
@@ -563,7 +563,7 @@ func TestGetBytes(t *testing.T) {
 			-1,
 			0,
 			nil,
-			"Offset is outside",
+			"Offset is outside the byte array.",
 		},
 		{
 			"Offset out of bounds",
@@ -572,7 +572,7 @@ func TestGetBytes(t *testing.T) {
 			10,
 			2,
 			nil,
-			"Offset is outside",
+			"Offset is outside the byte array.",
 		},
 	}
 	for _, tc := range testCases {
@@ -636,7 +636,7 @@ func TestGetLong(t *testing.T) {
 			1,
 			0,
 			nil,
-			"Offset is outside",
+			"Offset is outside the byte array.",
 		},
 		{
 			"Negative offset",
@@ -645,7 +645,7 @@ func TestGetLong(t *testing.T) {
 			-1,
 			0,
 			nil,
-			"Offset is outside",
+			"Offset is outside the byte array.",
 		},
 		{
 			"Offset out of bounds",
@@ -654,7 +654,7 @@ func TestGetLong(t *testing.T) {
 			10,
 			2,
 			nil,
-			"Offset is outside",
+			"Offset is outside the byte array.",
 		},
 	}
 	for _, tc := range testCases {
@@ -877,7 +877,8 @@ func TestPutUuid(t *testing.T) {
 				assert.NoError(t, err)
 
 				expectedBuffer := get16ByteBuffer()
-				putUuid(mockLogger, expectedBuffer, 0, uuidOut)
+				err = putUuid(mockLogger, expectedBuffer, 0, uuidOut)
+				assert.NoError(t, err, "Error putting UUID")
 				assert.Equal(t, expectedBuffer, tc.byteArray)
 			case ERROR:
 				assert.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
@@ -1053,7 +1054,7 @@ func TestDeserializeAgentMessageWithChannelClosed(t *testing.T) {
 
 	channelClosedJson, err := json.Marshal(channelClosed)
 	if err != nil {
-		t.Fatalf("Failed to marshal channel closed: %v", err)
+		t.Fatalf("marshaling channel closed: %v", err)
 	}
 
 	agentMessage := ClientMessage{

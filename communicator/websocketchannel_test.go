@@ -81,7 +81,11 @@ func handlerToBeTested(w http.ResponseWriter, req *http.Request) {
 		}
 
 		// echo back the same sent string from the client while adding "echo" at the beginning
-		conn.WriteMessage(mt, []byte("echo "+string(p)))
+		if err := conn.WriteMessage(mt, []byte("echo "+string(p))); err != nil {
+			log.Error("Error writing message", "error", err)
+
+			return
+		}
 	}
 }
 
@@ -208,8 +212,10 @@ func TestReadWriteTextToWebSocketChannel(t *testing.T) {
 	assert.NoError(t, err, "Error opening the websocket connection.")
 	assert.NotNil(t, websocketchannel.Connection, "Open connection failed.")
 
-	// Verify write to websocket server
-	websocketchannel.SendMessage(log, []byte("channelreadwrite"), websocket.TextMessage)
+	if err := websocketchannel.SendMessage(log, []byte("channelreadwrite"), websocket.TextMessage); err != nil {
+		t.Errorf("Failed to send message: %v", err)
+	}
+
 	wg.Wait()
 
 	err = websocketchannel.Close(log)
@@ -219,7 +225,7 @@ func TestReadWriteTextToWebSocketChannel(t *testing.T) {
 }
 
 func TestReadWriteBinaryToWebSocketChannel(t *testing.T) {
-	t.Log("Starting test: TestReadWriteWebSocketChannel ")
+	t.Log("Starting test: TestReadWriteBinaryWebSocketChannel ")
 
 	srv := httptest.NewServer(http.HandlerFunc(handlerToBeTested))
 	u, _ := url.Parse(srv.URL)
@@ -248,8 +254,10 @@ func TestReadWriteBinaryToWebSocketChannel(t *testing.T) {
 	assert.NoError(t, err, "Error opening the websocket connection.")
 	assert.NotNil(t, websocketchannel.Connection, "Open connection failed.")
 
-	// Verify write to websocket server
-	websocketchannel.SendMessage(log, []byte("channelreadwrite"), websocket.BinaryMessage)
+	if err := websocketchannel.SendMessage(log, []byte("channelreadwrite"), websocket.BinaryMessage); err != nil {
+		t.Errorf("Failed to send message: %v", err)
+	}
+
 	wg.Wait()
 
 	err = websocketchannel.Close(log)
@@ -293,8 +301,10 @@ func TestMultipleReadWriteWebSocketChannel(t *testing.T) {
 	assert.NotNil(t, websocketchannel.Connection, "Open connection failed.")
 
 	// Verify writes to websocket server
-	websocketchannel.SendMessage(log, []byte("channelreadwrite1"), websocket.TextMessage)
-	websocketchannel.SendMessage(log, []byte("channelreadwrite2"), websocket.TextMessage)
+	err = websocketchannel.SendMessage(log, []byte("channelreadwrite1"), websocket.TextMessage)
+	assert.NoError(t, err, "Error sending message 1")
+	err = websocketchannel.SendMessage(log, []byte("channelreadwrite2"), websocket.TextMessage)
+	assert.NoError(t, err, "Error sending message 2")
 	assert.True(t, <-read1, "Didn't read value 1 correctly")
 	assert.True(t, <-read2, "Didn't ready value 2 correctly")
 

@@ -78,7 +78,11 @@ func TestProcessFirstMessageOutputMessageFirst(t *testing.T) {
 		DataChannel: dataChannel,
 	}
 
-	session.ProcessFirstMessage(logger, outputMessage)
+	_, err := session.ProcessFirstMessage(logger, outputMessage)
+	if err != nil {
+		t.Errorf("Failed to process first message: %v", err)
+	}
+
 	assert.Equal(t, config.ShellPluginName, session.DataChannel.GetSessionType())
 	assert.True(t, <-session.DataChannel.IsSessionTypeSet())
 }

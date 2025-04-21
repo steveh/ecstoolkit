@@ -111,11 +111,11 @@ func (webSocketChannel *WebSocketChannel) StartPings(log *slog.Logger, pingInter
 // Examples of message type are websocket.TextMessage or websocket.Binary.
 func (webSocketChannel *WebSocketChannel) SendMessage(log *slog.Logger, input []byte, inputType int) error {
 	if !webSocketChannel.IsOpen {
-		return errors.New("Can't send message: Connection is closed.")
+		return errors.New("connection is closed")
 	}
 
 	if len(input) < 1 {
-		return errors.New("Can't send message: Empty input.")
+		return errors.New("empty input")
 	}
 
 	webSocketChannel.writeLock.Lock()
@@ -123,7 +123,7 @@ func (webSocketChannel *WebSocketChannel) SendMessage(log *slog.Logger, input []
 	webSocketChannel.writeLock.Unlock()
 
 	if err != nil {
-		return fmt.Errorf("failed to write websocket message: %w", err)
+		return fmt.Errorf("writing websocket message: %w", err)
 	}
 
 	return nil
@@ -138,7 +138,7 @@ func (webSocketChannel *WebSocketChannel) Close(log *slog.Logger) error {
 		webSocketChannel.IsOpen = false
 
 		if err := websocketutil.NewWebsocketUtil(log, nil).CloseConnection(webSocketChannel.Connection); err != nil {
-			return fmt.Errorf("failed to close websocket connection: %w", err)
+			return fmt.Errorf("closing websocket connection: %w", err)
 		}
 
 		return nil
@@ -156,7 +156,7 @@ func (webSocketChannel *WebSocketChannel) Open(log *slog.Logger) error {
 
 	ws, err := websocketutil.NewWebsocketUtil(log, nil).OpenConnection(webSocketChannel.Url)
 	if err != nil {
-		return fmt.Errorf("failed to open websocket connection: %w", err)
+		return fmt.Errorf("opening websocket connection: %w", err)
 	}
 
 	webSocketChannel.Connection = ws
