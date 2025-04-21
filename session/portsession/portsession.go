@@ -61,7 +61,7 @@ func (PortSession) Name() string {
 func (s *PortSession) Initialize(ctx context.Context, log log.T, sessionVar *session.Session) {
 	s.Session = *sessionVar
 	if err := jsonutil.Remarshal(s.SessionProperties, &s.portParameters); err != nil {
-		log.Errorf("Invalid format: %v", err)
+		log.Error("Invalid format", "error", err)
 	}
 
 	if s.portParameters.Type == LocalPortForwardingType {

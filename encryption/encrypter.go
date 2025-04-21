@@ -59,7 +59,7 @@ var NewEncrypter = func(ctx context.Context, log log.T, kmsKeyId string, encrypt
 func (encrypter *Encrypter) generateEncryptionKey(ctx context.Context, log log.T, kmsKeyId string, encryptionContext map[string]string) error {
 	cipherTextKey, plainTextKey, err := KMSGenerateDataKey(ctx, kmsKeyId, encrypter.KMSService, encryptionContext)
 	if err != nil {
-		log.Errorf("Error generating data key from KMS: %s,", err)
+		log.Error("Error generating data key from KMS", "error", err)
 
 		return err
 	}

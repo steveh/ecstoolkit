@@ -89,9 +89,9 @@ var handleStreamMessageResendTimeout = func(ctx context.Context, session *Sessio
 			// Repeat this loop for every 200ms
 			time.Sleep(config.ResendSleepInterval)
 			if <-session.DataChannel.IsStreamMessageResendTimeout() {
-				log.Errorf("Terminating session %s as the stream data was not processed before timeout.", session.SessionId)
+				log.Error("Stream data timeout", "sessionId", session.SessionId)
 				if err := session.TerminateSession(ctx, log); err != nil {
-					log.Errorf("Unable to terminate session upon stream data timeout. %v", err)
+					log.Error("Unable to terminate session upon stream data timeout", "error", err)
 				}
 
 				return
@@ -108,7 +108,7 @@ func (s *Session) Execute(ctx context.Context, log log.T) (err error) {
 	s.DisplayMode = sessionutil.NewDisplayMode(log)
 
 	if err = s.OpenDataChannel(ctx, log); err != nil {
-		log.Errorf("Error in Opening data channel: %v", err)
+		log.Error("Error opening data channel", "error", err)
 
 		return err
 	}
@@ -117,7 +117,7 @@ func (s *Session) Execute(ctx context.Context, log log.T) (err error) {
 
 	// The session type is set either by handshake or the first packet received.
 	if !<-s.DataChannel.IsSessionTypeSet() {
-		log.Errorf("unable to set SessionType for session %s", s.SessionId)
+		log.Error("Unable to set SessionType", "sessionId", s.SessionId)
 
 		return errors.New("unable to determine SessionType")
 	} else {
@@ -125,7 +125,7 @@ func (s *Session) Execute(ctx context.Context, log log.T) (err error) {
 		s.SessionProperties = s.DataChannel.GetSessionProperties()
 
 		if err = setSessionHandlersWithSessionType(ctx, s, log); err != nil {
-			log.Errorf("Session ending with error: %v", err)
+			log.Error("Session ending with error", "error", err)
 
 			return err
 		}

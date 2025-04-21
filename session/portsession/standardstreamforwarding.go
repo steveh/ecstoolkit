@@ -72,7 +72,7 @@ func (p *StandardStreamForwarding) ReadStream(_ context.Context, log log.T) (err
 		log.Tracef("Received message of size %d from stdin.", numBytes)
 
 		if err = p.session.DataChannel.SendInputDataMessage(log, message.Output, msg[:numBytes]); err != nil {
-			log.Errorf("Failed to send packet: %v", err)
+			log.Error("Failed to send packet", "error", err)
 
 			return err
 		}
@@ -95,7 +95,7 @@ func (p *StandardStreamForwarding) handleReadError(log log.T, err error) error {
 
 		return nil
 	} else {
-		log.Errorf("Reading input failed with error: %v", err)
+		log.Error("Reading input failed", "error", err)
 
 		return err
 	}

@@ -89,13 +89,13 @@ func (s *ShellSession) handleKeyboardInput(ctx context.Context, log log.T) (err 
 			var stdinBytesLen int
 
 			if stdinBytesLen, err = reader.Read(stdinBytes); err != nil {
-				log.Errorf("Unable read from Stdin: %v", err)
+				log.Error("Unable to read from Stdin", "error", err)
 
 				break
 			}
 
 			if err = s.DataChannel.SendInputDataMessage(log, message.Output, stdinBytes[:stdinBytesLen]); err != nil {
-				log.Errorf("Failed to send UTF8 char: %v", err)
+				log.Error("Failed to send UTF8 char", "error", err)
 
 				break
 			}

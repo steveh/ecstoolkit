@@ -96,7 +96,7 @@ func (webSocketChannel *WebSocketChannel) StartPings(log log.T, pingInterval tim
 			webSocketChannel.writeLock.Unlock()
 
 			if err != nil {
-				log.Errorf("Error while sending websocket ping: %v", err)
+				log.Error("Error sending websocket ping", "error", err)
 
 				return
 			}
@@ -158,7 +158,7 @@ func (webSocketChannel *WebSocketChannel) Open(log log.T) error {
 	go func() {
 		defer func() {
 			if msg := recover(); msg != nil {
-				log.Errorf("WebsocketChannel listener run panic: %+v", msg)
+				log.Error("WebsocketChannel listener run panic", "error", msg)
 			}
 		}()
 
@@ -175,7 +175,7 @@ func (webSocketChannel *WebSocketChannel) Open(log log.T) error {
 			if err != nil {
 				retryCount++
 				if retryCount >= config.RetryAttempt {
-					log.Errorf("Reach the retry limit %v for receive messages.", config.RetryAttempt)
+					log.Error("Reached retry limit for receiving messages", "retryLimit", config.RetryAttempt)
 					webSocketChannel.OnError(err)
 
 					break
@@ -184,7 +184,7 @@ func (webSocketChannel *WebSocketChannel) Open(log log.T) error {
 				log.Debug("Error receiving message", "retryCount", retryCount, "error", err.Error(), "messageType", messageType)
 			} else if messageType != websocket.TextMessage && messageType != websocket.BinaryMessage {
 				// We only accept text messages which are interpreted as UTF-8 or binary encoded text.
-				log.Errorf("Invalid message type. We only accept UTF-8 or binary encoded text. Message type: %v", messageType)
+				log.Error("Invalid message type", "messageType", messageType, "reason", "Only UTF-8 or binary encoded text accepted")
 			} else {
 				retryCount = 0
 

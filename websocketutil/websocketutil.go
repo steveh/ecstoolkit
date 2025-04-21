@@ -58,7 +58,7 @@ func (u *WebsocketUtil) OpenConnection(url string) (*websocket.Conn, error) {
 
 	conn, _, err := u.dialer.Dial(url, nil)
 	if err != nil {
-		u.log.Errorf("Failed to dial websocket: %s", err.Error())
+		u.log.Error("Failed to dial websocket", "error", err.Error())
 
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func (u *WebsocketUtil) CloseConnection(ws *websocket.Conn) error {
 
 	err := ws.Close()
 	if err != nil {
-		u.log.Errorf("Failed to close websocket: %s", err.Error())
+		u.log.Error("Failed to close websocket", "error", err.Error())
 
 		return err
 	}

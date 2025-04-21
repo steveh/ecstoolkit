@@ -44,21 +44,21 @@ func (s *Session) OpenDataChannel(ctx context.Context, log log.T) (err error) {
 	s.DataChannel.RegisterOutputStreamHandler(s.ProcessFirstMessage, false)
 
 	if err = s.DataChannel.Open(log); err != nil {
-		log.Errorf("Retrying connection for data channel id: %s failed with error: %s", s.SessionId, err)
+		log.Error("Retrying connection failed", "sessionId", s.SessionId, "error", err)
 
 		s.retryParams.CallableFunc = func() (err error) { return s.DataChannel.Reconnect(log) }
 		if err = s.retryParams.Call(); err != nil {
-			log.Errorf("%+v", err)
+			log.Error("Retry error", "error", err)
 		}
 	}
 
 	s.DataChannel.GetWsChannel().SetOnError(
 		func(err error) {
-			log.Errorf("Trying to reconnect the session: %v with seq num: %d", s.StreamUrl, s.DataChannel.GetStreamDataSequenceNumber())
+			log.Error("Trying to reconnect session", "url", s.StreamUrl, "sequenceNumber", s.DataChannel.GetStreamDataSequenceNumber())
 
 			s.retryParams.CallableFunc = func() (err error) { return s.ResumeSessionHandler(ctx, log) }
 			if err = s.retryParams.Call(); err != nil {
-				log.Errorf("%+v", err)
+				log.Error("Reconnect error", "error", err)
 			}
 		})
 
@@ -102,7 +102,7 @@ func (s *Session) GetResumeSessionParams(ctx context.Context, log log.T) (string
 
 	resumeSessionOutput, err := s.SSMClient.ResumeSession(ctx, &resumeSessionInput)
 	if err != nil {
-		log.Errorf("Resume Session failed: %v", err)
+		log.Error("Resume Session failed", "error", err)
 
 		return "", err
 	}
@@ -118,7 +118,7 @@ func (s *Session) GetResumeSessionParams(ctx context.Context, log log.T) (string
 func (s *Session) ResumeSessionHandler(ctx context.Context, log log.T) (err error) {
 	s.TokenValue, err = s.GetResumeSessionParams(ctx, log)
 	if err != nil {
-		log.Errorf("Failed to get token: %v", err)
+		log.Error("Failed to get token", "error", err)
 
 		return
 	} else if s.TokenValue == "" {
@@ -142,7 +142,7 @@ func (s *Session) TerminateSession(ctx context.Context, log log.T) error {
 	log.Debug("Terminate Session input parameters", "input", terminateSessionInput)
 
 	if _, err := s.SSMClient.TerminateSession(ctx, &terminateSessionInput); err != nil {
-		log.Errorf("Terminate Session failed: %v", err)
+		log.Error("Terminate Session failed", "error", err)
 
 		return err
 	}

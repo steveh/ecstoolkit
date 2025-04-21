@@ -87,7 +87,7 @@ func (s *ShellSession) handleControlSignals(log log.T) {
 			sig := <-signals
 			if b, ok := sessionutil.SignalsByteMap[sig]; ok {
 				if err := s.DataChannel.SendInputDataMessage(log, message.Output, []byte{b}); err != nil {
-					log.Errorf("Failed to send control signals: %v", err)
+					log.Error("Failed to send control signals", "error", err)
 				}
 			}
 		}
@@ -109,7 +109,7 @@ func (s *ShellSession) handleTerminalResize(log log.T) {
 			if width, height, err = GetTerminalSizeCall(int(os.Stdout.Fd())); err != nil {
 				width = 300
 				height = 100
-				log.Errorf("Could not get size of the terminal: %s, using width %d height %d", err, width, height)
+				log.Error("Could not get size of terminal", "error", err, "width", width, "height", height)
 			}
 
 			if s.SizeData.Rows != uint32(height) || s.SizeData.Cols != uint32(width) {
@@ -120,13 +120,13 @@ func (s *ShellSession) handleTerminalResize(log log.T) {
 				s.SizeData = sizeData
 
 				if inputSizeData, err = json.Marshal(sizeData); err != nil {
-					log.Errorf("Cannot marshall size data: %v", err)
+					log.Error("Cannot marshal size data", "error", err)
 				}
 
 				log.Debug("Sending input size data", "data", string(inputSizeData))
 
 				if err = s.DataChannel.SendInputDataMessage(log, message.Size, inputSizeData); err != nil {
-					log.Errorf("Failed to Send size data: %v", err)
+					log.Error("Failed to send size data", "error", err)
 				}
 			}
 			// repeating this loop for every 500ms

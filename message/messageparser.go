@@ -36,56 +36,56 @@ import (
 func (clientMessage *ClientMessage) DeserializeClientMessage(log log.T, input []byte) (err error) {
 	clientMessage.MessageType, err = getString(log, input, ClientMessage_MessageTypeOffset, ClientMessage_MessageTypeLength)
 	if err != nil {
-		log.Errorf("Could not deserialize field MessageType with error: %v", err)
+		log.Error("Could not deserialize field MessageType", "error", err)
 
 		return err
 	}
 
 	clientMessage.SchemaVersion, err = getUInteger(log, input, ClientMessage_SchemaVersionOffset)
 	if err != nil {
-		log.Errorf("Could not deserialize field SchemaVersion with error: %v", err)
+		log.Error("Could not deserialize field SchemaVersion", "error", err)
 
 		return err
 	}
 
 	clientMessage.CreatedDate, err = getULong(log, input, ClientMessage_CreatedDateOffset)
 	if err != nil {
-		log.Errorf("Could not deserialize field CreatedDate with error: %v", err)
+		log.Error("Could not deserialize field CreatedDate", "error", err)
 
 		return err
 	}
 
 	clientMessage.SequenceNumber, err = getLong(log, input, ClientMessage_SequenceNumberOffset)
 	if err != nil {
-		log.Errorf("Could not deserialize field SequenceNumber with error: %v", err)
+		log.Error("Could not deserialize field SequenceNumber", "error", err)
 
 		return err
 	}
 
 	clientMessage.Flags, err = getULong(log, input, ClientMessage_FlagsOffset)
 	if err != nil {
-		log.Errorf("Could not deserialize field Flags with error: %v", err)
+		log.Error("Could not deserialize field Flags", "error", err)
 
 		return err
 	}
 
 	clientMessage.MessageId, err = getUuid(log, input, ClientMessage_MessageIdOffset)
 	if err != nil {
-		log.Errorf("Could not deserialize field MessageId with error: %v", err)
+		log.Error("Could not deserialize field MessageId", "error", err)
 
 		return err
 	}
 
 	clientMessage.PayloadDigest, err = getBytes(log, input, ClientMessage_PayloadDigestOffset, ClientMessage_PayloadDigestLength)
 	if err != nil {
-		log.Errorf("Could not deserialize field PayloadDigest with error: %v", err)
+		log.Error("Could not deserialize field PayloadDigest", "error", err)
 
 		return err
 	}
 
 	clientMessage.PayloadType, err = getUInteger(log, input, ClientMessage_PayloadTypeOffset)
 	if err != nil {
-		log.Errorf("Could not deserialize field PayloadType with error: %v", err)
+		log.Error("Could not deserialize field PayloadType", "error", err)
 
 		return err
 	}
@@ -94,7 +94,7 @@ func (clientMessage *ClientMessage) DeserializeClientMessage(log log.T, input []
 
 	headerLength, herr := getUInteger(log, input, ClientMessage_HLOffset)
 	if herr != nil {
-		log.Errorf("Could not deserialize field HeaderLength with error: %v", err)
+		log.Error("Could not deserialize field HeaderLength", "error", err)
 
 		return err
 	}
@@ -309,7 +309,7 @@ func (clientMessage *ClientMessage) SerializeClientMessage(log log.T) (result []
 
 	err = putUInteger(log, result, ClientMessage_HLOffset, headerLength)
 	if err != nil {
-		log.Errorf("Could not serialize HeaderLength with error: %v", err)
+		log.Error("Could not serialize HeaderLength", "error", err)
 
 		return make([]byte, 1), err
 	}
@@ -319,42 +319,42 @@ func (clientMessage *ClientMessage) SerializeClientMessage(log log.T) (result []
 
 	err = putString(log, result, startPosition, endPosition, clientMessage.MessageType)
 	if err != nil {
-		log.Errorf("Could not serialize MessageType with error: %v", err)
+		log.Error("Could not serialize MessageType", "error", err)
 
 		return make([]byte, 1), err
 	}
 
 	err = putUInteger(log, result, ClientMessage_SchemaVersionOffset, clientMessage.SchemaVersion)
 	if err != nil {
-		log.Errorf("Could not serialize SchemaVersion with error: %v", err)
+		log.Error("Could not serialize SchemaVersion", "error", err)
 
 		return make([]byte, 1), err
 	}
 
 	err = putULong(log, result, ClientMessage_CreatedDateOffset, clientMessage.CreatedDate)
 	if err != nil {
-		log.Errorf("Could not serialize CreatedDate with error: %v", err)
+		log.Error("Could not serialize CreatedDate", "error", err)
 
 		return make([]byte, 1), err
 	}
 
 	err = putLong(log, result, ClientMessage_SequenceNumberOffset, clientMessage.SequenceNumber)
 	if err != nil {
-		log.Errorf("Could not serialize SequenceNumber with error: %v", err)
+		log.Error("Could not serialize SequenceNumber", "error", err)
 
 		return make([]byte, 1), err
 	}
 
 	err = putULong(log, result, ClientMessage_FlagsOffset, clientMessage.Flags)
 	if err != nil {
-		log.Errorf("Could not serialize Flags with error: %v", err)
+		log.Error("Could not serialize Flags", "error", err)
 
 		return make([]byte, 1), err
 	}
 
 	err = putUuid(log, result, ClientMessage_MessageIdOffset, clientMessage.MessageId)
 	if err != nil {
-		log.Errorf("Could not serialize MessageId with error: %v", err)
+		log.Error("Could not serialize MessageId", "error", err)
 
 		return make([]byte, 1), err
 	}
@@ -367,21 +367,21 @@ func (clientMessage *ClientMessage) SerializeClientMessage(log log.T) (result []
 
 	err = putBytes(log, result, startPosition, endPosition, hasher.Sum(nil))
 	if err != nil {
-		log.Errorf("Could not serialize PayloadDigest with error: %v", err)
+		log.Error("Could not serialize PayloadDigest", "error", err)
 
 		return make([]byte, 1), err
 	}
 
 	err = putUInteger(log, result, ClientMessage_PayloadTypeOffset, clientMessage.PayloadType)
 	if err != nil {
-		log.Errorf("Could not serialize PayloadType with error: %v", err)
+		log.Error("Could not serialize PayloadType", "error", err)
 
 		return make([]byte, 1), err
 	}
 
 	err = putUInteger(log, result, ClientMessage_PayloadLengthOffset, clientMessage.PayloadLength)
 	if err != nil {
-		log.Errorf("Could not serialize PayloadLength with error: %v", err)
+		log.Error("Could not serialize PayloadLength", "error", err)
 
 		return make([]byte, 1), err
 	}
@@ -391,7 +391,7 @@ func (clientMessage *ClientMessage) SerializeClientMessage(log log.T) (result []
 
 	err = putBytes(log, result, startPosition, endPosition, clientMessage.Payload)
 	if err != nil {
-		log.Errorf("Could not serialize Payload with error: %v", err)
+		log.Error("Could not serialize Payload", "error", err)
 
 		return make([]byte, 1), err
 	}
@@ -567,7 +567,7 @@ func putULong(log log.T, byteArray []byte, offset int, value uint64) (err error)
 func SerializeClientMessagePayload(log log.T, obj interface{}) (reply []byte, err error) {
 	reply, err = json.Marshal(obj)
 	if err != nil {
-		log.Errorf("Could not serialize message with err: %s", err)
+		log.Error("Could not serialize message", "error", err)
 	}
 
 	return
@@ -577,8 +577,7 @@ func SerializeClientMessagePayload(log log.T, obj interface{}) (reply []byte, er
 func SerializeClientMessageWithAcknowledgeContent(log log.T, acknowledgeContent AcknowledgeContent) (reply []byte, err error) {
 	acknowledgeContentBytes, err := SerializeClientMessagePayload(log, acknowledgeContent)
 	if err != nil {
-		// should not happen
-		log.Errorf("Cannot marshal acknowledge content to json string: %v", acknowledgeContentBytes)
+		log.Error("Could not serialize acknowledge content to json", "content", acknowledgeContentBytes)
 
 		return
 	}
@@ -596,7 +595,7 @@ func SerializeClientMessageWithAcknowledgeContent(log log.T, acknowledgeContent 
 
 	reply, err = clientMessage.SerializeClientMessage(log)
 	if err != nil {
-		log.Errorf("Error serializing client message with acknowledge content err: %v", err)
+		log.Error("Error serializing client message with acknowledge content", "error", err)
 	}
 
 	return
@@ -612,7 +611,7 @@ func (clientMessage *ClientMessage) DeserializeDataStreamAcknowledgeContent(log 
 
 	err = json.Unmarshal(clientMessage.Payload, &dataStreamAcknowledge)
 	if err != nil {
-		log.Errorf("Could not deserialize rawMessage: %s", err)
+		log.Error("Could not deserialize raw message", "error", err)
 	}
 
 	return
@@ -628,7 +627,7 @@ func (clientMessage *ClientMessage) DeserializeChannelClosedMessage(log log.T) (
 
 	err = json.Unmarshal(clientMessage.Payload, &channelClosed)
 	if err != nil {
-		log.Errorf("Could not deserialize rawMessage: %s", err)
+		log.Error("Could not deserialize raw message", "error", err)
 	}
 
 	return
@@ -646,7 +645,7 @@ func (clientMessage *ClientMessage) DeserializeHandshakeRequest(log log.T) (hand
 
 	err = json.Unmarshal(clientMessage.Payload, &handshakeRequest)
 	if err != nil {
-		log.Errorf("Could not deserialize rawMessage: %s", err)
+		log.Error("Could not deserialize raw message", "error", err)
 	}
 
 	return
@@ -664,7 +663,7 @@ func (clientMessage *ClientMessage) DeserializeHandshakeComplete(log log.T) (han
 
 	err = json.Unmarshal(clientMessage.Payload, &handshakeComplete)
 	if err != nil {
-		log.Errorf("Could not deserialize rawMessage, %s : %s", clientMessage.Payload, err)
+		log.Error("Could not deserialize raw message", "error", err)
 	}
 
 	return

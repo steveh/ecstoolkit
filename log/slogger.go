@@ -56,12 +56,6 @@ func (s Slogger) Error(msg string, args ...any) {
 	s.logger.Error(msg, args...)
 }
 
-// Errorf formats message according to format specifier
-// and writes to log with level Error.
-func (s Slogger) Errorf(format string, args ...any) {
-	s.Error(fmt.Sprintf(format, args...))
-}
-
 // Trace writes to log with level Trace.
 func (s Slogger) Trace(message string) {
 	// s.logger.Debug(message)

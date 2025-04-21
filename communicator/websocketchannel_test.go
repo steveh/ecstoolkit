@@ -75,7 +75,7 @@ func handlerToBeTested(w http.ResponseWriter, req *http.Request) {
 	for {
 		mt, p, err := conn.ReadMessage()
 		if err != nil {
-			log.Errorf("error: %v", err)
+			log.Error("Error reading message", "error", err)
 
 			return
 		}

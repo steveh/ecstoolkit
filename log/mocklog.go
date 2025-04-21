@@ -32,9 +32,6 @@ func (m MockLog) Warn(msg string, args ...any) {
 func (m MockLog) Error(msg string, args ...any) {
 }
 
-func (m MockLog) Errorf(format string, args ...any) {
-}
-
 func (m MockLog) Trace(message string) {
 }
 

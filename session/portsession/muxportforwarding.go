@@ -207,7 +207,7 @@ func (p *MuxPortForwarding) handleControlSignals(log log.T) {
 		log.Debug("Terminate signal received, exiting.")
 
 		if err := p.session.DataChannel.SendFlag(log, message.TerminateSession); err != nil {
-			log.Errorf("Failed to send TerminateSession flag: %v", err)
+			log.Error("Failed to send TerminateSession flag", "error", err)
 		}
 
 		log.Debug("Exiting session", "sessionId", p.sessionId)
@@ -235,7 +235,7 @@ func (p *MuxPortForwarding) transferDataToServer(log log.T, ctx context.Context)
 			log.Tracef("Received message of size %d from mux client.", numBytes)
 
 			if err = p.session.DataChannel.SendInputDataMessage(log, message.Output, msg[:numBytes]); err != nil {
-				log.Errorf("Failed to send packet on data channel: %v", err)
+				log.Error("Failed to send packet on data channel", "error", err)
 
 				return
 			}
@@ -286,7 +286,7 @@ func (p *MuxPortForwarding) handleClientConnections(log log.T, ctx context.Conte
 			return ctx.Err()
 		default:
 			if conn, err := listener.Accept(); err != nil {
-				log.Errorf("Error while accepting connection: %v", err)
+				log.Error("Error while accepting connection", "error", err)
 			} else {
 				log.Debug("Connection accepted", "remoteAddr", conn.RemoteAddr(), "sessionId", p.sessionId)
 
