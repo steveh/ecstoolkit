@@ -30,12 +30,6 @@ func (s Slogger) Logf(classification logging.Classification, format string, para
 	}
 }
 
-// Tracef formats message according to format specifier
-// and writes to log with level Trace.
-func (s Slogger) Tracef(format string, params ...any) {
-	s.Trace(fmt.Sprintf(format, params...))
-}
-
 // Debug logs a message at Debug level.
 func (s Slogger) Debug(msg string, args ...any) {
 	s.logger.Debug(msg, args...)

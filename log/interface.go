@@ -17,10 +17,6 @@ type T interface {
 	// and writes to log with level Debug.
 	Logf(classification logging.Classification, format string, params ...any)
 
-	// Tracef formats message according to format specifier
-	// and writes to log with level Trace.
-	Tracef(format string, params ...any)
-
 	// Debug logs a message at Debug level.
 	Debug(msg string, args ...any)
 

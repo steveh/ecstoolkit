@@ -17,9 +17,6 @@ func (m MockLog) Log(ctx context.Context, level slog.Level, msg string, args ...
 func (m MockLog) Logf(classification logging.Classification, format string, params ...any) {
 }
 
-func (m MockLog) Tracef(format string, params ...any) {
-}
-
 func (m MockLog) Debug(msg string, args ...any) {
 }
 

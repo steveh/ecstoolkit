@@ -232,7 +232,7 @@ func (p *MuxPortForwarding) transferDataToServer(log log.T, ctx context.Context)
 				return
 			}
 
-			log.Tracef("Received message of size %d from mux client.", numBytes)
+			log.Debug("Received message from mux client", "size", numBytes)
 
 			if err = p.session.DataChannel.SendInputDataMessage(log, message.Output, msg[:numBytes]); err != nil {
 				log.Error("Failed to send packet on data channel", "error", err)

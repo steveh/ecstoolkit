@@ -134,7 +134,7 @@ func (s *PortSession) ProcessStreamMessagePayload(log log.T, outputMessage messa
 		return false, nil
 	}
 
-	log.Tracef("Received payload of size %d from datachannel.", outputMessage.PayloadLength)
+	log.Debug("Received payload from datachannel", "size", outputMessage.PayloadLength)
 	err = s.portSessionType.WriteStream(outputMessage)
 
 	return true, err

@@ -318,7 +318,7 @@ func (dataChannel *DataChannel) SendInputDataMessage(
 		return err
 	}
 
-	log.Tracef("Sending message with seq number: %d", dataChannel.StreamDataSequenceNumber)
+	log.Debug("Sending message", "sequenceNumber", dataChannel.StreamDataSequenceNumber)
 
 	if err = SendMessageCall(log, dataChannel, msg, websocket.BinaryMessage); err != nil {
 		log.Error("Error sending stream data message", "error", err)
@@ -436,7 +436,7 @@ func (dataChannel *DataChannel) OutputMessageHandler(ctx context.Context, log lo
 		return err
 	}
 
-	log.Tracef("Processing stream data message of type: %s", outputMessage.MessageType)
+	log.Debug("Processing stream data message", "type", outputMessage.MessageType)
 
 	switch outputMessage.MessageType {
 	case message.OutputStreamMessage:
@@ -593,7 +593,7 @@ func (dataChannel *DataChannel) sendEncryptionChallengeResponse(log log.T, respo
 		return fmt.Errorf("Could not serialize EncChallengeResponse message: %v, err: %w", response, err)
 	}
 
-	log.Tracef("Sending EncChallengeResponse message.")
+	log.Debug("Sending EncChallengeResponse message")
 
 	if err := dataChannel.SendInputDataMessage(log, message.EncChallengeResponse, resultBytes); err != nil {
 		return err
@@ -609,7 +609,7 @@ func (dataChannel *DataChannel) sendHandshakeResponse(log log.T, response messag
 		log.Error("Could not serialize HandshakeResponse message", "response", response, "error", err)
 	}
 
-	log.Tracef("Sending HandshakeResponse message.")
+	log.Debug("Sending HandshakeResponse message")
 
 	if err := dataChannel.SendInputDataMessage(log, message.HandshakeResponsePayloadType, resultBytes); err != nil {
 		return err
@@ -704,7 +704,7 @@ func (dataChannel *DataChannel) HandleOutputMessage(
 				}
 			}
 		default:
-			log.Tracef("Process new incoming stream data message. Sequence Number: %d", outputMessage.SequenceNumber)
+			log.Debug("Process new incoming stream data message", "sequenceNumber", outputMessage.SequenceNumber)
 
 			// Decrypt if encryption is enabled and payload type is output
 			if dataChannel.encryptionEnabled &&

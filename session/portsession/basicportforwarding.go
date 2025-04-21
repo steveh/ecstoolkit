@@ -104,7 +104,7 @@ func (p *BasicPortForwarding) ReadStream(ctx context.Context, log log.T) (err er
 			continue
 		}
 
-		log.Tracef("Received message of size %d from stdin.", numBytes)
+		log.Debug("Received message from stdin", "size", numBytes)
 
 		if err = p.session.DataChannel.SendInputDataMessage(log, message.Output, msg[:numBytes]); err != nil {
 			log.Error("Failed to send packet", "error", err)
