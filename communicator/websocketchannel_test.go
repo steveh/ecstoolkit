@@ -33,7 +33,7 @@ var (
 	mockLogger          = log.NewMockLog()
 	defaultChannelToken = "channelToken"
 	defaultStreamUrl    = "streamUrl"
-	defaultError        = errors.New("Default Error")
+	errDefault          = errors.New("Default Error")
 	defaultMessage      = []byte("Default Message")
 )
 
@@ -121,13 +121,13 @@ func TestWebSocketChannel_SetOnError(t *testing.T) {
 
 	channel := &WebSocketChannel{}
 	errorCallbackWrapper := &ErrorCallbackWrapper{}
-	errorCallbackWrapper.On("defaultErrorHandler", defaultError).Return()
+	errorCallbackWrapper.On("defaultErrorHandler", errDefault).Return()
 
 	channel.SetOnError((*errorCallbackWrapper).defaultErrorHandler)
-	channel.OnError(defaultError)
+	channel.OnError(errDefault)
 
-	errorCallbackWrapper.AssertCalled(t, "defaultErrorHandler", defaultError)
-	assert.Equal(t, defaultError.Error(), errorCallbackWrapper.err.Error())
+	errorCallbackWrapper.AssertCalled(t, "defaultErrorHandler", errDefault)
+	assert.Equal(t, errDefault.Error(), errorCallbackWrapper.err.Error())
 }
 
 func TestWebsocketChannel_SetOnMessage(t *testing.T) {
