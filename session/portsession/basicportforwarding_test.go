@@ -112,7 +112,7 @@ func TestStartSessionTCPAcceptFailed(t *testing.T) {
 			portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding"},
 		},
 	}
-	assert.Equal(t, portSession.SetSessionHandlers(context.TODO(), mockLog), connErr)
+	assert.True(t, errors.Is(portSession.SetSessionHandlers(context.TODO(), mockLog), connErr))
 }
 
 func TestStartSessionTCPConnectFailed(t *testing.T) {
@@ -128,5 +128,5 @@ func TestStartSessionTCPConnectFailed(t *testing.T) {
 			portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding"},
 		},
 	}
-	assert.Equal(t, portSession.SetSessionHandlers(context.TODO(), mockLog), listenerError)
+	assert.True(t, errors.Is(portSession.SetSessionHandlers(context.TODO(), mockLog), listenerError))
 }

@@ -36,7 +36,11 @@ func getState(state *bytes.Buffer) error {
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = state
 
-	return cmd.Run()
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to get terminal state: %w", err)
+	}
+
+	return nil
 }
 
 // setState sets the new settings to terminal.
@@ -45,7 +49,11 @@ func setState(state *bytes.Buffer) error {
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 
-	return cmd.Run()
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to set terminal state: %w", err)
+	}
+
+	return nil
 }
 
 // Stop restores the terminal settings and exits.
@@ -109,5 +117,9 @@ func (s *ShellSession) handleKeyboardInput(ctx context.Context, log *slog.Logger
 	// Wait for context to be canceled by a call to Stop(), or stdin closing
 	<-ctx.Done()
 
-	return err
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("failed to send input data message: %w", err)
+	}
+
+	return nil
 }

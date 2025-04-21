@@ -16,6 +16,7 @@ package communicator
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -121,7 +122,11 @@ func (webSocketChannel *WebSocketChannel) SendMessage(log *slog.Logger, input []
 	err := webSocketChannel.Connection.WriteMessage(inputType, input)
 	webSocketChannel.writeLock.Unlock()
 
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to write websocket message: %w", err)
+	}
+
+	return nil
 }
 
 // Close closes the corresponding connection.
@@ -132,7 +137,11 @@ func (webSocketChannel *WebSocketChannel) Close(log *slog.Logger) error {
 		// Send signal to stop receiving message
 		webSocketChannel.IsOpen = false
 
-		return websocketutil.NewWebsocketUtil(log, nil).CloseConnection(webSocketChannel.Connection)
+		if err := websocketutil.NewWebsocketUtil(log, nil).CloseConnection(webSocketChannel.Connection); err != nil {
+			return fmt.Errorf("failed to close websocket connection: %w", err)
+		}
+
+		return nil
 	}
 
 	log.Warn("Websocket channel connection to: " + webSocketChannel.Url + " is already Closed!")
@@ -147,7 +156,7 @@ func (webSocketChannel *WebSocketChannel) Open(log *slog.Logger) error {
 
 	ws, err := websocketutil.NewWebsocketUtil(log, nil).OpenConnection(webSocketChannel.Url)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open websocket connection: %w", err)
 	}
 
 	webSocketChannel.Connection = ws

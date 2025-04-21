@@ -70,17 +70,19 @@ func NewCluster(awsCfg aws.Config, clusterName string) *Cluster {
 	}
 }
 
-// chunk splits a slice into chunks of the specified size
+// chunk splits a slice into chunks of the specified size.
 func chunk[T any](slice []T, size int) [][]T {
 	if size <= 0 {
 		return [][]T{slice}
 	}
 
 	var chunks [][]T
+
 	for i := 0; i < len(slice); i += size {
 		end := min(i+size, len(slice))
 		chunks = append(chunks, slice[i:end])
 	}
+
 	return chunks
 }
 

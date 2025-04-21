@@ -17,9 +17,11 @@ package session
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"math/rand"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/steveh/ecstoolkit/config"
 	"github.com/steveh/ecstoolkit/message"
@@ -95,7 +97,7 @@ func (s *Session) Stop(log *slog.Logger) error {
 // GetResumeSessionParams calls ResumeSession API and gets tokenvalue for reconnecting.
 func (s *Session) GetResumeSessionParams(ctx context.Context, log *slog.Logger) (string, error) {
 	resumeSessionInput := ssm.ResumeSessionInput{
-		SessionId: &s.SessionId,
+		SessionId: aws.String(s.SessionId),
 	}
 
 	log.Debug("Resume Session input parameters", "input", resumeSessionInput)
@@ -104,7 +106,7 @@ func (s *Session) GetResumeSessionParams(ctx context.Context, log *slog.Logger) 
 	if err != nil {
 		log.Error("Resume Session failed", "error", err)
 
-		return "", err
+		return "", fmt.Errorf("failed to resume session: %w", err)
 	}
 
 	if resumeSessionOutput.TokenValue == nil {
@@ -144,7 +146,7 @@ func (s *Session) TerminateSession(ctx context.Context, log *slog.Logger) error 
 	if _, err := s.SSMClient.TerminateSession(ctx, &terminateSessionInput); err != nil {
 		log.Error("Terminate Session failed", "error", err)
 
-		return err
+		return fmt.Errorf("failed to terminate session: %w", err)
 	}
 
 	return nil

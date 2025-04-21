@@ -17,6 +17,7 @@ package portsession
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -74,7 +75,7 @@ func (p *StandardStreamForwarding) ReadStream(_ context.Context, log *slog.Logge
 		if err = p.session.DataChannel.SendInputDataMessage(log, message.Output, msg[:numBytes]); err != nil {
 			log.Error("Failed to send packet", "error", err)
 
-			return err
+			return fmt.Errorf("failed to send input data message: %w", err)
 		}
 		// Sleep to process more data
 		time.Sleep(time.Millisecond)
@@ -84,8 +85,11 @@ func (p *StandardStreamForwarding) ReadStream(_ context.Context, log *slog.Logge
 // WriteStream writes data to output stream.
 func (p *StandardStreamForwarding) WriteStream(outputMessage message.ClientMessage) error {
 	_, err := p.outputStream.Write(outputMessage.Payload)
+	if err != nil {
+		return fmt.Errorf("failed to write to output stream: %w", err)
+	}
 
-	return err
+	return nil
 }
 
 // handleReadError handles read error.
@@ -94,9 +98,9 @@ func (p *StandardStreamForwarding) handleReadError(log *slog.Logger, err error) 
 		log.Debug("Session to instance was closed", "targetId", p.session.TargetId, "port", p.portParameters.PortNumber)
 
 		return nil
-	} else {
-		log.Error("Reading input failed", "error", err)
-
-		return err
 	}
+
+	log.Error("Reading input failed", "error", err)
+
+	return fmt.Errorf("failed to read input: %w", err)
 }

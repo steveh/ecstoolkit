@@ -14,7 +14,10 @@
 // Package jsonutil contains various utilities for dealing with json data.
 package jsonutil
 
-import "io/ioutil"
+import (
+	"fmt"
+	"io/ioutil"
+)
 
 // dependency.
 var ioUtil ioUtility = ioU{}
@@ -26,4 +29,11 @@ type ioUtility interface {
 type ioU struct{}
 
 // ioU implements io/ioutil.
-func (ioU) ReadFile(filename string) ([]byte, error) { return ioutil.ReadFile(filename) }
+func (ioU) ReadFile(filename string) ([]byte, error) {
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file %s: %w", filename, err)
+	}
+
+	return data, nil
+}

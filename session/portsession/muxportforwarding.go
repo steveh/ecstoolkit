@@ -123,7 +123,11 @@ func (p *MuxPortForwarding) ReadStream(ctx context.Context, log *slog.Logger) (e
 		return p.handleClientConnections(log, ctx)
 	})
 
-	return g.Wait()
+	if err := g.Wait(); err != nil {
+		return fmt.Errorf("failed to wait for goroutine group: %w", err)
+	}
+
+	return nil
 }
 
 // WriteStream writes data to stream.
@@ -131,13 +135,18 @@ func (p *MuxPortForwarding) WriteStream(outputMessage message.ClientMessage) err
 	switch message.PayloadType(outputMessage.PayloadType) {
 	case message.Output:
 		_, err := p.mgsConn.conn.Write(outputMessage.Payload)
+		if err != nil {
+			return fmt.Errorf("failed to write to MGS connection: %w", err)
+		}
 
-		return err
+		return nil
 	case message.Flag:
 		var flag message.PayloadTypeFlag
 
 		buf := bytes.NewBuffer(outputMessage.Payload)
-		binary.Read(buf, binary.BigEndian, &flag)
+		if err := binary.Read(buf, binary.BigEndian, &flag); err != nil {
+			return fmt.Errorf("failed to read flag from buffer: %w", err)
+		}
 
 		if message.ConnectToPortError == flag {
 			return errors.New("connection to destination port failed, check SSM Agent logs.")
@@ -158,14 +167,14 @@ func (p *MuxPortForwarding) initialize(log *slog.Logger, agentVersion string) (e
 	var listener net.Listener
 
 	if listener, err = sessionutil.NewListener(log, p.socketFile); err != nil {
-		return err
+		return fmt.Errorf("failed to create new listener: %w", err)
 	}
 
 	var g errgroup.Group
 	// start a go routine to accept connections on the network listener
 	g.Go(func() error {
 		if conn, err := listener.Accept(); err != nil {
-			return err
+			return fmt.Errorf("failed to accept connection: %w", err)
 		} else {
 			p.mgsConn = &MgsConn{listener, conn}
 		}
@@ -176,7 +185,7 @@ func (p *MuxPortForwarding) initialize(log *slog.Logger, agentVersion string) (e
 	// start a connection to the local network listener and set up client side of mux
 	g.Go(func() error {
 		if muxConn, err := net.Dial(listener.Addr().Network(), listener.Addr().String()); err != nil {
-			return err
+			return fmt.Errorf("failed to dial listener: %w", err)
 		} else {
 			smuxConfig := smux.DefaultConfig()
 			if version.DoesAgentSupportDisableSmuxKeepAlive(log, agentVersion) {
@@ -185,7 +194,7 @@ func (p *MuxPortForwarding) initialize(log *slog.Logger, agentVersion string) (e
 			}
 
 			if muxSession, err := smux.Client(muxConn, smuxConfig); err != nil {
-				return err
+				return fmt.Errorf("failed to create smux client: %w", err)
 			} else {
 				p.muxClient = &MuxClient{muxConn, muxSession}
 			}
@@ -194,7 +203,11 @@ func (p *MuxPortForwarding) initialize(log *slog.Logger, agentVersion string) (e
 		return nil
 	})
 
-	return g.Wait()
+	if err := g.Wait(); err != nil {
+		return fmt.Errorf("failed to initialize mux port forwarding: %w", err)
+	}
+
+	return nil
 }
 
 // handleControlSignals handles terminate signals.
@@ -222,14 +235,14 @@ func (p *MuxPortForwarding) transferDataToServer(log *slog.Logger, ctx context.C
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return fmt.Errorf("context cancelled: %w", ctx.Err())
 		default:
 			var numBytes int
 
 			if numBytes, err = p.mgsConn.conn.Read(msg); err != nil {
 				log.Debug("Reading from port failed", "error", err)
 
-				return
+				return fmt.Errorf("failed to read from MGS connection: %w", err)
 			}
 
 			log.Debug("Received message from mux client", "size", numBytes)
@@ -237,7 +250,7 @@ func (p *MuxPortForwarding) transferDataToServer(log *slog.Logger, ctx context.C
 			if err = p.session.DataChannel.SendInputDataMessage(log, message.Output, msg[:numBytes]); err != nil {
 				log.Error("Failed to send packet on data channel", "error", err)
 
-				return
+				return fmt.Errorf("failed to send input data message: %w", err)
 			}
 			// sleep to process more data
 			time.Sleep(time.Millisecond)
@@ -254,7 +267,7 @@ func (p *MuxPortForwarding) handleClientConnections(log *slog.Logger, ctx contex
 
 	if p.portParameters.LocalConnectionType == "unix" {
 		if listener, err = net.Listen(p.portParameters.LocalConnectionType, p.portParameters.LocalUnixSocket); err != nil {
-			return err
+			return fmt.Errorf("failed to listen on unix socket: %w", err)
 		}
 
 		displayMsg = fmt.Sprintf("Unix socket %s opened for sessionId %s.", p.portParameters.LocalUnixSocket, p.sessionId)
@@ -265,7 +278,7 @@ func (p *MuxPortForwarding) handleClientConnections(log *slog.Logger, ctx contex
 		}
 
 		if listener, err = net.Listen("tcp", "localhost:"+localPortNumber); err != nil {
-			return err
+			return fmt.Errorf("failed to listen on TCP port: %w", err)
 		}
 
 		p.portParameters.LocalPortNumber = strconv.Itoa(listener.Addr().(*net.TCPAddr).Port)
@@ -275,7 +288,6 @@ func (p *MuxPortForwarding) handleClientConnections(log *slog.Logger, ctx contex
 	defer listener.Close()
 
 	log.Debug(displayMsg)
-
 	log.Debug("Waiting for connections")
 
 	var once sync.Once
@@ -283,7 +295,7 @@ func (p *MuxPortForwarding) handleClientConnections(log *slog.Logger, ctx contex
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return fmt.Errorf("context cancelled: %w", ctx.Err())
 		default:
 			if conn, err := listener.Accept(); err != nil {
 				log.Error("Error while accepting connection", "error", err)
@@ -296,6 +308,8 @@ func (p *MuxPortForwarding) handleClientConnections(log *slog.Logger, ctx contex
 
 				stream, err := p.muxClient.session.OpenStream()
 				if err != nil {
+					log.Error("Failed to open stream", "error", err)
+
 					continue
 				}
 

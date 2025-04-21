@@ -226,13 +226,18 @@ func (dataChannel *DataChannel) FinalizeDataChannelHandshake(log *slog.Logger, t
 
 // SendMessage sends a message to the service through datachannel.
 func (dataChannel *DataChannel) SendMessage(log *slog.Logger, input []byte, inputType int) error {
-	return dataChannel.wsChannel.SendMessage(log, input, inputType)
+	err := dataChannel.wsChannel.SendMessage(log, input, inputType)
+	if err != nil {
+		return fmt.Errorf("failed to send message through data channel: %w", err)
+	}
+
+	return nil
 }
 
 // Open opens websocket connects and does final handshake to acknowledge connection.
 func (dataChannel *DataChannel) Open(log *slog.Logger) (err error) {
 	if err = dataChannel.wsChannel.Open(log); err != nil {
-		return fmt.Errorf("failed to open data channel with error: %w", err)
+		return fmt.Errorf("failed to open data channel: %w", err)
 	}
 
 	if err = dataChannel.FinalizeDataChannelHandshake(log, dataChannel.wsChannel.GetChannelToken()); err != nil {
@@ -246,7 +251,11 @@ func (dataChannel *DataChannel) Open(log *slog.Logger) (err error) {
 func (dataChannel *DataChannel) Close(log *slog.Logger) error {
 	log.Debug("Closing datachannel", "url", dataChannel.wsChannel.GetStreamUrl())
 
-	return dataChannel.wsChannel.Close(log)
+	if err := dataChannel.wsChannel.Close(log); err != nil {
+		return fmt.Errorf("failed to close data channel: %w", err)
+	}
+
+	return nil
 }
 
 // Reconnect calls ResumeSession API to reconnect datachannel when connection is lost.
@@ -297,7 +306,7 @@ func (dataChannel *DataChannel) SendInputDataMessage(
 	if dataChannel.encryptionEnabled && payloadType == message.Output {
 		inputData, err = dataChannel.encryption.Encrypt(log, inputData)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to encrypt input data: %w", err)
 		}
 	}
 
@@ -315,7 +324,7 @@ func (dataChannel *DataChannel) SendInputDataMessage(
 	if msg, err = clientMessage.SerializeClientMessage(log); err != nil {
 		log.Error("Cannot serialize StreamData message", "error", err)
 
-		return err
+		return fmt.Errorf("failed to serialize client message: %w", err)
 	}
 
 	log.Debug("Sending message", "sequenceNumber", dataChannel.StreamDataSequenceNumber)
@@ -323,7 +332,7 @@ func (dataChannel *DataChannel) SendInputDataMessage(
 	if err = SendMessageCall(log, dataChannel, msg, websocket.BinaryMessage); err != nil {
 		log.Error("Error sending stream data message", "error", err)
 
-		return err
+		return fmt.Errorf("failed to send message: %w", err)
 	}
 
 	streamingMessage := StreamingMessage{
@@ -427,13 +436,13 @@ func (dataChannel *DataChannel) OutputMessageHandler(ctx context.Context, log *s
 	if err != nil {
 		log.Error("Cannot deserialize raw message", "message", string(rawMessage), "error", err)
 
-		return err
+		return fmt.Errorf("failed to deserialize client message: %w", err)
 	}
 
 	if err = outputMessage.Validate(); err != nil {
 		log.Error("Invalid outputMessage", "message", *outputMessage, "error", err)
 
-		return err
+		return fmt.Errorf("failed to validate output message: %w", err)
 	}
 
 	log.Debug("Processing stream data message", "type", outputMessage.MessageType)
@@ -460,7 +469,7 @@ func (dataChannel *DataChannel) handleHandshakeRequest(ctx context.Context, log 
 	if err != nil {
 		log.Error("Deserialize Handshake Request failed", "error", err)
 
-		return err
+		return fmt.Errorf("failed to deserialize handshake request: %w", err)
 	}
 
 	dataChannel.agentVersion = handshakeRequest.AgentVersion
@@ -534,7 +543,7 @@ func (dataChannel *DataChannel) handleHandshakeComplete(log *slog.Logger, client
 
 	handshakeComplete, err = clientMessage.DeserializeHandshakeComplete(log)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to deserialize handshake complete: %w", err)
 	}
 
 	// SessionType would be set when handshake request is received
@@ -551,7 +560,7 @@ func (dataChannel *DataChannel) handleHandshakeComplete(log *slog.Logger, client
 		log.Debug("Session message", "sessionId", dataChannel.SessionId, "message", handshakeComplete.CustomerMessage)
 	}
 
-	return err
+	return fmt.Errorf("failed to handle handshake complete: %w", err)
 }
 
 // handleEncryptionChallengeRequest receives EncryptionChallenge and responds.
@@ -569,12 +578,12 @@ func (dataChannel *DataChannel) handleEncryptionChallengeRequest(log *slog.Logge
 
 	challenge, err = dataChannel.encryption.Decrypt(log, challenge)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to decrypt challenge: %w", err)
 	}
 
 	challenge, err = dataChannel.encryption.Encrypt(log, challenge)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to encrypt challenge: %w", err)
 	}
 
 	encChallengeResp := message.EncryptionChallengeResponse{
@@ -715,7 +724,7 @@ func (dataChannel *DataChannel) HandleOutputMessage(
 				if err != nil {
 					log.Error("Unable to decrypt incoming data payload", "messageType", outputMessage.MessageType, "payloadType", outputMessage.PayloadType, "error", err)
 
-					return err
+					return fmt.Errorf("failed to decrypt incoming data payload: %w", err)
 				}
 			}
 
@@ -723,7 +732,7 @@ func (dataChannel *DataChannel) HandleOutputMessage(
 			if err != nil {
 				log.Error("Failed to process stream data message", "error", err.Error())
 
-				return err
+				return fmt.Errorf("failed to process stream data message: %w", err)
 			}
 
 			if !isHandlerReady {
@@ -784,7 +793,7 @@ func (dataChannel *DataChannel) ProcessIncomingMessageBufferItems(log *slog.Logg
 			if err := outputMessage.DeserializeClientMessage(log, bufferedStreamMessage.Content); err != nil {
 				log.Error("Cannot deserialize raw message", "error", err)
 
-				return err
+				return fmt.Errorf("failed to deserialize raw message: %w", err)
 			}
 
 			// Decrypt if encryption is enabled and payload type is output
@@ -796,7 +805,7 @@ func (dataChannel *DataChannel) ProcessIncomingMessageBufferItems(log *slog.Logg
 				if err != nil {
 					log.Error("Unable to decrypt buffered message data payload", "messageType", outputMessage.MessageType, "payloadType", outputMessage.PayloadType, "error", err)
 
-					return err
+					return fmt.Errorf("failed to decrypt buffered message data payload: %w", err)
 				}
 			}
 
@@ -809,7 +818,11 @@ func (dataChannel *DataChannel) ProcessIncomingMessageBufferItems(log *slog.Logg
 		}
 	}
 
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to process incoming message buffer items: %w", err)
+	}
+
+	return nil
 }
 
 // handleAcknowledgeMessage deserialize acknowledge content and process it.
@@ -822,12 +835,15 @@ func (dataChannel *DataChannel) HandleAcknowledgeMessage(
 	if acknowledgeMessage, err = outputMessage.DeserializeDataStreamAcknowledgeContent(log); err != nil {
 		log.Error("Cannot deserialize payload to AcknowledgeMessage", "error", err)
 
-		return err
+		return fmt.Errorf("failed to deserialize data stream acknowledge content: %w", err)
 	}
 
 	err = ProcessAcknowledgedMessageCall(log, dataChannel, acknowledgeMessage)
+	if err != nil {
+		return fmt.Errorf("failed to process acknowledged message: %w", err)
+	}
 
-	return err
+	return nil
 }
 
 // handleChannelClosedMessage exits the shell.

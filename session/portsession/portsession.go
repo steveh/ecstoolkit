@@ -16,6 +16,7 @@ package portsession
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/steveh/ecstoolkit/config"
@@ -110,20 +111,24 @@ func (s *PortSession) Initialize(ctx context.Context, log *slog.Logger, sessionV
 }
 
 func (s *PortSession) Stop(log *slog.Logger) error {
-	return s.portSessionType.Stop(log)
+	if err := s.portSessionType.Stop(log); err != nil {
+		return fmt.Errorf("failed to stop port session: %w", err)
+	}
+
+	return nil
 }
 
 // StartSession redirects inputStream/outputStream data to datachannel.
 func (s *PortSession) SetSessionHandlers(ctx context.Context, log *slog.Logger) (err error) {
 	if err = s.portSessionType.InitializeStreams(ctx, log, s.DataChannel.GetAgentVersion()); err != nil {
-		return err
+		return fmt.Errorf("failed to initialize streams: %w", err)
 	}
 
 	if err = s.portSessionType.ReadStream(ctx, log); err != nil {
-		return err
+		return fmt.Errorf("failed to read stream: %w", err)
 	}
 
-	return
+	return nil
 }
 
 // ProcessStreamMessagePayload writes messages received on datachannel to stdout.
@@ -135,7 +140,10 @@ func (s *PortSession) ProcessStreamMessagePayload(log *slog.Logger, outputMessag
 	}
 
 	log.Debug("Received payload from datachannel", "size", outputMessage.PayloadLength)
-	err = s.portSessionType.WriteStream(outputMessage)
 
-	return true, err
+	if err := s.portSessionType.WriteStream(outputMessage); err != nil {
+		return true, fmt.Errorf("failed to write stream: %w", err)
+	}
+
+	return true, nil
 }

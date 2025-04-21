@@ -534,7 +534,7 @@ func TestHandleOutputMessageForExitCodePayloadTypeWithError(t *testing.T) {
 	rawMessage := []byte("rawMessage")
 
 	err := dataChannel.HandleOutputMessage(context.TODO(), mockLogger, clientMessage, rawMessage)
-	assert.Equal(t, mockErr, err)
+	assert.True(t, errors.Is(err, mockErr))
 }
 
 func TestHandleHandshakeRequestWithMessageDeserializeError(t *testing.T) {

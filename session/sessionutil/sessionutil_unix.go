@@ -41,5 +41,10 @@ func (d *DisplayMode) DisplayMessage(log *slog.Logger, message message.ClientMes
 
 // NewListener starts a new socket listener on the address.
 func NewListener(log *slog.Logger, address string) (net.Listener, error) {
-	return net.Listen("unix", address)
+	listener, err := net.Listen("unix", address)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create unix socket listener: %w", err)
+	}
+
+	return listener, nil
 }

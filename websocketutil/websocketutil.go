@@ -16,6 +16,7 @@ package websocketutil
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/gorilla/websocket"
@@ -60,12 +61,12 @@ func (u *WebsocketUtil) OpenConnection(url string) (*websocket.Conn, error) {
 	if err != nil {
 		u.log.Error("Failed to dial websocket", "error", err.Error())
 
-		return nil, err
+		return nil, fmt.Errorf("failed to dial websocket: %w", err)
 	}
 
 	u.log.Debug("Successfully opened websocket connection", "url", url)
 
-	return conn, err
+	return conn, nil
 }
 
 // CloseConnection closes a websocket connection given the Conn object as input.
@@ -80,7 +81,7 @@ func (u *WebsocketUtil) CloseConnection(ws *websocket.Conn) error {
 	if err != nil {
 		u.log.Error("Failed to close websocket", "error", err.Error())
 
-		return err
+		return fmt.Errorf("failed to close websocket: %w", err)
 	}
 
 	u.log.Debug("Successfully closed websocket connection", "remoteAddr", ws.RemoteAddr().String())
