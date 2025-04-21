@@ -2,10 +2,7 @@ package log
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
-
-	"github.com/aws/smithy-go/logging"
 )
 
 // Slogger wraps a slog.Logger.
@@ -19,15 +16,6 @@ var _ T = Slogger{}
 // Log logs a message at the specified level with the given message and args.
 func (s Slogger) Log(ctx context.Context, level slog.Level, msg string, args ...any) {
 	s.logger.Log(ctx, level, msg, args...)
-}
-
-func (s Slogger) Logf(classification logging.Classification, format string, params ...any) {
-	switch classification {
-	case logging.Debug:
-		s.Debug(fmt.Sprintf(format, params...))
-	case logging.Warn:
-		s.Warn(fmt.Sprintf(format, params...))
-	}
 }
 
 // Debug logs a message at Debug level.
