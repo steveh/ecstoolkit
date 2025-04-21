@@ -90,17 +90,17 @@ func (s *PortSession) Initialize(ctx context.Context, log *slog.Logger, sessionV
 		if s.portSessionType.IsStreamNotSet() {
 			outputMessage := &message.ClientMessage{}
 			if err := outputMessage.DeserializeClientMessage(log, input); err != nil {
-				log.Debug("Ignore message deserialize error while stream connection had not set")
+				log.Warn("Ignore message deserialize error while stream connection had not set")
 
 				return
 			}
 
 			if outputMessage.MessageType == message.OutputStreamMessage {
-				log.Debug("Waiting for user to establish connection before processing incoming messages")
+				log.Warn("Waiting for user to establish connection before processing incoming messages")
 
 				return
 			} else {
-				log.Debug("Received message while establishing connection", "messageType", outputMessage.MessageType)
+				log.Warn("Received message while establishing connection", "messageType", outputMessage.MessageType)
 			}
 		}
 

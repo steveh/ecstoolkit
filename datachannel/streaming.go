@@ -252,7 +252,7 @@ func (dataChannel *DataChannel) Close(log *slog.Logger) error {
 // Reconnect calls ResumeSession API to reconnect datachannel when connection is lost.
 func (dataChannel *DataChannel) Reconnect(log *slog.Logger) (err error) {
 	if err = dataChannel.Close(log); err != nil {
-		log.Debug("Closing datachannel failed", "error", err)
+		log.Warn("Closing datachannel failed", "error", err)
 	}
 
 	if err = dataChannel.Open(log); err != nil {
