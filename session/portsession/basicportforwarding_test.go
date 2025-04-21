@@ -31,7 +31,7 @@ import (
 
 // This test passes ctrl+c signal which blocks running of all other tests.
 func TestSetSessionHandlers(t *testing.T) {
-	mockLog.Infof("TestStartSession!!!!!")
+	mockLog.Info("Test session started", "message", "TestStartSession!!!!!")
 
 	out, in := net.Pipe()
 	defer out.Close()
@@ -61,7 +61,7 @@ func TestSetSessionHandlers(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 
 		if _, err := out.Write([]byte("testing123")); err != nil {
-			mockLog.Infof("error: ", err)
+			mockLog.Info("Write error", "error", err)
 		}
 	}()
 

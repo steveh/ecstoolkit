@@ -56,12 +56,6 @@ func (s Slogger) Error(msg string, args ...any) {
 	s.logger.Error(msg, args...)
 }
 
-// Infof formats message according to format specifier
-// and writes to log with level Info.
-func (s Slogger) Infof(format string, args ...any) {
-	s.Info(fmt.Sprintf(format, args...))
-}
-
 // Warnf formats message according to format specifier
 // and writes to log with level Warn.
 func (s Slogger) Warnf(format string, args ...any) {

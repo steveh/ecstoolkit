@@ -32,9 +32,6 @@ func (m MockLog) Warn(msg string, args ...any) {
 func (m MockLog) Error(msg string, args ...any) {
 }
 
-func (m MockLog) Infof(format string, args ...any) {
-}
-
 func (m MockLog) Warnf(format string, args ...any) {
 }
 
