@@ -184,7 +184,7 @@ func TestProcessAcknowledgedMessage(t *testing.T) {
 func TestCalculateRetransmissionTimeout(t *testing.T) {
 	dataChannel := getDataChannel()
 	GetRoundTripTime = func(streamingMessage StreamingMessage) time.Duration {
-		return time.Duration(140 * time.Millisecond)
+		return 140 * time.Millisecond
 	}
 
 	dataChannel.CalculateRetransmissionTimeout(mockLogger, streamingMessages[0])
