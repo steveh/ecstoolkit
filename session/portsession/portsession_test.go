@@ -18,7 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log/slog"
 	"os"
 	"testing"
@@ -225,7 +225,7 @@ func TestProcessStreamMessagePayload(t *testing.T) {
 		// Read the payload from the output pipe
 		t.Log("Reading from output pipe")
 
-		payload, err = ioutil.ReadAll(outR)
+		payload, err = io.ReadAll(outR)
 		if err != nil {
 			errChan <- fmt.Errorf("failed to read from output pipe: %w", err)
 

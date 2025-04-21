@@ -33,7 +33,7 @@ var (
 	mockLogger          = log.NewMockLog()
 	defaultChannelToken = "channelToken"
 	defaultStreamUrl    = "streamUrl"
-	errDefault          = errors.New("Default Error")
+	errDefault          = errors.New("default error")
 	defaultMessage      = []byte("Default Message")
 )
 

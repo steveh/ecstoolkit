@@ -50,18 +50,18 @@ func (s *Session) OpenDataChannel(ctx context.Context, log *slog.Logger) (err er
 	if err = s.DataChannel.Open(log); err != nil {
 		log.Error("Retrying connection failed", "sessionId", s.SessionId, "error", err)
 
-		s.retryParams.CallableFunc = func() (err error) { return s.DataChannel.Reconnect(log) }
-		if err = s.retryParams.Call(); err != nil {
-			log.Error("Retry error", "error", err)
+		s.retryParams.CallableFunc = func() error { return s.DataChannel.Reconnect(log) }
+		if err := s.retryParams.Call(); err != nil {
+			log.Error("Failed to call retry parameters", "error", err)
 		}
 	}
 
 	s.DataChannel.GetWsChannel().SetOnError(
-		func(err error) {
+		func(wsErr error) {
 			log.Error("Trying to reconnect session", "url", s.StreamUrl, "sequenceNumber", s.DataChannel.GetStreamDataSequenceNumber())
 
-			s.retryParams.CallableFunc = func() (err error) { return s.ResumeSessionHandler(ctx, log) }
-			if err = s.retryParams.Call(); err != nil {
+			s.retryParams.CallableFunc = func() error { return s.ResumeSessionHandler(ctx, log) }
+			if err := s.retryParams.Call(); err != nil {
 				log.Error("Reconnect error", "error", err)
 			}
 		})

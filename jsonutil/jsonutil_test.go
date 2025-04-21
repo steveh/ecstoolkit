@@ -17,8 +17,8 @@ package jsonutil
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -129,7 +129,7 @@ func TestIndent(t *testing.T) {
 			continue
 		}
 
-		correct, err := ioutil.ReadFile(filepath.Join("testdata", t.Name()+tc.name+".golden"))
+		correct, err := os.ReadFile(filepath.Join("testdata", t.Name()+tc.name+".golden"))
 		if err != nil {
 			t.Errorf("error reading file: %v", err)
 		}
@@ -154,7 +154,7 @@ func TestMarshal(t *testing.T) {
 		t.Errorf("error in %s: %v", t.Name(), err)
 	}
 
-	correct, err := ioutil.ReadFile(filepath.Join("testdata", t.Name()+".golden"))
+	correct, err := os.ReadFile(filepath.Join("testdata", t.Name()+".golden"))
 	if err != nil {
 		t.Errorf("error reading golden file in %s: %v", t.Name(), err)
 	}
@@ -269,7 +269,7 @@ func TestMarshalIndent(t *testing.T) {
 		[]string{"Crimson", "Red", "Ruby", "Maroon"},
 	}
 
-	correct, err := ioutil.ReadFile(filepath.Join("testdata", t.Name()+".golden"))
+	correct, err := os.ReadFile(filepath.Join("testdata", t.Name()+".golden"))
 	if err != nil {
 		t.Errorf("error: %v", err)
 		t.FailNow()

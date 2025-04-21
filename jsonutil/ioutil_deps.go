@@ -16,7 +16,7 @@ package jsonutil
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 )
 
 // dependency.
@@ -30,7 +30,7 @@ type ioU struct{}
 
 // ioU implements io/ioutil.
 func (ioU) ReadFile(filename string) ([]byte, error) {
-	data, err := ioutil.ReadFile(filename)
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("reading file %s: %w", filename, err)
 	}

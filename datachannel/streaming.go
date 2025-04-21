@@ -438,7 +438,7 @@ func (dataChannel *DataChannel) OutputMessageHandler(ctx context.Context, log *s
 	if err != nil {
 		log.Error("Cannot deserialize raw message", "message", string(rawMessage), "error", err)
 
-		return fmt.Errorf("deserializing client message: %w", err)
+		return fmt.Errorf("could not deserialize rawMessage, %s : %w", rawMessage, err)
 	}
 
 	if err = outputMessage.Validate(); err != nil {
@@ -573,7 +573,7 @@ func (dataChannel *DataChannel) handleEncryptionChallengeRequest(log *slog.Logge
 
 	err = json.Unmarshal(clientMessage.Payload, &encChallengeReq)
 	if err != nil {
-		return fmt.Errorf("Could not deserialize rawMessage, %s : %w", clientMessage.Payload, err)
+		return fmt.Errorf("could not deserialize rawMessage, %s : %w", clientMessage.Payload, err)
 	}
 
 	challenge := encChallengeReq.Challenge
@@ -601,7 +601,7 @@ func (dataChannel *DataChannel) handleEncryptionChallengeRequest(log *slog.Logge
 func (dataChannel *DataChannel) sendEncryptionChallengeResponse(log *slog.Logger, response message.EncryptionChallengeResponse) error {
 	resultBytes, err := json.Marshal(response)
 	if err != nil {
-		return fmt.Errorf("Could not serialize EncChallengeResponse message: %v, err: %w", response, err)
+		return fmt.Errorf("could not serialize EncChallengeResponse message: %v, err: %w", response, err)
 	}
 
 	log.Debug("Sending EncChallengeResponse message")
@@ -934,7 +934,7 @@ func (dataChannel *DataChannel) CalculateRetransmissionTimeout(log *slog.Logger,
 // when encryption is specified in HandshakeRequest.
 func (dataChannel *DataChannel) ProcessKMSEncryptionHandshakeAction(ctx context.Context, log *slog.Logger, actionParams json.RawMessage) (err error) {
 	if dataChannel.IsAwsCliUpgradeNeeded {
-		return errors.New("Installed version of CLI does not support Session Manager encryption feature. Please upgrade to the latest version of your CLI (e.g., AWS CLI).")
+		return errors.New("installed version of CLI does not support Session Manager encryption feature. Please upgrade to the latest version of your CLI (e.g., AWS CLI)")
 	}
 
 	kmsEncRequest := message.KMSEncryptionRequest{}

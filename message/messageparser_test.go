@@ -17,6 +17,7 @@ package message
 import (
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -153,7 +154,7 @@ func TestPutString(t *testing.T) {
 			-1,
 			7,
 			"hello",
-			"Offset is outside",
+			ErrOffsetOutside,
 		},
 		{
 			"Data too long for buffer",
@@ -162,7 +163,7 @@ func TestPutString(t *testing.T) {
 			0,
 			7,
 			"longinputstring",
-			"Not enough space",
+			ErrNotEnoughSpace,
 		},
 	}
 	for _, tc := range testCases {
@@ -185,7 +186,7 @@ func TestPutString(t *testing.T) {
 				assert.Contains(t, string(tc.byteArray), tc.expected)
 			case ERROR:
 				assert.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
-				assert.Contains(t, err.Error(), tc.expected, "%s:%s does not contain the intended message. Expected: \"%s\", Actual: \"%s\"", tc.expected, err)
+				assert.True(t, errors.Is(err, tc.expected.(error)), "%s:%s does not match the expected error", t.Name(), tc.name)
 			default:
 				t.Fatal("Test expectation was not correctly set.")
 			}
@@ -222,7 +223,7 @@ func TestPutBytes(t *testing.T) {
 			-1,
 			7,
 			[]byte{0x22, 0x55, 0x00, 0x22},
-			"Offset is outside",
+			ErrOffsetOutsideByteArray,
 		},
 		{
 			"Data too long for buffer",
@@ -231,7 +232,7 @@ func TestPutBytes(t *testing.T) {
 			0,
 			2,
 			[]byte{0x22, 0x55, 0x00, 0x22},
-			"Not enough space",
+			ErrNotEnoughSpace,
 		},
 	}
 	for _, tc := range testCases {
@@ -254,7 +255,7 @@ func TestPutBytes(t *testing.T) {
 				assert.True(t, reflect.DeepEqual(tc.byteArray, tc.expected))
 			case ERROR:
 				assert.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
-				assert.Contains(t, err.Error(), tc.expected, "%s:%s does not contain the intended message. Expected: \"%s\", Actual: \"%s\"", tc.expected, err)
+				assert.True(t, errors.Is(err, tc.expected.(error)), "%s:%s does not match the expected error", t.Name(), tc.name)
 			default:
 				t.Fatal("Test expectation was not correctly set.")
 			}
@@ -334,7 +335,7 @@ func TestPutLong(t *testing.T) {
 			1,
 			0,
 			50,
-			"Offset is outside",
+			"offset outside",
 		},
 		{
 			"Negative offset",
@@ -343,7 +344,7 @@ func TestPutLong(t *testing.T) {
 			-1,
 			0,
 			5748,
-			"Offset is outside",
+			"offset outside",
 		},
 		{
 			"Offset out of bounds",
@@ -352,7 +353,7 @@ func TestPutLong(t *testing.T) {
 			10,
 			0,
 			938283,
-			"Offset is outside",
+			"offset outside",
 		},
 	}
 	for _, tc := range testCases {
@@ -421,7 +422,7 @@ func TestPutInteger(t *testing.T) {
 			5,
 			0,
 			50,
-			"Offset is outside",
+			"offset outside",
 		},
 		{
 			"Negative offset",
@@ -430,7 +431,7 @@ func TestPutInteger(t *testing.T) {
 			-1,
 			0,
 			5748,
-			"Offset is outside",
+			"offset outside",
 		},
 		{
 			"Offset out of bounds",
@@ -439,7 +440,7 @@ func TestPutInteger(t *testing.T) {
 			10,
 			0,
 			938283,
-			"Offset is outside",
+			"offset outside",
 		},
 	}
 	for _, tc := range testCases {
@@ -499,7 +500,7 @@ func TestGetString(t *testing.T) {
 			-1,
 			0,
 			nil,
-			"offset outside byte array",
+			ErrOffsetOutsideByteArrayNoPoint,
 		},
 		{
 			"Offset out of bounds",
@@ -508,7 +509,7 @@ func TestGetString(t *testing.T) {
 			10,
 			2,
 			nil,
-			"offset outside byte array",
+			ErrOffsetOutsideByteArrayNoPoint,
 		},
 	}
 	for _, tc := range testCases {
@@ -526,7 +527,7 @@ func TestGetString(t *testing.T) {
 				assert.Equal(t, tc.expected, strOut)
 			case ERROR:
 				assert.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
-				assert.Contains(t, err.Error(), tc.expected, "%s:%s does not contain the intended message. Expected: \"%s\", Actual: \"%s\"", tc.expected, err)
+				assert.True(t, errors.Is(err, tc.expected.(error)), "%s:%s does not match the expected error", t.Name(), tc.name)
 			default:
 				t.Fatal("Test expectation was not correctly set.")
 			}
@@ -563,7 +564,7 @@ func TestGetBytes(t *testing.T) {
 			-1,
 			0,
 			nil,
-			"Offset is outside the byte array.",
+			ErrOffsetOutsideByteArray,
 		},
 		{
 			"Offset out of bounds",
@@ -572,7 +573,7 @@ func TestGetBytes(t *testing.T) {
 			10,
 			2,
 			nil,
-			"Offset is outside the byte array.",
+			ErrOffsetOutsideByteArray,
 		},
 	}
 	for _, tc := range testCases {
@@ -590,7 +591,7 @@ func TestGetBytes(t *testing.T) {
 				assert.Equal(t, tc.expected, byteOut)
 			case ERROR:
 				assert.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
-				assert.Contains(t, err.Error(), tc.expected, "%s:%s does not contain the intended message. Expected: \"%s\", Actual: \"%s\"", tc.expected, err)
+				assert.True(t, errors.Is(err, tc.expected.(error)), "%s:%s does not match the expected error", t.Name(), tc.name)
 			default:
 				t.Fatal("Test expectation was not correctly set.")
 			}
@@ -636,7 +637,7 @@ func TestGetLong(t *testing.T) {
 			1,
 			0,
 			nil,
-			"Offset is outside the byte array.",
+			ErrOffsetOutsideByteArray,
 		},
 		{
 			"Negative offset",
@@ -645,7 +646,7 @@ func TestGetLong(t *testing.T) {
 			-1,
 			0,
 			nil,
-			"Offset is outside the byte array.",
+			ErrOffsetOutsideByteArray,
 		},
 		{
 			"Offset out of bounds",
@@ -654,7 +655,7 @@ func TestGetLong(t *testing.T) {
 			10,
 			2,
 			nil,
-			"Offset is outside the byte array.",
+			ErrOffsetOutsideByteArray,
 		},
 	}
 	for _, tc := range testCases {
@@ -675,7 +676,7 @@ func TestGetLong(t *testing.T) {
 				assert.Equal(t, expectedLong, longOut)
 			case ERROR:
 				assert.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
-				assert.Contains(t, err.Error(), tc.expected, "%s:%s does not contain the intended message. Expected: \"%s\", Actual: \"%s\"", tc.expected, err)
+				assert.True(t, errors.Is(err, tc.expected.(error)), "%s:%s does not match the expected error", t.Name(), tc.name)
 			default:
 				t.Fatal("Test expectation was not correctly set.")
 			}

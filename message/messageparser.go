@@ -28,6 +28,14 @@ import (
 	"github.com/google/uuid"
 )
 
+// Error messages.
+var (
+	ErrOffsetOutside                 = errors.New("offset outside")
+	ErrNotEnoughSpace                = errors.New("not enough space")
+	ErrOffsetOutsideByteArray        = errors.New("offset outside byte array")
+	ErrOffsetOutsideByteArrayNoPoint = errors.New("offset outside byte array")
+)
+
 // DeserializeClientMessage deserializes the byte array into an ClientMessage message.
 // * Payload is a variable length byte data.
 // * | HL|         MessageType           |Ver|  CD   |  Seq  | Flags |
@@ -111,7 +119,7 @@ func getString(log *slog.Logger, byteArray []byte, offset int, stringLength int)
 	if offset > byteArrayLength-1 || offset+stringLength-1 > byteArrayLength-1 || offset < 0 {
 		log.Error("getString failed: Offset is invalid.")
 
-		return "", errors.New("offset outside byte array")
+		return "", ErrOffsetOutsideByteArrayNoPoint
 	}
 
 	// remove nulls from the bytes array
@@ -134,7 +142,7 @@ func getInteger(log *slog.Logger, byteArray []byte, offset int) (result int32, e
 	if offset > byteArrayLength-1 || offset+4 > byteArrayLength || offset < 0 {
 		log.Error("getInteger failed: Offset is invalid.")
 
-		return 0, errors.New("offset outside byte array")
+		return 0, ErrOffsetOutside
 	}
 
 	return bytesToInteger(log, byteArray[offset:offset+4])
@@ -148,7 +156,7 @@ func bytesToInteger(log *slog.Logger, input []byte) (result int32, err error) {
 	if inputLength != 4 {
 		log.Error("bytesToInteger failed: input array size is not equal to 4.")
 
-		return 0, errors.New("input array size not equal to 4")
+		return 0, ErrOffsetOutside
 	}
 
 	buf := bytes.NewBuffer(input)
@@ -173,7 +181,7 @@ func getLong(log *slog.Logger, byteArray []byte, offset int) (result int64, err 
 	if offset > byteArrayLength-1 || offset+8 > byteArrayLength || offset < 0 {
 		log.Error("getLong failed: Offset is invalid.")
 
-		return 0, errors.New("Offset is outside the byte array.")
+		return 0, ErrOffsetOutsideByteArray
 	}
 
 	return bytesToLong(log, byteArray[offset:offset+8])
@@ -187,7 +195,7 @@ func bytesToLong(log *slog.Logger, input []byte) (result int64, err error) {
 	if inputLength != 8 {
 		log.Error("bytesToLong failed: input array size is not equal to 8.")
 
-		return 0, errors.New("input array size not equal to 8")
+		return 0, ErrOffsetOutside
 	}
 
 	buf := bytes.NewBuffer(input)
@@ -204,35 +212,35 @@ func getUuid(log *slog.Logger, byteArray []byte, offset int) (uuid.UUID, error) 
 	if offset > byteArrayLength-1 || offset+16-1 > byteArrayLength-1 || offset < 0 {
 		log.Error("getUuid failed: Offset is invalid.")
 
-		return uuid.Nil, errors.New("offset outside byte array")
+		return uuid.Nil, ErrOffsetOutsideByteArray
 	}
 
 	leastSignificantLong, err := getLong(log, byteArray, offset)
 	if err != nil {
 		log.Error("getUuid failed: getting uuid LSBs Long value")
 
-		return uuid.Nil, errors.New("getting uuid LSBs")
+		return uuid.Nil, ErrOffsetOutside
 	}
 
 	leastSignificantBytes, err := longToBytes(log, leastSignificantLong)
 	if err != nil {
 		log.Error("getUuid failed: getting uuid LSBs bytes value")
 
-		return uuid.Nil, errors.New("getting uuid LSBs bytes")
+		return uuid.Nil, ErrOffsetOutside
 	}
 
 	mostSignificantLong, err := getLong(log, byteArray, offset+8)
 	if err != nil {
 		log.Error("getUuid failed: getting uuid MSBs Long value")
 
-		return uuid.Nil, errors.New("getting uuid MSBs")
+		return uuid.Nil, ErrOffsetOutside
 	}
 
 	mostSignificantBytes, err := longToBytes(log, mostSignificantLong)
 	if err != nil {
 		log.Error("getUuid failed: getting uuid MSBs bytes value")
 
-		return uuid.Nil, errors.New("getting uuid MSBs bytes")
+		return uuid.Nil, ErrOffsetOutside
 	}
 
 	uuidBytes := append(mostSignificantBytes, leastSignificantBytes...)
@@ -255,7 +263,7 @@ func longToBytes(log *slog.Logger, input int64) (result []byte, err error) {
 	if buf.Len() != 8 {
 		log.Error("longToBytes failed: buffer output length is not equal to 8.")
 
-		return make([]byte, 8), errors.New("Input array size is not equal to 8.")
+		return make([]byte, 8), ErrOffsetOutside
 	}
 
 	return buf.Bytes(), nil
@@ -267,7 +275,7 @@ func getBytes(log *slog.Logger, byteArray []byte, offset int, byteLength int) (r
 	if offset > byteArrayLength-1 || offset+byteLength-1 > byteArrayLength-1 || offset < 0 {
 		log.Error("getBytes failed: Offset is invalid.")
 
-		return make([]byte, byteLength), errors.New("Offset is outside the byte array.")
+		return make([]byte, byteLength), ErrOffsetOutsideByteArray
 	}
 
 	return byteArray[offset : offset+byteLength], nil
@@ -421,7 +429,7 @@ func putInteger(log *slog.Logger, byteArray []byte, offset int, value int32) (er
 	if offset > byteArrayLength-1 || offset+4 > byteArrayLength || offset < 0 {
 		log.Error("putInteger failed: Offset is invalid.")
 
-		return errors.New("Offset is outside the byte array.")
+		return ErrOffsetOutside
 	}
 
 	bytes, err := integerToBytes(log, value)
@@ -446,7 +454,7 @@ func integerToBytes(log *slog.Logger, input int32) (result []byte, err error) {
 	if buf.Len() != 4 {
 		log.Error("integerToBytes failed: buffer output length is not equal to 4.")
 
-		return make([]byte, 4), errors.New("Input array size is not equal to 4.")
+		return make([]byte, 4), ErrOffsetOutside
 	}
 
 	return buf.Bytes(), nil
@@ -458,13 +466,13 @@ func putString(log *slog.Logger, byteArray []byte, offsetStart int, offsetEnd in
 	if offsetStart > byteArrayLength-1 || offsetEnd > byteArrayLength-1 || offsetStart > offsetEnd || offsetStart < 0 {
 		log.Error("putString failed: Offset is invalid.")
 
-		return errors.New("Offset is outside the byte array.")
+		return ErrOffsetOutside
 	}
 
 	if offsetEnd-offsetStart+1 < len(inputString) {
 		log.Error("putString failed: Not enough space to save the string.")
 
-		return errors.New("Not enough space to save the string.")
+		return ErrNotEnoughSpace
 	}
 
 	// wipe out the array location first and then insert the new value.
@@ -483,13 +491,13 @@ func putBytes(log *slog.Logger, byteArray []byte, offsetStart int, offsetEnd int
 	if offsetStart > byteArrayLength-1 || offsetEnd > byteArrayLength-1 || offsetStart > offsetEnd || offsetStart < 0 {
 		log.Error("putBytes failed: Offset is invalid.")
 
-		return errors.New("Offset is outside the byte array.")
+		return ErrOffsetOutsideByteArray
 	}
 
 	if offsetEnd-offsetStart+1 != len(inputBytes) {
 		log.Error("putBytes failed: Not enough space to save the bytes.")
 
-		return errors.New("Not enough space to save the bytes.")
+		return ErrNotEnoughSpace
 	}
 
 	copy(byteArray[offsetStart:offsetEnd+1], inputBytes)
@@ -502,14 +510,14 @@ func putUuid(log *slog.Logger, byteArray []byte, offset int, input uuid.UUID) (e
 	if input == uuid.Nil {
 		log.Error("putUuid failed: input is null.")
 
-		return errors.New("putUuid failed: input is null.")
+		return ErrOffsetOutside
 	}
 
 	byteArrayLength := len(byteArray)
 	if offset > byteArrayLength-1 || offset+16-1 > byteArrayLength-1 || offset < 0 {
 		log.Error("putUuid failed: Offset is invalid.")
 
-		return errors.New("Offset is outside the byte array.")
+		return ErrOffsetOutsideByteArray
 	}
 
 	uuidBytes, err := input.MarshalBinary()
@@ -523,28 +531,28 @@ func putUuid(log *slog.Logger, byteArray []byte, offset int, input uuid.UUID) (e
 	if err != nil {
 		log.Error("putUuid failed: getting leastSignificant Long value")
 
-		return errors.New("getting leastSignificant Long value")
+		return ErrOffsetOutside
 	}
 
 	mostSignificantLong, err := bytesToLong(log, uuidBytes[0:8])
 	if err != nil {
 		log.Error("putUuid failed: getting mostSignificantLong Long value")
 
-		return errors.New("getting mostSignificantLong Long value")
+		return ErrOffsetOutside
 	}
 
 	err = putLong(log, byteArray, offset, leastSignificantLong)
 	if err != nil {
 		log.Error("putUuid failed: putting leastSignificantLong Long value")
 
-		return errors.New("putting leastSignificantLong Long value")
+		return ErrOffsetOutside
 	}
 
 	err = putLong(log, byteArray, offset+8, mostSignificantLong)
 	if err != nil {
 		log.Error("putUuid failed: putting mostSignificantLong Long value")
 
-		return errors.New("putting mostSignificantLong Long value")
+		return ErrOffsetOutside
 	}
 
 	return nil
@@ -556,7 +564,7 @@ func putLong(log *slog.Logger, byteArray []byte, offset int, value int64) (err e
 	if offset > byteArrayLength-1 || offset+8 > byteArrayLength || offset < 0 {
 		log.Error("putInteger failed: Offset is invalid.")
 
-		return errors.New("Offset is outside the byte array.")
+		return ErrOffsetOutside
 	}
 
 	mbytes, err := longToBytes(log, value)
