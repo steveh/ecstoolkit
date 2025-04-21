@@ -54,7 +54,7 @@ func NewWebsocketUtil(logger log.T, dialerInput *websocket.Dialer) *WebsocketUti
 
 // OpenConnection opens a websocket connection provided an input url.
 func (u *WebsocketUtil) OpenConnection(url string) (*websocket.Conn, error) {
-	u.log.Debugf("Opening websocket connection to: ", url)
+	u.log.Debug("Opening websocket connection", "url", url)
 
 	conn, _, err := u.dialer.Dial(url, nil)
 	if err != nil {
@@ -63,7 +63,7 @@ func (u *WebsocketUtil) OpenConnection(url string) (*websocket.Conn, error) {
 		return nil, err
 	}
 
-	u.log.Debugf("Successfully opened websocket connection to: ", url)
+	u.log.Debug("Successfully opened websocket connection", "url", url)
 
 	return conn, err
 }
@@ -74,7 +74,7 @@ func (u *WebsocketUtil) CloseConnection(ws *websocket.Conn) error {
 		return errors.New("websocket conn object is nil")
 	}
 
-	u.log.Debugf("Closing websocket connection to:", ws.RemoteAddr().String())
+	u.log.Debug("Closing websocket connection", "remoteAddr", ws.RemoteAddr().String())
 
 	err := ws.Close()
 	if err != nil {
@@ -83,7 +83,7 @@ func (u *WebsocketUtil) CloseConnection(ws *websocket.Conn) error {
 		return err
 	}
 
-	u.log.Debugf("Successfully closed websocket connection to:", ws.RemoteAddr().String())
+	u.log.Debug("Successfully closed websocket connection", "remoteAddr", ws.RemoteAddr().String())
 
 	return nil
 }

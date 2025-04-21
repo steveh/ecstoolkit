@@ -102,7 +102,7 @@ var handleStreamMessageResendTimeout = func(ctx context.Context, session *Sessio
 
 // Execute create data channel and start the session.
 func (s *Session) Execute(ctx context.Context, log log.T) (err error) {
-	log.Debugf("Starting session with SessionId: %s", s.SessionId)
+	log.Debug("Starting session", "sessionId", s.SessionId)
 
 	// sets the display mode
 	s.DisplayMode = sessionutil.NewDisplayMode(log)

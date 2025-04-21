@@ -87,8 +87,7 @@ func (p *BasicPortForwarding) ReadStream(ctx context.Context, log log.T) (err er
 	for {
 		numBytes, err := (*p.stream).Read(msg)
 		if err != nil {
-			log.Debugf("Reading from port %s failed with error: %v. Close this connection, listen and accept new one.",
-				p.portParameters.PortNumber, err)
+			log.Debug("Reading from port failed", "port", p.portParameters.PortNumber, "error", err)
 
 			// Send DisconnectToPort flag to agent when client tcp connection drops to ensure agent closes tcp connection too with server port
 			if err = p.session.DataChannel.SendFlag(log, message.DisconnectToPort); err != nil {
@@ -148,7 +147,7 @@ func (p *BasicPortForwarding) startLocalConn(log log.T) (err error) {
 		return err
 	}
 
-	log.Debugf("Connection accepted for session %s.", p.sessionId)
+	log.Debug("Connection accepted", "sessionId", p.sessionId)
 
 	p.listener = &listener
 	p.stream = &tcpConn
@@ -195,7 +194,7 @@ func (p *BasicPortForwarding) handleControlSignals(ctx context.Context, log log.
 				log.Errorf("Failed to send TerminateSession flag: %v", err)
 			}
 
-			log.Debugf("Exiting session with sessionId: %s.", p.sessionId)
+			log.Debug("Exiting session", "sessionId", p.sessionId)
 			p.Stop(log)
 		} else {
 			p.session.TerminateSession(ctx, log)

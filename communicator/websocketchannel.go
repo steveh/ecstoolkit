@@ -166,8 +166,7 @@ func (webSocketChannel *WebSocketChannel) Open(log log.T) error {
 
 		for {
 			if !webSocketChannel.IsOpen {
-				log.Debugf("Ending the channel listening routine since the channel is closed: %s",
-					webSocketChannel.Url)
+				log.Debug("Ending the channel listening routine since the channel is closed", "url", webSocketChannel.Url)
 
 				break
 			}
@@ -182,10 +181,7 @@ func (webSocketChannel *WebSocketChannel) Open(log log.T) error {
 					break
 				}
 
-				log.Debugf("An error happened when receiving the message. Retried times: %v, Error: %v, Messagetype: %v",
-					retryCount,
-					err.Error(),
-					messageType)
+				log.Debug("Error receiving message", "retryCount", retryCount, "error", err.Error(), "messageType", messageType)
 			} else if messageType != websocket.TextMessage && messageType != websocket.BinaryMessage {
 				// We only accept text messages which are interpreted as UTF-8 or binary encoded text.
 				log.Errorf("Invalid message type. We only accept UTF-8 or binary encoded text. Message type: %v", messageType)

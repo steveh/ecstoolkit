@@ -16,6 +16,7 @@ package portsession
 
 import (
 	"context"
+	"errors"
 	"io"
 	"os"
 	"time"
@@ -89,8 +90,8 @@ func (p *StandardStreamForwarding) WriteStream(outputMessage message.ClientMessa
 
 // handleReadError handles read error.
 func (p *StandardStreamForwarding) handleReadError(log log.T, err error) error {
-	if err == io.EOF {
-		log.Debugf("Session to instance[%s] on port[%s] was closed.", p.session.TargetId, p.portParameters.PortNumber)
+	if errors.Is(err, io.EOF) {
+		log.Debug("Session to instance was closed", "targetId", p.session.TargetId, "port", p.portParameters.PortNumber)
 
 		return nil
 	} else {

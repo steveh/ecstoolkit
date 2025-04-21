@@ -123,7 +123,7 @@ func (s *ShellSession) handleTerminalResize(log log.T) {
 					log.Errorf("Cannot marshall size data: %v", err)
 				}
 
-				log.Debugf("Sending input size data: %s", inputSizeData)
+				log.Debug("Sending input size data", "data", string(inputSizeData))
 
 				if err = s.DataChannel.SendInputDataMessage(log, message.Size, inputSizeData); err != nil {
 					log.Errorf("Failed to Send size data: %v", err)

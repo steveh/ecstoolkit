@@ -166,7 +166,7 @@ var newEncrypter = func(ctx context.Context, log log.T, kmsKeyId string, encrypt
 // Initialize populates the data channel object with the correct values.
 func (dataChannel *DataChannel) Initialize(log log.T, clientId string, sessionId string, targetId string, isAwsCliUpgradeNeeded bool) {
 	// open data channel as publish_subscribe
-	log.Debugf("Calling Initialize Datachannel for role: %s", config.RolePublishSubscribe)
+	log.Debug("Calling Initialize Datachannel", "role", config.RolePublishSubscribe)
 
 	dataChannel.Role = config.RolePublishSubscribe
 	dataChannel.ClientId = clientId
@@ -204,7 +204,7 @@ func (dataChannel *DataChannel) SetWebsocket(log log.T, channelUrl string, chann
 func (dataChannel *DataChannel) FinalizeDataChannelHandshake(log log.T, tokenValue string) (err error) {
 	uid := uuid.New().String()
 
-	log.Debugf("Sending token through data channel %s to acknowledge connection", dataChannel.wsChannel.GetStreamUrl())
+	log.Debug("Sending token through data channel to acknowledge connection", "url", dataChannel.wsChannel.GetStreamUrl())
 	openDataChannelInput := service.OpenDataChannelInput{
 		MessageSchemaVersion: aws.String(config.MessageSchemaVersion),
 		RequestId:            aws.String(uid),
@@ -244,7 +244,7 @@ func (dataChannel *DataChannel) Open(log log.T) (err error) {
 
 // Close closes datachannel - its web socket connection.
 func (dataChannel *DataChannel) Close(log log.T) error {
-	log.Debugf("Closing datachannel with url %s", dataChannel.wsChannel.GetStreamUrl())
+	log.Debug("Closing datachannel", "url", dataChannel.wsChannel.GetStreamUrl())
 
 	return dataChannel.wsChannel.Close(log)
 }
@@ -252,14 +252,14 @@ func (dataChannel *DataChannel) Close(log log.T) error {
 // Reconnect calls ResumeSession API to reconnect datachannel when connection is lost.
 func (dataChannel *DataChannel) Reconnect(log log.T) (err error) {
 	if err = dataChannel.Close(log); err != nil {
-		log.Debugf("Closing datachannel failed with error: %v", err)
+		log.Debug("Closing datachannel failed", "error", err)
 	}
 
 	if err = dataChannel.Open(log); err != nil {
 		return fmt.Errorf("failed to reconnect data channel %s with error: %w", dataChannel.wsChannel.GetStreamUrl(), err)
 	}
 
-	log.Debugf("Successfully reconnected to data channel: %s", dataChannel.wsChannel.GetStreamUrl())
+	log.Debug("Successfully reconnected to data channel", "url", dataChannel.wsChannel.GetStreamUrl())
 
 	return
 }
@@ -354,7 +354,7 @@ func (dataChannel *DataChannel) ResendStreamDataMessageScheduler(log log.T) (err
 
 			streamMessage := streamMessageElement.Value.(StreamingMessage)
 			if time.Since(streamMessage.LastSentTime) > dataChannel.RetransmissionTimeout {
-				log.Debugf("Resend stream data message %d for the %d attempt.", streamMessage.SequenceNumber, *streamMessage.ResendAttempt)
+				log.Debug("Resend stream data message", "sequenceNumber", streamMessage.SequenceNumber, "attempt", *streamMessage.ResendAttempt)
 
 				if *streamMessage.ResendAttempt >= config.ResendMaxAttempt {
 					log.Warnf("Message %d was resent over %d times.", streamMessage.SequenceNumber, config.ResendMaxAttempt)
@@ -544,12 +544,11 @@ func (dataChannel *DataChannel) handleHandshakeComplete(log log.T, clientMessage
 		dataChannel.isSessionTypeSet <- false
 	}
 
-	log.Debugf("Handshake Complete. Handshake time to complete is: %s seconds",
-		handshakeComplete.HandshakeTimeToComplete.Seconds())
+	log.Debug("Handshake Complete", "timeToComplete", handshakeComplete.HandshakeTimeToComplete.Seconds())
 
 	if handshakeComplete.CustomerMessage != "" {
-		log.Debugf("Exiting session with sessionId: %s.", dataChannel.SessionId)
-		log.Debugf("SessionId: %s : %s", dataChannel.SessionId, handshakeComplete.CustomerMessage)
+		log.Debug("Exiting session", "sessionId", dataChannel.SessionId)
+		log.Debug("Session message", "sessionId", dataChannel.SessionId, "message", handshakeComplete.CustomerMessage)
 	}
 
 	return err
@@ -672,7 +671,7 @@ func (dataChannel *DataChannel) HandleOutputMessage(
 				}
 
 				// PayloadType is HandshakeRequest so we call our own handler instead of the provided handler
-				log.Debugf("Processing HandshakeRequest message %s", outputMessage)
+				log.Debug("Processing HandshakeRequest message", "message", outputMessage)
 
 				if err = dataChannel.handleHandshakeRequest(ctx, log, outputMessage); err != nil {
 					log.Errorf("Unable to process incoming data payload, MessageType %s, "+
@@ -747,14 +746,12 @@ func (dataChannel *DataChannel) HandleOutputMessage(
 
 		return dataChannel.ProcessIncomingMessageBufferItems(log, outputMessage)
 	} else {
-		log.Debugf("Unexpected sequence message received. Received Sequence Number: %d. Expected Sequence Number: %d",
-			outputMessage.SequenceNumber, dataChannel.ExpectedSequenceNumber)
+		log.Debug("Unexpected sequence message received", "receivedSequence", outputMessage.SequenceNumber, "expectedSequence", dataChannel.ExpectedSequenceNumber)
 
 		// If incoming message sequence number is greater then expected sequence number and IncomingMessageBuffer has capacity,
 		// add message to IncomingMessageBuffer and send acknowledgement
 		if outputMessage.SequenceNumber > dataChannel.ExpectedSequenceNumber {
-			log.Debugf("Received Sequence Number %d is higher than Expected Sequence Number %d, adding to IncomingMessageBuffer",
-				outputMessage.SequenceNumber, dataChannel.ExpectedSequenceNumber)
+			log.Debug("Received sequence number is higher than expected", "receivedSequence", outputMessage.SequenceNumber, "expectedSequence", dataChannel.ExpectedSequenceNumber)
 
 			if len(dataChannel.IncomingMessageBuffer.Messages) < dataChannel.IncomingMessageBuffer.Capacity {
 				if err = SendAcknowledgeMessageCall(log, dataChannel, outputMessage); err != nil {
@@ -786,8 +783,7 @@ func (dataChannel *DataChannel) ProcessIncomingMessageBufferItems(log log.T,
 	for {
 		bufferedStreamMessage := dataChannel.IncomingMessageBuffer.Messages[dataChannel.ExpectedSequenceNumber]
 		if bufferedStreamMessage.Content != nil {
-			log.Debugf("Process stream data message from IncomingMessageBuffer. "+
-				"Sequence Number: %d", bufferedStreamMessage.SequenceNumber)
+			log.Debug("Process stream data message from IncomingMessageBuffer", "sequenceNumber", bufferedStreamMessage.SequenceNumber)
 
 			if err := outputMessage.DeserializeClientMessage(log, bufferedStreamMessage.Content); err != nil {
 				log.Errorf("Cannot deserialize raw message with err: %v.", err)
@@ -850,12 +846,12 @@ func (dataChannel DataChannel) HandleChannelClosedMessage(log log.T, stopHandler
 		log.Errorf("Cannot deserialize payload to ChannelClosedMessage: %v.", err)
 	}
 
-	log.Debugf("Exiting session with sessionId: %s.", sessionId)
+	log.Debug("Exiting session", "sessionId", sessionId)
 
 	if channelClosedMessage.Output == "" {
-		log.Debugf("SessionId: %s : %s", sessionId, channelClosedMessage.Output)
+		log.Debug("Session message", "sessionId", sessionId, "output", channelClosedMessage.Output)
 	} else {
-		log.Debugf("SessionId: %s : %s", sessionId, channelClosedMessage.Output)
+		log.Debug("Session message", "sessionId", sessionId, "output", channelClosedMessage.Output)
 	}
 
 	stopHandler(log)
@@ -925,7 +921,7 @@ func (dataChannel *DataChannel) ProcessKMSEncryptionHandshakeAction(ctx context.
 
 	kmsEncRequest := message.KMSEncryptionRequest{}
 	json.Unmarshal(actionParams, &kmsEncRequest)
-	log.Debugf("%+v", kmsEncRequest)
+	log.Debug("KMS encryption request", "request", kmsEncRequest)
 
 	kmsKeyId := kmsEncRequest.KMSKeyID
 

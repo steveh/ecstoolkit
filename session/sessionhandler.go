@@ -98,7 +98,7 @@ func (s *Session) GetResumeSessionParams(ctx context.Context, log log.T) (string
 		SessionId: &s.SessionId,
 	}
 
-	log.Debugf("Resume Session input parameters: %v", resumeSessionInput)
+	log.Debug("Resume Session input parameters", "input", resumeSessionInput)
 
 	resumeSessionOutput, err := s.SSMClient.ResumeSession(ctx, &resumeSessionInput)
 	if err != nil {
@@ -122,7 +122,7 @@ func (s *Session) ResumeSessionHandler(ctx context.Context, log log.T) (err erro
 
 		return
 	} else if s.TokenValue == "" {
-		log.Debugf("Session: %s timed out.", s.SessionId)
+		log.Debug("Session timed out", "sessionId", s.SessionId)
 
 		return errors.New("session timed out")
 	}
@@ -139,7 +139,7 @@ func (s *Session) TerminateSession(ctx context.Context, log log.T) error {
 		SessionId: &s.SessionId,
 	}
 
-	log.Debugf("Terminate Session input parameters: %v", terminateSessionInput)
+	log.Debug("Terminate Session input parameters", "input", terminateSessionInput)
 
 	if _, err := s.SSMClient.TerminateSession(ctx, &terminateSessionInput); err != nil {
 		log.Errorf("Terminate Session failed: %v", err)

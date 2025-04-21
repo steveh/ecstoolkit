@@ -210,7 +210,7 @@ func (p *MuxPortForwarding) handleControlSignals(log log.T) {
 			log.Errorf("Failed to send TerminateSession flag: %v", err)
 		}
 
-		log.Debugf("Exiting session with sessionId: %s.", p.sessionId)
+		log.Debug("Exiting session", "sessionId", p.sessionId)
 		p.Stop(log)
 	}()
 }
@@ -227,7 +227,7 @@ func (p *MuxPortForwarding) transferDataToServer(log log.T, ctx context.Context)
 			var numBytes int
 
 			if numBytes, err = p.mgsConn.conn.Read(msg); err != nil {
-				log.Debugf("Reading from port failed with error: %v.", err)
+				log.Debug("Reading from port failed", "error", err)
 
 				return
 			}
@@ -274,9 +274,9 @@ func (p *MuxPortForwarding) handleClientConnections(log log.T, ctx context.Conte
 
 	defer listener.Close()
 
-	log.Debugf(displayMsg)
+	log.Debug(displayMsg)
 
-	log.Debugf("Waiting for connections...")
+	log.Debug("Waiting for connections")
 
 	var once sync.Once
 
@@ -288,10 +288,10 @@ func (p *MuxPortForwarding) handleClientConnections(log log.T, ctx context.Conte
 			if conn, err := listener.Accept(); err != nil {
 				log.Errorf("Error while accepting connection: %v", err)
 			} else {
-				log.Debugf("Connection accepted from %s for session [%s]", conn.RemoteAddr(), p.sessionId)
+				log.Debug("Connection accepted", "remoteAddr", conn.RemoteAddr(), "sessionId", p.sessionId)
 
 				once.Do(func() {
-					log.Debugf("Connection accepted for session [%s]", p.sessionId)
+					log.Debug("Connection accepted", "sessionId", p.sessionId)
 				})
 
 				stream, err := p.muxClient.session.OpenStream()
@@ -299,7 +299,7 @@ func (p *MuxPortForwarding) handleClientConnections(log log.T, ctx context.Conte
 					continue
 				}
 
-				log.Debugf("Client stream opened %d\n", stream.ID())
+				log.Debug("Client stream opened", "streamId", stream.ID())
 
 				go handleDataTransfer(stream, conn)
 			}

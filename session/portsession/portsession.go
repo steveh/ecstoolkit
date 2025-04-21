@@ -90,23 +90,23 @@ func (s *PortSession) Initialize(ctx context.Context, log log.T, sessionVar *ses
 		if s.portSessionType.IsStreamNotSet() {
 			outputMessage := &message.ClientMessage{}
 			if err := outputMessage.DeserializeClientMessage(log, input); err != nil {
-				log.Debugf("Ignore message deserialize error while stream connection had not set.")
+				log.Debug("Ignore message deserialize error while stream connection had not set")
 
 				return
 			}
 
 			if outputMessage.MessageType == message.OutputStreamMessage {
-				log.Debugf("Waiting for user to establish connection before processing incoming messages.")
+				log.Debug("Waiting for user to establish connection before processing incoming messages")
 
 				return
 			} else {
-				log.Debugf("Received %s message while establishing connection", outputMessage.MessageType)
+				log.Debug("Received message while establishing connection", "messageType", outputMessage.MessageType)
 			}
 		}
 
 		s.DataChannel.OutputMessageHandler(ctx, log, s.Stop, s.SessionId, input)
 	})
-	log.Debugf("Connected to instance[%s] on port: %s", sessionVar.TargetId, s.portParameters.PortNumber)
+	log.Debug("Connected to instance", "targetId", sessionVar.TargetId, "port", s.portParameters.PortNumber)
 }
 
 func (s *PortSession) Stop(log log.T) error {
@@ -129,7 +129,7 @@ func (s *PortSession) SetSessionHandlers(ctx context.Context, log log.T) (err er
 // ProcessStreamMessagePayload writes messages received on datachannel to stdout.
 func (s *PortSession) ProcessStreamMessagePayload(log log.T, outputMessage message.ClientMessage) (isHandlerReady bool, err error) {
 	if s.portSessionType.IsStreamNotSet() {
-		log.Debugf("Waiting for streams to be established before processing incoming messages.")
+		log.Debug("Waiting for streams to be established before processing incoming messages")
 
 		return false, nil
 	}

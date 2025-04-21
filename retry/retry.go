@@ -33,7 +33,7 @@ func Retry(log log.T, attempts int, sleep time.Duration, fn func() error) (err e
 			time.Sleep(sleep)
 			sleep = sleep * sleepConstant
 
-			log.Debugf("%v attempts to connect web socket connection.", attempts)
+			log.Debug("Attempts remaining to connect web socket connection", "attempts", attempts)
 
 			continue
 		}

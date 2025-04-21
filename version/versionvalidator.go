@@ -45,19 +45,19 @@ func isAgentVersionGreaterThanSupportedVersion(log log.T, agentVersionString str
 	)
 
 	if supportedVersion, err = NewVersion(supportedVersionString); err != nil {
-		log.Debugf("supportedVersion initialization failed, %v", err)
+		log.Debug("Supported version initialization failed", "error", err)
 
 		return supported
 	}
 
 	if agentVersion, err = NewVersion(agentVersionString); err != nil {
-		log.Debugf("agentVersion initialization failed, %v", err)
+		log.Debug("Agent version initialization failed", "error", err)
 
 		return supported
 	}
 
 	if compareResult, err = agentVersion.compare(supportedVersion); err != nil {
-		log.Debugf("version comparison failed, %v", err)
+		log.Debug("Version comparison failed", "error", err)
 
 		return supported
 	}
