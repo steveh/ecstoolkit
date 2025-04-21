@@ -152,7 +152,9 @@ func bytesToInteger(log *slog.Logger, input []byte) (result int32, err error) {
 	}
 
 	buf := bytes.NewBuffer(input)
-	binary.Read(buf, binary.BigEndian, &res)
+	if err := binary.Read(buf, binary.BigEndian, &res); err != nil {
+		return 0, fmt.Errorf("failed to read integer from bytes: %w", err)
+	}
 
 	return res, nil
 }
@@ -189,7 +191,9 @@ func bytesToLong(log *slog.Logger, input []byte) (result int64, err error) {
 	}
 
 	buf := bytes.NewBuffer(input)
-	binary.Read(buf, binary.BigEndian, &res)
+	if err := binary.Read(buf, binary.BigEndian, &res); err != nil {
+		return 0, fmt.Errorf("failed to read long from bytes: %w", err)
+	}
 
 	return res, nil
 }
@@ -244,7 +248,9 @@ func getUuid(log *slog.Logger, byteArray []byte, offset int) (uuid.UUID, error) 
 // longToBytes gets bytes array from a long integer.
 func longToBytes(log *slog.Logger, input int64) (result []byte, err error) {
 	buf := new(bytes.Buffer)
-	binary.Write(buf, binary.BigEndian, input)
+	if err := binary.Write(buf, binary.BigEndian, input); err != nil {
+		return nil, fmt.Errorf("failed to write long to bytes: %w", err)
+	}
 
 	if buf.Len() != 8 {
 		log.Error("longToBytes failed: buffer output length is not equal to 8.")
@@ -433,7 +439,9 @@ func putInteger(log *slog.Logger, byteArray []byte, offset int, value int32) (er
 // integerToBytes gets bytes array from an integer.
 func integerToBytes(log *slog.Logger, input int32) (result []byte, err error) {
 	buf := new(bytes.Buffer)
-	binary.Write(buf, binary.BigEndian, input)
+	if err := binary.Write(buf, binary.BigEndian, input); err != nil {
+		return nil, fmt.Errorf("failed to write integer to bytes: %w", err)
+	}
 
 	if buf.Len() != 4 {
 		log.Error("integerToBytes failed: buffer output length is not equal to 4.")

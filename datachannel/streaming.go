@@ -279,7 +279,9 @@ func (dataChannel *DataChannel) SendFlag(
 	flagType message.PayloadTypeFlag,
 ) (err error) {
 	flagBuf := new(bytes.Buffer)
-	binary.Write(flagBuf, binary.BigEndian, flagType)
+	if err := binary.Write(flagBuf, binary.BigEndian, flagType); err != nil {
+		return fmt.Errorf("failed to write flag to buffer: %w", err)
+	}
 
 	return dataChannel.SendInputDataMessage(log, message.Flag, flagBuf.Bytes())
 }

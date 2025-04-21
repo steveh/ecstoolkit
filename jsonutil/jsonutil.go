@@ -17,18 +17,21 @@ package jsonutil
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 )
 
 // jsonFormat json formatIndent.
 const jsonFormat = "  "
 
 // Indent indents a json string.
-func Indent(jsonStr string) string {
+func Indent(jsonStr string) (string, error) {
 	var dst bytes.Buffer
 
-	json.Indent(&dst, []byte(jsonStr), "", jsonFormat)
+	if err := json.Indent(&dst, []byte(jsonStr), "", jsonFormat); err != nil {
+		return "", fmt.Errorf("failed to indent JSON: %w", err)
+	}
 
-	return dst.String()
+	return dst.String(), nil
 }
 
 // Remarshal marshals an object to Json then parses it back to another object.

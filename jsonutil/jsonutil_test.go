@@ -85,8 +85,8 @@ func ExampleIndent() {
 	}
 
 	roads := []Road{
-		{"Diamond Fork", 29},
-		{"Sheep Creek", 51},
+		{Name: "Diamond Fork", Number: 29},
+		{Name: "Sheep Creek", Number: 51},
 	}
 
 	b, err := Marshal(roads)
@@ -94,7 +94,11 @@ func ExampleIndent() {
 		log.Fatal(err)
 	}
 
-	out := Indent(b)
+	out, err := Indent(b)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	fmt.Println(out)
 	// Output:
 	// [
@@ -118,7 +122,12 @@ func TestIndent(t *testing.T) {
 		{"BasicMoreWhitespace", "[\n{\"Name\":\"Diamond Fork\",     \"Number\":29}, {    \"Name\"   :   \"Sheep Creek\",    \"Number\":51}]"},
 	}
 	for _, tc := range testCases {
-		out := Indent(tc.input)
+		out, err := Indent(tc.input)
+		if err != nil {
+			t.Errorf("error indenting JSON: %v", err)
+
+			continue
+		}
 
 		correct, err := ioutil.ReadFile(filepath.Join("testdata", t.Name()+tc.name+".golden"))
 		if err != nil {
