@@ -46,7 +46,7 @@ func TestSetSessionHandlers(t *testing.T) {
 	}()
 
 	counter := 0
-	countTimes := func() error {
+	countTimes := func() error { //nolint:unparam
 		counter++
 
 		return nil
