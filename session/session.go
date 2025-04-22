@@ -39,13 +39,13 @@ type ISessionPlugin interface {
 }
 
 type ISession interface {
-	Execute(slog.Logger) error
-	OpenDataChannel(slog.Logger) error
+	Execute(log slog.Logger) error
+	OpenDataChannel(log slog.Logger) error
 	ProcessFirstMessage(log *slog.Logger, outputMessage message.ClientMessage) (isHandlerReady bool, err error)
 	Stop(log *slog.Logger) error
-	GetResumeSessionParams(slog.Logger) (string, error)
-	ResumeSessionHandler(slog.Logger) error
-	TerminateSession(slog.Logger) error
+	GetResumeSessionParams(log slog.Logger) (string, error)
+	ResumeSessionHandler(log slog.Logger) error
+	TerminateSession(log slog.Logger) error
 }
 
 func init() {

@@ -35,7 +35,7 @@ type IWebSocketChannel interface {
 	StartPings(log *slog.Logger, pingInterval time.Duration)
 	GetChannelToken() string
 	GetStreamUrl() string
-	SetChannelToken(string)
+	SetChannelToken(channelToken string)
 	SetOnError(onErrorHandler func(error))
 	SetOnMessage(onMessageHandler func([]byte))
 }

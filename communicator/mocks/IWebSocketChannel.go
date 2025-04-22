@@ -288,9 +288,9 @@ func (_c *IWebSocketChannel_SendMessage_Call) RunAndReturn(run func(*slog.Logger
 	return _c
 }
 
-// SetChannelToken provides a mock function with given fields: _a0
-func (_m *IWebSocketChannel) SetChannelToken(_a0 string) {
-	_m.Called(_a0)
+// SetChannelToken provides a mock function with given fields: channelToken
+func (_m *IWebSocketChannel) SetChannelToken(channelToken string) {
+	_m.Called(channelToken)
 }
 
 // IWebSocketChannel_SetChannelToken_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetChannelToken'
@@ -299,12 +299,12 @@ type IWebSocketChannel_SetChannelToken_Call struct {
 }
 
 // SetChannelToken is a helper method to define mock.On call
-//   - _a0 string
-func (_e *IWebSocketChannel_Expecter) SetChannelToken(_a0 interface{}) *IWebSocketChannel_SetChannelToken_Call {
-	return &IWebSocketChannel_SetChannelToken_Call{Call: _e.mock.On("SetChannelToken", _a0)}
+//   - channelToken string
+func (_e *IWebSocketChannel_Expecter) SetChannelToken(channelToken interface{}) *IWebSocketChannel_SetChannelToken_Call {
+	return &IWebSocketChannel_SetChannelToken_Call{Call: _e.mock.On("SetChannelToken", channelToken)}
 }
 
-func (_c *IWebSocketChannel_SetChannelToken_Call) Run(run func(_a0 string)) *IWebSocketChannel_SetChannelToken_Call {
+func (_c *IWebSocketChannel_SetChannelToken_Call) Run(run func(channelToken string)) *IWebSocketChannel_SetChannelToken_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(string))
 	})

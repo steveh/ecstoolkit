@@ -21,7 +21,7 @@ import (
 
 type Retryer interface {
 	Call() error
-	NextSleepTime(int32) time.Duration
+	NextSleepTime(attempt int32) time.Duration
 }
 
 type RepeatableExponentialRetryer struct {
