@@ -693,6 +693,7 @@ func (dataChannel *DataChannel) HandleOutputMessage(
 	// On receiving expected stream data message, send acknowledgement, process it and increment expected sequence number by 1.
 	// Further process messages from IncomingMessageBuffer
 	if outputMessage.SequenceNumber == dataChannel.ExpectedSequenceNumber {
+		//nolint:exhaustive
 		switch message.PayloadType(outputMessage.PayloadType) {
 		case message.HandshakeRequestPayloadType:
 			{

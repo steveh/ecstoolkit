@@ -172,6 +172,7 @@ func (p *MuxPortForwarding) ReadStream(ctx context.Context, log *slog.Logger) er
 
 // WriteStream writes data to stream.
 func (p *MuxPortForwarding) WriteStream(outputMessage message.ClientMessage) error {
+	//nolint:exhaustive
 	switch message.PayloadType(outputMessage.PayloadType) {
 	case message.Output:
 		_, err := p.mgsConn.conn.Write(outputMessage.Payload)
