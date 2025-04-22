@@ -243,9 +243,9 @@ func getUuid(log *slog.Logger, byteArray []byte, offset int) (uuid.UUID, error) 
 		return uuid.Nil, ErrOffsetOutside
 	}
 
-	uuidBytes := append(mostSignificantBytes, leastSignificantBytes...)
+	mostSignificantBytes = append(mostSignificantBytes, leastSignificantBytes...)
 
-	result, err := uuid.FromBytes(uuidBytes)
+	result, err := uuid.FromBytes(mostSignificantBytes)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("creating UUID from bytes: %w", err)
 	}

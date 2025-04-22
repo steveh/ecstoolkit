@@ -181,7 +181,9 @@ func (webSocketChannel *WebSocketChannel) Open(log *slog.Logger) error {
 			}
 
 			messageType, rawMessage, err := webSocketChannel.Connection.ReadMessage()
-			if err != nil {
+
+			switch {
+			case err != nil:
 				retryCount++
 				if retryCount >= config.RetryAttempt {
 					log.Error("Reached retry limit for receiving messages", "retryLimit", config.RetryAttempt)
@@ -191,10 +193,10 @@ func (webSocketChannel *WebSocketChannel) Open(log *slog.Logger) error {
 				}
 
 				log.Warn("Error receiving message", "retryCount", retryCount, "error", err.Error(), "messageType", messageType)
-			} else if messageType != websocket.TextMessage && messageType != websocket.BinaryMessage {
+			case messageType != websocket.TextMessage && messageType != websocket.BinaryMessage:
 				// We only accept text messages which are interpreted as UTF-8 or binary encoded text.
 				log.Error("Invalid message type", "messageType", messageType, "reason", "Only UTF-8 or binary encoded text accepted")
-			} else {
+			default:
 				retryCount = 0
 
 				webSocketChannel.OnMessage(rawMessage)

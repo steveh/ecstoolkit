@@ -47,9 +47,7 @@ type BasicPortForwarding struct {
 var _ IPortSession = (*BasicPortForwarding)(nil)
 
 // getNewListener returns a new listener to given address and type like tcp, unix etc.
-var getNewListener = func(listenerType string, listenerAddress string) (net.Listener, error) {
-	return net.Listen(listenerType, listenerAddress)
-}
+var getNewListener = net.Listen
 
 // acceptConnection returns connection to the listener.
 var acceptConnection = func(log *slog.Logger, listener net.Listener) (net.Conn, error) {

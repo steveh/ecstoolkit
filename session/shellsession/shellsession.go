@@ -47,9 +47,7 @@ type ShellSession struct {
 
 var _ session.ISessionPlugin = (*ShellSession)(nil)
 
-var GetTerminalSizeCall = func(fd int) (int, int, error) {
-	return term.GetSize(fd)
-}
+var GetTerminalSizeCall = term.GetSize
 
 // Name is the session name used in the plugin.
 func (s *ShellSession) Name() string {

@@ -345,7 +345,8 @@ func (dataChannel *DataChannel) SendInputDataMessage(
 		new(int),
 	}
 	dataChannel.AddDataToOutgoingMessageBuffer(streamingMessage)
-	dataChannel.StreamDataSequenceNumber = dataChannel.StreamDataSequenceNumber + 1
+
+	dataChannel.StreamDataSequenceNumber++
 
 	return err
 }
@@ -771,7 +772,7 @@ func (dataChannel *DataChannel) HandleOutputMessage(
 			}
 		}
 
-		dataChannel.ExpectedSequenceNumber = dataChannel.ExpectedSequenceNumber + 1
+		dataChannel.ExpectedSequenceNumber++
 
 		return dataChannel.ProcessIncomingMessageBufferItems(log, outputMessage)
 	} else {
@@ -840,7 +841,7 @@ func (dataChannel *DataChannel) ProcessIncomingMessageBufferItems(log *slog.Logg
 				return fmt.Errorf("processing output message with handlers: %w", err)
 			}
 
-			dataChannel.ExpectedSequenceNumber = dataChannel.ExpectedSequenceNumber + 1
+			dataChannel.ExpectedSequenceNumber++
 			dataChannel.RemoveDataFromIncomingMessageBuffer(bufferedStreamMessage.SequenceNumber)
 		} else {
 			break
@@ -887,11 +888,7 @@ func (dataChannel *DataChannel) HandleChannelClosedMessage(log *slog.Logger, sto
 
 	log.Debug("Exiting session", "sessionId", sessionId)
 
-	if channelClosedMessage.Output == "" {
-		log.Debug("Session message", "sessionId", sessionId, "output", channelClosedMessage.Output)
-	} else {
-		log.Debug("Session message", "sessionId", sessionId, "output", channelClosedMessage.Output)
-	}
+	log.Debug("Session message", "sessionId", sessionId, "output", channelClosedMessage.Output)
 
 	if err := stopHandler(log); err != nil {
 		log.Error("Failed to stop handler", "error", err)
