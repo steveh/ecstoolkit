@@ -17,7 +17,6 @@ package portsession
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"net"
 	"os"
 	"os/signal"
@@ -51,7 +50,7 @@ func TestSetSessionHandlers(t *testing.T) {
 
 		return nil
 	}
-	mockWebSocketChannel.On("SendMessage", mockLog, mock.Anything, mock.Anything).
+	mockWebSocketChannel.On("SendMessage", mock.Anything, mock.Anything).
 		Return(countTimes())
 
 	mockSession := getSessionMock()
@@ -74,7 +73,7 @@ func TestSetSessionHandlers(t *testing.T) {
 	}()
 
 	go func() {
-		acceptConnection = func(log *slog.Logger, listener net.Listener) (net.Conn, error) {
+		acceptConnection = func(_ net.Listener) (net.Conn, error) {
 			return in, nil
 		}
 
@@ -97,7 +96,7 @@ func TestSetSessionHandlers(t *testing.T) {
 }
 
 func TestStartSessionTCPLocalPortFromDocument(t *testing.T) {
-	acceptConnection = func(log *slog.Logger, listener net.Listener) (net.Conn, error) {
+	acceptConnection = func(_ net.Listener) (net.Conn, error) {
 		return nil, errors.New("accept failed")
 	}
 
@@ -118,7 +117,7 @@ func TestStartSessionTCPLocalPortFromDocument(t *testing.T) {
 
 func TestStartSessionTCPAcceptFailed(t *testing.T) {
 	connErr := errors.New("accept failed")
-	acceptConnection = func(log *slog.Logger, listener net.Listener) (net.Conn, error) {
+	acceptConnection = func(_ net.Listener) (net.Conn, error) {
 		return nil, connErr
 	}
 	portSession := PortSession{
@@ -134,7 +133,7 @@ func TestStartSessionTCPAcceptFailed(t *testing.T) {
 
 func TestStartSessionTCPConnectFailed(t *testing.T) {
 	listenerError := errors.New("TCP connection failed")
-	getNewListener = func(listenerType string, listenerAddress string) (net.Listener, error) {
+	getNewListener = func(_ string, _ string) (net.Listener, error) {
 		return nil, listenerError
 	}
 	portSession := PortSession{

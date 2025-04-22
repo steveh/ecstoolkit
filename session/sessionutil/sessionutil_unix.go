@@ -27,9 +27,11 @@ import (
 	"github.com/steveh/ecstoolkit/message"
 )
 
+// DisplayMode represents a display mode for Unix-like systems.
 type DisplayMode struct{}
 
-func (d *DisplayMode) InitDisplayMode(log *slog.Logger) {
+// InitDisplayMode initializes the display mode for Unix-like systems.
+func (d *DisplayMode) InitDisplayMode(_ *slog.Logger) {
 }
 
 // DisplayMessage function displays the output on the screen.
@@ -42,7 +44,7 @@ func (d *DisplayMode) DisplayMessage(log *slog.Logger, message message.ClientMes
 }
 
 // NewListener starts a new socket listener on the address.
-func NewListener(log *slog.Logger, address string) (net.Listener, error) {
+func NewListener(_ *slog.Logger, address string) (net.Listener, error) {
 	listener, err := net.Listen("unix", address)
 	if err != nil {
 		return nil, fmt.Errorf("creating unix socket listener: %w", err)

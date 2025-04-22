@@ -11,6 +11,7 @@
 // either express or implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+// Package encryption provides encryption and decryption functionality using AWS KMS.
 package encryption
 
 import (
@@ -29,35 +30,39 @@ const (
 	nonceSize = 12
 )
 
+// KMSKeyProvider defines the interface for AWS KMS key operations.
 type KMSKeyProvider interface {
 	GenerateDataKey()
 }
 
+// IEncrypter defines the interface for encryption and decryption operations.
 type IEncrypter interface {
 	Encrypt(log *slog.Logger, plainText []byte) (cipherText []byte, err error)
 	Decrypt(log *slog.Logger, cipherText []byte) (plainText []byte, err error)
 	GetEncryptedDataKey() (ciptherTextBlob []byte)
 }
 
+// Encrypter implements the IEncrypter interface using AWS KMS for key management.
 type Encrypter struct {
 	KMSService *kms.Client
 
-	kmsKeyId      string
+	kmsKeyID      string
 	cipherTextKey []byte
 	encryptionKey []byte
 	decryptionKey []byte
 }
 
-var NewEncrypter = func(ctx context.Context, log *slog.Logger, kmsKeyId string, encryptionContext map[string]string, KMSService *kms.Client) (*Encrypter, error) {
-	encrypter := Encrypter{kmsKeyId: kmsKeyId, KMSService: KMSService}
-	err := encrypter.generateEncryptionKey(ctx, log, kmsKeyId, encryptionContext)
+// NewEncrypter creates a new Encrypter instance with the given KMS key and encryption context.
+var NewEncrypter = func(ctx context.Context, log *slog.Logger, kmsKeyID string, encryptionContext map[string]string, KMSService *kms.Client) (*Encrypter, error) {
+	encrypter := Encrypter{kmsKeyID: kmsKeyID, KMSService: KMSService}
+	err := encrypter.generateEncryptionKey(ctx, log, kmsKeyID, encryptionContext)
 
 	return &encrypter, err
 }
 
 // generateEncryptionKey calls KMS to generate a new encryption key.
-func (encrypter *Encrypter) generateEncryptionKey(ctx context.Context, log *slog.Logger, kmsKeyId string, encryptionContext map[string]string) error {
-	cipherTextKey, plainTextKey, err := KMSGenerateDataKey(ctx, kmsKeyId, encrypter.KMSService, encryptionContext)
+func (encrypter *Encrypter) generateEncryptionKey(ctx context.Context, log *slog.Logger, kmsKeyID string, encryptionContext map[string]string) error {
+	cipherTextKey, plainTextKey, err := KMSGenerateDataKey(ctx, kmsKeyID, encrypter.KMSService, encryptionContext)
 	if err != nil {
 		log.Error("Error generating data key from KMS", "error", err)
 
@@ -77,9 +82,9 @@ func (encrypter *Encrypter) GetEncryptedDataKey() []byte {
 	return encrypter.cipherTextKey
 }
 
-// GetKMSKeyId gets the KMS key id that is used to generate the encryption key.
-func (encrypter *Encrypter) GetKMSKeyId() string {
-	return encrypter.kmsKeyId
+// GetKMSKeyID gets the KMS key id that is used to generate the encryption key.
+func (encrypter *Encrypter) GetKMSKeyID() string {
+	return encrypter.kmsKeyID
 }
 
 // getAEAD gets AEAD which is a GCM cipher mode providing authenticated encryption with associated data.
@@ -102,7 +107,7 @@ func getAEAD(plainTextKey []byte) (cipher.AEAD, error) {
 }
 
 // Encrypt encrypts a byte slice and returns the encrypted slice.
-func (encrypter *Encrypter) Encrypt(log *slog.Logger, plainText []byte) ([]byte, error) {
+func (encrypter *Encrypter) Encrypt(_ *slog.Logger, plainText []byte) ([]byte, error) {
 	var aesgcm cipher.AEAD
 
 	var err error
@@ -129,7 +134,7 @@ func (encrypter *Encrypter) Encrypt(log *slog.Logger, plainText []byte) ([]byte,
 }
 
 // Decrypt decrypts a byte slice and returns the decrypted slice.
-func (encrypter *Encrypter) Decrypt(log *slog.Logger, cipherText []byte) ([]byte, error) {
+func (encrypter *Encrypter) Decrypt(_ *slog.Logger, cipherText []byte) ([]byte, error) {
 	var aesgcm cipher.AEAD
 
 	var err error

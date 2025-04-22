@@ -28,8 +28,10 @@ import (
 	"github.com/steveh/ecstoolkit/session/sessionutil"
 )
 
+// SessionRegistry stores the mapping of session types to their implementations.
 var SessionRegistry = map[string]ISessionPlugin{}
 
+// ISessionPlugin defines the interface for session type implementations.
 type ISessionPlugin interface {
 	SetSessionHandlers(ctx context.Context, log *slog.Logger) error
 	ProcessStreamMessagePayload(log *slog.Logger, streamDataMessage message.ClientMessage) (isHandlerReady bool, err error)
@@ -38,6 +40,7 @@ type ISessionPlugin interface {
 	Name() string
 }
 
+// ISession defines the interface for session operations.
 type ISession interface {
 	Execute(log slog.Logger) error
 	OpenDataChannel(log slog.Logger) error
@@ -52,19 +55,21 @@ func init() {
 	SessionRegistry = make(map[string]ISessionPlugin)
 }
 
+// Register adds a session plugin to the registry.
 func Register(session ISessionPlugin) {
 	SessionRegistry[session.Name()] = session
 }
 
+// Session represents an active session with its configuration and state.
 type Session struct {
 	DataChannel           datachannel.IDataChannel
-	SessionId             string
-	StreamUrl             string
+	SessionID             string
+	StreamURL             string
 	TokenValue            string
 	IsAwsCliUpgradeNeeded bool
 	Endpoint              string
-	ClientId              string
-	TargetId              string
+	ClientID              string
+	TargetID              string
 	SSMClient             *ssm.Client
 	retryParams           retry.RepeatableExponentialRetryer
 	SessionType           string
@@ -89,7 +94,7 @@ var handleStreamMessageResendTimeout = func(ctx context.Context, session *Sessio
 			// Repeat this loop for every 200ms
 			time.Sleep(config.ResendSleepInterval)
 			if <-session.DataChannel.IsStreamMessageResendTimeout() {
-				log.Error("Stream data timeout", "sessionId", session.SessionId)
+				log.Error("Stream data timeout", "sessionID", session.SessionID)
 				if err := session.TerminateSession(ctx, log); err != nil {
 					log.Error("Unable to terminate session upon stream data timeout", "error", err)
 				}
@@ -102,7 +107,7 @@ var handleStreamMessageResendTimeout = func(ctx context.Context, session *Sessio
 
 // Execute create data channel and start the session.
 func (s *Session) Execute(ctx context.Context, log *slog.Logger) error {
-	log.Debug("Starting session", "sessionId", s.SessionId)
+	log.Debug("Starting session", "sessionID", s.SessionID)
 
 	// sets the display mode
 	s.DisplayMode = sessionutil.NewDisplayMode(log)
@@ -117,7 +122,7 @@ func (s *Session) Execute(ctx context.Context, log *slog.Logger) error {
 
 	// The session type is set either by handshake or the first packet received.
 	if !<-s.DataChannel.IsSessionTypeSet() {
-		log.Error("Unable to set SessionType", "sessionId", s.SessionId)
+		log.Error("Unable to set SessionType", "sessionID", s.SessionID)
 
 		return errors.New("unable to determine SessionType")
 	}

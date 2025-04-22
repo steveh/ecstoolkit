@@ -114,12 +114,12 @@ func (_c *IWebSocketChannel_GetChannelToken_Call) RunAndReturn(run func() string
 	return _c
 }
 
-// GetStreamUrl provides a mock function with no fields
-func (_m *IWebSocketChannel) GetStreamUrl() string {
+// GetStreamURL provides a mock function with no fields
+func (_m *IWebSocketChannel) GetStreamURL() string {
 	ret := _m.Called()
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetStreamUrl")
+		panic("no return value specified for GetStreamURL")
 	}
 
 	var r0 string
@@ -132,36 +132,36 @@ func (_m *IWebSocketChannel) GetStreamUrl() string {
 	return r0
 }
 
-// IWebSocketChannel_GetStreamUrl_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetStreamUrl'
-type IWebSocketChannel_GetStreamUrl_Call struct {
+// IWebSocketChannel_GetStreamURL_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetStreamURL'
+type IWebSocketChannel_GetStreamURL_Call struct {
 	*mock.Call
 }
 
-// GetStreamUrl is a helper method to define mock.On call
-func (_e *IWebSocketChannel_Expecter) GetStreamUrl() *IWebSocketChannel_GetStreamUrl_Call {
-	return &IWebSocketChannel_GetStreamUrl_Call{Call: _e.mock.On("GetStreamUrl")}
+// GetStreamURL is a helper method to define mock.On call
+func (_e *IWebSocketChannel_Expecter) GetStreamURL() *IWebSocketChannel_GetStreamURL_Call {
+	return &IWebSocketChannel_GetStreamURL_Call{Call: _e.mock.On("GetStreamURL")}
 }
 
-func (_c *IWebSocketChannel_GetStreamUrl_Call) Run(run func()) *IWebSocketChannel_GetStreamUrl_Call {
+func (_c *IWebSocketChannel_GetStreamURL_Call) Run(run func()) *IWebSocketChannel_GetStreamURL_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run()
 	})
 	return _c
 }
 
-func (_c *IWebSocketChannel_GetStreamUrl_Call) Return(_a0 string) *IWebSocketChannel_GetStreamUrl_Call {
+func (_c *IWebSocketChannel_GetStreamURL_Call) Return(_a0 string) *IWebSocketChannel_GetStreamURL_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *IWebSocketChannel_GetStreamUrl_Call) RunAndReturn(run func() string) *IWebSocketChannel_GetStreamUrl_Call {
+func (_c *IWebSocketChannel_GetStreamURL_Call) RunAndReturn(run func() string) *IWebSocketChannel_GetStreamURL_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// Initialize provides a mock function with given fields: log, channelUrl, channelToken
-func (_m *IWebSocketChannel) Initialize(log *slog.Logger, channelUrl string, channelToken string) {
-	_m.Called(log, channelUrl, channelToken)
+// Initialize provides a mock function with given fields: log, channelURL, channelToken
+func (_m *IWebSocketChannel) Initialize(log *slog.Logger, channelURL string, channelToken string) {
+	_m.Called(log, channelURL, channelToken)
 }
 
 // IWebSocketChannel_Initialize_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Initialize'
@@ -171,13 +171,13 @@ type IWebSocketChannel_Initialize_Call struct {
 
 // Initialize is a helper method to define mock.On call
 //   - log *slog.Logger
-//   - channelUrl string
+//   - channelURL string
 //   - channelToken string
-func (_e *IWebSocketChannel_Expecter) Initialize(log interface{}, channelUrl interface{}, channelToken interface{}) *IWebSocketChannel_Initialize_Call {
-	return &IWebSocketChannel_Initialize_Call{Call: _e.mock.On("Initialize", log, channelUrl, channelToken)}
+func (_e *IWebSocketChannel_Expecter) Initialize(log interface{}, channelURL interface{}, channelToken interface{}) *IWebSocketChannel_Initialize_Call {
+	return &IWebSocketChannel_Initialize_Call{Call: _e.mock.On("Initialize", log, channelURL, channelToken)}
 }
 
-func (_c *IWebSocketChannel_Initialize_Call) Run(run func(log *slog.Logger, channelUrl string, channelToken string)) *IWebSocketChannel_Initialize_Call {
+func (_c *IWebSocketChannel_Initialize_Call) Run(run func(log *slog.Logger, channelURL string, channelToken string)) *IWebSocketChannel_Initialize_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(*slog.Logger), args[1].(string), args[2].(string))
 	})
@@ -240,17 +240,17 @@ func (_c *IWebSocketChannel_Open_Call) RunAndReturn(run func(*slog.Logger) error
 	return _c
 }
 
-// SendMessage provides a mock function with given fields: log, input, inputType
-func (_m *IWebSocketChannel) SendMessage(log *slog.Logger, input []byte, inputType int) error {
-	ret := _m.Called(log, input, inputType)
+// SendMessage provides a mock function with given fields: input, inputType
+func (_m *IWebSocketChannel) SendMessage(input []byte, inputType int) error {
+	ret := _m.Called(input, inputType)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SendMessage")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*slog.Logger, []byte, int) error); ok {
-		r0 = rf(log, input, inputType)
+	if rf, ok := ret.Get(0).(func([]byte, int) error); ok {
+		r0 = rf(input, inputType)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -264,16 +264,15 @@ type IWebSocketChannel_SendMessage_Call struct {
 }
 
 // SendMessage is a helper method to define mock.On call
-//   - log *slog.Logger
 //   - input []byte
 //   - inputType int
-func (_e *IWebSocketChannel_Expecter) SendMessage(log interface{}, input interface{}, inputType interface{}) *IWebSocketChannel_SendMessage_Call {
-	return &IWebSocketChannel_SendMessage_Call{Call: _e.mock.On("SendMessage", log, input, inputType)}
+func (_e *IWebSocketChannel_Expecter) SendMessage(input interface{}, inputType interface{}) *IWebSocketChannel_SendMessage_Call {
+	return &IWebSocketChannel_SendMessage_Call{Call: _e.mock.On("SendMessage", input, inputType)}
 }
 
-func (_c *IWebSocketChannel_SendMessage_Call) Run(run func(log *slog.Logger, input []byte, inputType int)) *IWebSocketChannel_SendMessage_Call {
+func (_c *IWebSocketChannel_SendMessage_Call) Run(run func(input []byte, inputType int)) *IWebSocketChannel_SendMessage_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*slog.Logger), args[1].([]byte), args[2].(int))
+		run(args[0].([]byte), args[1].(int))
 	})
 	return _c
 }
@@ -283,7 +282,7 @@ func (_c *IWebSocketChannel_SendMessage_Call) Return(_a0 error) *IWebSocketChann
 	return _c
 }
 
-func (_c *IWebSocketChannel_SendMessage_Call) RunAndReturn(run func(*slog.Logger, []byte, int) error) *IWebSocketChannel_SendMessage_Call {
+func (_c *IWebSocketChannel_SendMessage_Call) RunAndReturn(run func([]byte, int) error) *IWebSocketChannel_SendMessage_Call {
 	_c.Call.Return(run)
 	return _c
 }

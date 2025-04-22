@@ -38,7 +38,7 @@ type BasicPortForwarding struct {
 	port           IPortSession
 	stream         *net.Conn
 	listener       *net.Listener
-	sessionId      string
+	sessionID      string
 	portParameters PortParameters
 	session        session.Session
 }
@@ -50,7 +50,7 @@ var _ IPortSession = (*BasicPortForwarding)(nil)
 var getNewListener = net.Listen
 
 // acceptConnection returns connection to the listener.
-var acceptConnection = func(log *slog.Logger, listener net.Listener) (net.Conn, error) {
+var acceptConnection = func(listener net.Listener) (net.Conn, error) {
 	return listener.Accept()
 }
 
@@ -60,7 +60,7 @@ func (p *BasicPortForwarding) IsStreamNotSet() bool {
 }
 
 // Stop closes the stream.
-func (p *BasicPortForwarding) Stop(log *slog.Logger) error {
+func (p *BasicPortForwarding) Stop(_ *slog.Logger) error {
 	if p.stream != nil {
 		if err := (*p.stream).Close(); err != nil {
 			return fmt.Errorf("closing stream: %w", err)
@@ -71,7 +71,7 @@ func (p *BasicPortForwarding) Stop(log *slog.Logger) error {
 }
 
 // InitializeStreams establishes connection and initializes the stream.
-func (p *BasicPortForwarding) InitializeStreams(ctx context.Context, log *slog.Logger, agentVersion string) error {
+func (p *BasicPortForwarding) InitializeStreams(ctx context.Context, log *slog.Logger, _ string) error {
 	p.handleControlSignals(ctx, log)
 
 	if err := p.startLocalConn(log); err != nil {
@@ -82,7 +82,7 @@ func (p *BasicPortForwarding) InitializeStreams(ctx context.Context, log *slog.L
 }
 
 // ReadStream reads data from the stream.
-func (p *BasicPortForwarding) ReadStream(ctx context.Context, log *slog.Logger) error {
+func (p *BasicPortForwarding) ReadStream(_ context.Context, log *slog.Logger) error {
 	msg := make([]byte, config.StreamDataPayloadSize)
 
 	for {
@@ -142,14 +142,14 @@ func (p *BasicPortForwarding) startLocalConn(log *slog.Logger) error {
 		return fmt.Errorf("starting local listener: %w", err)
 	}
 
-	tcpConn, err := acceptConnection(log, listener)
+	tcpConn, err := acceptConnection(listener)
 	if err != nil {
 		log.Error("accepting connection", "error", err)
 
 		return fmt.Errorf("accepting connection: %w", err)
 	}
 
-	log.Debug("Connection accepted", "sessionId", p.sessionId)
+	log.Debug("Connection accepted", "sessionID", p.sessionID)
 
 	p.listener = &listener
 	p.stream = &tcpConn
@@ -172,7 +172,7 @@ func (p *BasicPortForwarding) startLocalListener(log *slog.Logger, portNumber st
 			return nil, err
 		}
 
-		displayMessage = fmt.Sprintf("Unix socket %s opened for sessionId %s.", p.portParameters.LocalUnixSocket, p.sessionId)
+		displayMessage = fmt.Sprintf("Unix socket %s opened for sessionID %s.", p.portParameters.LocalUnixSocket, p.sessionID)
 	default:
 		listener, err = getNewListener("tcp", "localhost:"+portNumber)
 		if err != nil {
@@ -185,7 +185,7 @@ func (p *BasicPortForwarding) startLocalListener(log *slog.Logger, portNumber st
 		}
 
 		p.portParameters.LocalPortNumber = strconv.Itoa(tcpAddr.Port)
-		displayMessage = fmt.Sprintf("Port %s opened for sessionId %s.", p.portParameters.LocalPortNumber, p.sessionId)
+		displayMessage = fmt.Sprintf("Port %s opened for sessionID %s.", p.portParameters.LocalPortNumber, p.sessionID)
 	}
 
 	log.Debug(displayMessage)
@@ -207,7 +207,7 @@ func (p *BasicPortForwarding) handleControlSignals(ctx context.Context, log *slo
 				log.Error("sending TerminateSession flag", "error", err)
 			}
 
-			log.Debug("Exiting session", "sessionId", p.sessionId)
+			log.Debug("Exiting session", "sessionID", p.sessionID)
 
 			if err := p.Stop(log); err != nil {
 				log.Error("stopping session", "error", err)
@@ -229,7 +229,7 @@ func (p *BasicPortForwarding) reconnect(log *slog.Logger) error {
 	}
 
 	// wait for new connection on listener and accept it
-	conn, err := acceptConnection(log, *p.listener)
+	conn, err := acceptConnection(*p.listener)
 	if err != nil {
 		return fmt.Errorf("accepting connection: %w", err)
 	}

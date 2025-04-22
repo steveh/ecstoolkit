@@ -39,8 +39,8 @@ func DoesAgentSupportTerminateSessionFlag(log *slog.Logger, agentVersion string)
 // false in case of any error and agentVersion is equalTo or less than supportedVersion.
 func isAgentVersionGreaterThanSupportedVersion(log *slog.Logger, agentVersionString string, supportedVersionString string) bool {
 	var (
-		supportedVersion version
-		agentVersion     version
+		supportedVersion Number
+		agentVersion     Number
 		compareResult    int
 		err              error
 	)

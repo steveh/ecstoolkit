@@ -11,7 +11,7 @@
 // either express or implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-// message package defines data channel messages structure.
+// Package message defines data channel messages structure.
 package message
 
 import (
@@ -23,48 +23,54 @@ import (
 type ActionType string
 
 const (
+	// KMSEncryption represents the KMS encryption action type.
 	KMSEncryption ActionType = "KMSEncryption"
-	SessionType   ActionType = "SessionType"
+	// SessionType represents the session type action type.
+	SessionType ActionType = "SessionType"
 )
 
+// ActionStatus represents the status of a client action.
 type ActionStatus int
 
 const (
-	Success     ActionStatus = 1
-	Failed      ActionStatus = 2
+	// Success indicates that the action was successful.
+	Success ActionStatus = 1
+	// Failed indicates that the action failed.
+	Failed ActionStatus = 2
+	// Unsupported indicates that the action is not supported.
 	Unsupported ActionStatus = 3
 )
 
-// This is sent by the agent to initialize KMS encryption.
+// KMSEncryptionRequest represents a request to initialize KMS encryption.
 type KMSEncryptionRequest struct {
 	KMSKeyID string `json:"KMSKeyId"`
 }
 
-// This is received by the agent to set up KMS encryption.
+// KMSEncryptionResponse represents the response containing KMS encryption setup data.
 type KMSEncryptionResponse struct {
 	KMSCipherTextKey  []byte `json:"KMSCipherTextKey"`
 	KMSCipherTextHash []byte `json:"KMSCipherTextHash"`
 }
 
-// SessionType request contains type of the session that needs to be launched and properties for plugin.
+// SessionTypeRequest represents a request containing session type and plugin properties.
 type SessionTypeRequest struct {
 	SessionType string      `json:"SessionType"`
 	Properties  interface{} `json:"Properties"`
 }
 
-// Handshake payload sent by the agent to the session manager plugin.
+// HandshakeRequestPayload represents the handshake payload sent by the agent to the session manager plugin.
 type HandshakeRequestPayload struct {
 	AgentVersion           string                  `json:"AgentVersion"`
 	RequestedClientActions []RequestedClientAction `json:"RequestedClientActions"`
 }
 
-// An action requested by the agent to the plugin.
+// RequestedClientAction represents an action requested by the agent to the plugin.
 type RequestedClientAction struct {
 	ActionType       ActionType      `json:"ActionType"`
 	ActionParameters json.RawMessage `json:"ActionParameters"`
 }
 
-// The result of processing the action by the plugin.
+// ProcessedClientAction represents the result of processing an action by the plugin.
 type ProcessedClientAction struct {
 	ActionType   ActionType   `json:"ActionType"`
 	ActionStatus ActionStatus `json:"ActionStatus"`
@@ -72,29 +78,24 @@ type ProcessedClientAction struct {
 	Error        string       `json:"Error"`
 }
 
-// Handshake Response sent by the plugin in response to the handshake request.
+// HandshakeResponsePayload represents the response sent by the plugin in response to the handshake request.
 type HandshakeResponsePayload struct {
 	ClientVersion          string                  `json:"ClientVersion"`
 	ProcessedClientActions []ProcessedClientAction `json:"ProcessedClientActions"`
 	Errors                 []string                `json:"Errors"`
 }
 
-// This is sent by the agent as a challenge to the client. The challenge field
-// is some data that was encrypted by the agent. The client must be able to decrypt
-// this and in turn encrypt it with its own key.
+// EncryptionChallengeRequest represents a challenge sent by the agent to the client.
 type EncryptionChallengeRequest struct {
 	Challenge []byte `json:"Challenge"`
 }
 
-// This is received by the agent from the client. The challenge field contains
-// some data received, decrypted and then encrypted by the client. Agent must
-// be able to decrypt this and verify it matches the original plaintext challenge.
+// EncryptionChallengeResponse represents the client's response to the encryption challenge.
 type EncryptionChallengeResponse struct {
 	Challenge []byte `json:"Challenge"`
 }
 
-// Handshake Complete indicates to client that handshake is complete.
-// This signals the client to start the plugin and display a customer message where appropriate.
+// HandshakeCompletePayload represents the completion of the handshake process.
 type HandshakeCompletePayload struct {
 	HandshakeTimeToComplete time.Duration `json:"HandshakeTimeToComplete"`
 	CustomerMessage         string        `json:"CustomerMessage"`

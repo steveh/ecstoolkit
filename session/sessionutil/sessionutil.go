@@ -16,6 +16,7 @@ package sessionutil
 
 import "log/slog"
 
+// NewDisplayMode creates and initializes a new DisplayMode instance.
 func NewDisplayMode(log *slog.Logger) DisplayMode {
 	displayMode := DisplayMode{}
 	displayMode.InitDisplayMode(log)

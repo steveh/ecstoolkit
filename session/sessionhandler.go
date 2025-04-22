@@ -37,18 +37,18 @@ func (s *Session) OpenDataChannel(ctx context.Context, log *slog.Logger) error {
 		MaxAttempts:         config.DataChannelNumMaxRetries,
 	}
 
-	s.DataChannel.Initialize(log, s.ClientId, s.SessionId, s.TargetId, s.IsAwsCliUpgradeNeeded)
-	s.DataChannel.SetWebsocket(log, s.StreamUrl, s.TokenValue)
+	s.DataChannel.Initialize(log, s.ClientID, s.SessionID, s.TargetID, s.IsAwsCliUpgradeNeeded)
+	s.DataChannel.SetWebsocket(log, s.StreamURL, s.TokenValue)
 	s.DataChannel.GetWsChannel().SetOnMessage(
 		func(input []byte) {
-			if err := s.DataChannel.OutputMessageHandler(ctx, log, s.Stop, s.SessionId, input); err != nil {
+			if err := s.DataChannel.OutputMessageHandler(ctx, log, s.Stop, s.SessionID, input); err != nil {
 				log.Error("Failed to handle output message", "error", err)
 			}
 		})
 	s.DataChannel.RegisterOutputStreamHandler(s.ProcessFirstMessage, false)
 
 	if err := s.DataChannel.Open(log); err != nil {
-		log.Error("Retrying connection failed", "sessionId", s.SessionId, "error", err)
+		log.Error("Retrying connection failed", "sessionID", s.SessionID, "error", err)
 
 		s.retryParams.CallableFunc = func() error { return s.DataChannel.Reconnect(log) }
 		if err := s.retryParams.Call(); err != nil {
@@ -58,7 +58,7 @@ func (s *Session) OpenDataChannel(ctx context.Context, log *slog.Logger) error {
 
 	s.DataChannel.GetWsChannel().SetOnError(
 		func(wsErr error) {
-			log.Error("Trying to reconnect session", "url", s.StreamUrl, "sequenceNumber", s.DataChannel.GetStreamDataSequenceNumber())
+			log.Error("Trying to reconnect session", "url", s.StreamURL, "sequenceNumber", s.DataChannel.GetStreamDataSequenceNumber(), "error", wsErr)
 
 			s.retryParams.CallableFunc = func() error { return s.ResumeSessionHandler(ctx, log) }
 			if err := s.retryParams.Call(); err != nil {
@@ -94,14 +94,14 @@ func (s *Session) ProcessFirstMessage(log *slog.Logger, outputMessage message.Cl
 }
 
 // Stop will end the session.
-func (s *Session) Stop(log *slog.Logger) error {
+func (s *Session) Stop(_ *slog.Logger) error {
 	return nil
 }
 
 // GetResumeSessionParams calls ResumeSession API and gets tokenvalue for reconnecting.
 func (s *Session) GetResumeSessionParams(ctx context.Context, log *slog.Logger) (string, error) {
 	resumeSessionInput := ssm.ResumeSessionInput{
-		SessionId: aws.String(s.SessionId),
+		SessionId: aws.String(s.SessionID),
 	}
 
 	log.Debug("Resume Session input parameters", "input", resumeSessionInput)
@@ -130,7 +130,7 @@ func (s *Session) ResumeSessionHandler(ctx context.Context, log *slog.Logger) er
 
 		return fmt.Errorf("resume session: %w", err)
 	} else if s.TokenValue == "" {
-		log.Debug("Session timed out", "sessionId", s.SessionId)
+		log.Debug("Session timed out", "sessionID", s.SessionID)
 
 		return errors.New("session timed out")
 	}
@@ -148,7 +148,7 @@ func (s *Session) ResumeSessionHandler(ctx context.Context, log *slog.Logger) er
 // TerminateSession calls TerminateSession API.
 func (s *Session) TerminateSession(ctx context.Context, log *slog.Logger) error {
 	terminateSessionInput := ssm.TerminateSessionInput{
-		SessionId: &s.SessionId,
+		SessionId: &s.SessionID,
 	}
 
 	log.Debug("Terminate Session input parameters", "input", terminateSessionInput)

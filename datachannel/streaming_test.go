@@ -44,17 +44,17 @@ var (
 	serializedClientMessages, streamingMessages = getClientAndStreamingMessageList(7)
 	logger                                      = log.NewMockLog()
 	mockWsChannel                               = &communicatorMocks.IWebSocketChannel{}
-	streamUrl                                   = "stream-url"
+	streamURL                                   = "stream-url"
 	channelToken                                = "channel-token"
-	sessionId                                   = "session-id"
-	clientId                                    = "client-id"
-	kmsKeyId                                    = "some-key-id"
-	instanceId                                  = "some-instance-id"
+	sessionID                                   = "session-id"
+	clientID                                    = "client-id"
+	kmsKeyID                                    = "some-key-id"
+	instanceID                                  = "some-instance-id"
 	cipherTextKey                               = []byte("cipher-text-key")
 	mockLogger                                  = log.NewMockLog()
 	messageType                                 = message.OutputStreamMessage
 	schemaVersion                               = uint32(1)
-	messageId                                   = "dd01e56b-ff48-483e-a508-b5f073f31b16"
+	messageID                                   = "dd01e56b-ff48-483e-a508-b5f073f31b16"
 	createdDate                                 = uint64(1503434274948)
 	payload                                     = []byte("testPayload")
 	streamDataSequenceNumber                    = int64(0)
@@ -64,10 +64,10 @@ var (
 func TestInitialize(t *testing.T) {
 	datachannel := DataChannel{}
 	isAwsCliUpgradeNeeded := false
-	datachannel.Initialize(mockLogger, clientId, sessionId, instanceId, isAwsCliUpgradeNeeded)
+	datachannel.Initialize(mockLogger, clientID, sessionID, instanceID, isAwsCliUpgradeNeeded)
 
 	assert.Equal(t, config.RolePublishSubscribe, datachannel.Role)
-	assert.Equal(t, clientId, datachannel.ClientId)
+	assert.Equal(t, clientID, datachannel.ClientID)
 	assert.Equal(t, int64(0), datachannel.ExpectedSequenceNumber)
 	assert.Equal(t, int64(0), datachannel.StreamDataSequenceNumber)
 	assert.NotNil(t, datachannel.OutgoingMessageBuffer)
@@ -81,13 +81,13 @@ func TestInitialize(t *testing.T) {
 func TestSetWebsocket(t *testing.T) {
 	datachannel := getDataChannel()
 
-	mockWsChannel.On("GetStreamUrl").Return(streamUrl)
+	mockWsChannel.On("GetStreamURL").Return(streamURL)
 	mockWsChannel.On("GetChannelToken").Return(channelToken)
 	mockWsChannel.On("Initialize", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	datachannel.SetWebsocket(mockLogger, streamUrl, channelToken)
+	datachannel.SetWebsocket(mockLogger, streamURL, channelToken)
 
-	assert.Equal(t, streamUrl, datachannel.wsChannel.GetStreamUrl())
+	assert.Equal(t, streamURL, datachannel.wsChannel.GetStreamURL())
 	assert.Equal(t, channelToken, datachannel.wsChannel.GetChannelToken())
 	mockWsChannel.AssertExpectations(t)
 }
@@ -133,12 +133,12 @@ func TestFinalizeDataChannelHandshake(t *testing.T) {
 	datachannel := getDataChannel()
 
 	mockWsChannel.On("SendMessage", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	mockWsChannel.On("GetStreamUrl").Return(streamUrl)
+	mockWsChannel.On("GetStreamURL").Return(streamURL)
 
 	err := datachannel.FinalizeDataChannelHandshake(mockLogger, channelToken)
 
 	assert.NoError(t, err)
-	assert.Equal(t, streamUrl, datachannel.wsChannel.GetStreamUrl())
+	assert.Equal(t, streamURL, datachannel.wsChannel.GetStreamURL())
 	mockWsChannel.AssertExpectations(t)
 }
 
@@ -147,7 +147,7 @@ func TestSendMessage(t *testing.T) {
 
 	mockWsChannel.On("SendMessage", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	err := datachannel.SendMessage(mockLogger, []byte{10}, websocket.BinaryMessage)
+	err := datachannel.SendMessage([]byte{10}, websocket.BinaryMessage)
 
 	assert.NoError(t, err)
 	mockWsChannel.AssertExpectations(t)
@@ -172,7 +172,7 @@ func TestProcessAcknowledgedMessage(t *testing.T) {
 
 	dataStreamAcknowledgeContent := message.AcknowledgeContent{
 		MessageType:         messageType,
-		MessageId:           messageId,
+		MessageID:           messageID,
 		SequenceNumber:      0,
 		IsSequentialMessage: true,
 	}
@@ -183,11 +183,11 @@ func TestProcessAcknowledgedMessage(t *testing.T) {
 
 func TestCalculateRetransmissionTimeout(t *testing.T) {
 	dataChannel := getDataChannel()
-	GetRoundTripTime = func(streamingMessage StreamingMessage) time.Duration {
+	GetRoundTripTime = func(_ StreamingMessage) time.Duration {
 		return 140 * time.Millisecond
 	}
 
-	dataChannel.CalculateRetransmissionTimeout(mockLogger, streamingMessages[0])
+	dataChannel.CalculateRetransmissionTimeout(streamingMessages[0])
 	assert.Equal(t, int64(105), int64(time.Duration(dataChannel.RoundTripTime)/time.Millisecond))
 	assert.Equal(t, int64(10), int64(time.Duration(dataChannel.RoundTripTimeVariation)/time.Millisecond))
 	assert.Equal(t, int64(145), int64(dataChannel.RetransmissionTimeout/time.Millisecond))
@@ -294,7 +294,7 @@ func TestResendStreamDataMessageScheduler(t *testing.T) {
 	}()
 
 	SendMessageCallCount := 0
-	SendMessageCall = func(log *slog.Logger, dataChannel *DataChannel, input []byte, inputType int) error {
+	SendMessageCall = func(_ *DataChannel, _ []byte, _ int) error {
 		SendMessageCallCount++
 
 		return nil
@@ -314,24 +314,24 @@ func TestDataChannelIncomingMessageHandlerForExpectedInputStreamDataMessage(t *t
 	dataChannel.wsChannel = mockChannel
 
 	SendAcknowledgeMessageCallCount := 0
-	SendAcknowledgeMessageCall = func(log *slog.Logger, dataChannel *DataChannel, streamDataMessage message.ClientMessage) error {
+	SendAcknowledgeMessageCall = func(_ *slog.Logger, _ *DataChannel, _ message.ClientMessage) error {
 		SendAcknowledgeMessageCallCount++
 
 		return nil
 	}
 
-	var handler OutputStreamDataMessageHandler = func(log *slog.Logger, outputMessage message.ClientMessage) (bool, error) {
+	var handler OutputStreamDataMessageHandler = func(_ *slog.Logger, _ message.ClientMessage) (bool, error) {
 		return true, nil
 	}
 
-	var stopHandler Stop = func(log *slog.Logger) error {
+	var stopHandler Stop = func(_ *slog.Logger) error {
 		return nil
 	}
 
 	dataChannel.RegisterOutputStreamHandler(handler, true)
 	// First scenario is to test when incoming message sequence number matches with expected sequence number
 	// and no message found in IncomingMessageBuffer
-	err := dataChannel.OutputMessageHandler(context.TODO(), logger, stopHandler, sessionId, serializedClientMessages[0])
+	err := dataChannel.OutputMessageHandler(context.TODO(), logger, stopHandler, sessionID, serializedClientMessages[0])
 	assert.NoError(t, err)
 	assert.Equal(t, int64(1), dataChannel.ExpectedSequenceNumber)
 	assert.Empty(t, dataChannel.IncomingMessageBuffer.Messages)
@@ -344,7 +344,7 @@ func TestDataChannelIncomingMessageHandlerForExpectedInputStreamDataMessage(t *t
 	dataChannel.AddDataToIncomingMessageBuffer(streamingMessages[4])
 	dataChannel.AddDataToIncomingMessageBuffer(streamingMessages[3])
 
-	err = dataChannel.OutputMessageHandler(context.TODO(), logger, stopHandler, sessionId, serializedClientMessages[1])
+	err = dataChannel.OutputMessageHandler(context.TODO(), logger, stopHandler, sessionID, serializedClientMessages[1])
 	assert.NoError(t, err)
 	assert.Equal(t, int64(5), dataChannel.ExpectedSequenceNumber)
 	assert.Len(t, dataChannel.IncomingMessageBuffer.Messages, 1)
@@ -361,23 +361,23 @@ func TestDataChannelIncomingMessageHandlerForUnexpectedInputStreamDataMessage(t 
 	dataChannel.IncomingMessageBuffer.Capacity = 2
 
 	SendAcknowledgeMessageCallCount := 0
-	SendAcknowledgeMessageCall = func(log *slog.Logger, dataChannel *DataChannel, streamDataMessage message.ClientMessage) error {
+	SendAcknowledgeMessageCall = func(_ *slog.Logger, _ *DataChannel, _ message.ClientMessage) error {
 		SendAcknowledgeMessageCallCount++
 
 		return nil
 	}
 
-	var stopHandler Stop = func(log *slog.Logger) error {
+	var stopHandler Stop = func(_ *slog.Logger) error {
 		return nil
 	}
 
-	err := dataChannel.OutputMessageHandler(context.TODO(), logger, stopHandler, sessionId, serializedClientMessages[1])
+	err := dataChannel.OutputMessageHandler(context.TODO(), logger, stopHandler, sessionID, serializedClientMessages[1])
 	assert.NoError(t, err)
 
-	err = dataChannel.OutputMessageHandler(context.TODO(), logger, stopHandler, sessionId, serializedClientMessages[2])
+	err = dataChannel.OutputMessageHandler(context.TODO(), logger, stopHandler, sessionID, serializedClientMessages[2])
 	assert.NoError(t, err)
 
-	err = dataChannel.OutputMessageHandler(context.TODO(), logger, stopHandler, sessionId, serializedClientMessages[3])
+	err = dataChannel.OutputMessageHandler(context.TODO(), logger, stopHandler, sessionID, serializedClientMessages[3])
 	assert.NoError(t, err)
 
 	// Since capacity of IncomingMessageBuffer is 2, stream data with sequence number 3 should be ignored without sending acknowledgement
@@ -398,7 +398,7 @@ func TestDataChannelIncomingMessageHandlerForAcknowledgeMessage(t *testing.T) {
 	mockChannel := &communicatorMocks.IWebSocketChannel{}
 	dataChannel.wsChannel = mockChannel
 
-	var stopHandler Stop = func(log *slog.Logger) error {
+	var stopHandler Stop = func(_ *slog.Logger) error {
 		return nil
 	}
 
@@ -407,7 +407,7 @@ func TestDataChannelIncomingMessageHandlerForAcknowledgeMessage(t *testing.T) {
 	}
 
 	ProcessAcknowledgedMessageCallCount := 0
-	ProcessAcknowledgedMessageCall = func(log *slog.Logger, dataChannel *DataChannel, acknowledgeMessage message.AcknowledgeContent) error {
+	ProcessAcknowledgedMessageCall = func(_ *slog.Logger, _ *DataChannel, _ message.AcknowledgeContent) error {
 		ProcessAcknowledgedMessageCallCount++
 
 		return nil
@@ -415,7 +415,7 @@ func TestDataChannelIncomingMessageHandlerForAcknowledgeMessage(t *testing.T) {
 
 	acknowledgeContent := message.AcknowledgeContent{
 		MessageType:         outputMessageType,
-		MessageId:           messageId,
+		MessageID:           messageID,
 		SequenceNumber:      1,
 		IsSequentialMessage: true,
 	}
@@ -428,7 +428,7 @@ func TestDataChannelIncomingMessageHandlerForAcknowledgeMessage(t *testing.T) {
 	clientMessage := getClientMessage(0, message.AcknowledgeMessage, uint32(message.Output), payload)
 
 	serializedClientMessage, _ := clientMessage.SerializeClientMessage(logger)
-	if err := dataChannel.OutputMessageHandler(context.TODO(), logger, stopHandler, sessionId, serializedClientMessage); err != nil {
+	if err := dataChannel.OutputMessageHandler(context.TODO(), logger, stopHandler, sessionID, serializedClientMessage); err != nil {
 		t.Fatal(err)
 	}
 
@@ -456,16 +456,16 @@ func TestDataChannelIncomingMessageHandlerForPausePublicationessage(t *testing.T
 		}
 	}
 
-	var handler OutputStreamDataMessageHandler = func(log *slog.Logger, outputMessage message.ClientMessage) (bool, error) {
+	var handler OutputStreamDataMessageHandler = func(_ *slog.Logger, _ message.ClientMessage) (bool, error) {
 		return true, nil
 	}
 
-	var stopHandler Stop = func(log *slog.Logger) error {
+	var stopHandler Stop = func(_ *slog.Logger) error {
 		return nil
 	}
 
 	dataChannel.RegisterOutputStreamHandler(handler, true)
-	err := dataChannel.OutputMessageHandler(context.TODO(), logger, stopHandler, sessionId, serializedClientMessages[0])
+	err := dataChannel.OutputMessageHandler(context.TODO(), logger, stopHandler, sessionID, serializedClientMessages[0])
 	assert.NoError(t, err)
 }
 
@@ -484,10 +484,10 @@ func TestHandshakeRequestHandler(t *testing.T) {
 		uint32(message.HandshakeRequestPayloadType), handshakeRequestBytes)
 	handshakeRequestMessageBytes, _ := clientMessage.SerializeClientMessage(mockLogger)
 
-	newEncrypter = func(ctx context.Context, log *slog.Logger, kmsKeyIdInput string, context map[string]string, KMSService *kms.Client) (encryption.IEncrypter, error) {
-		expectedContext := map[string]string{"aws:ssm:SessionId": sessionId, "aws:ssm:TargetId": instanceId}
+	newEncrypter = func(_ context.Context, _ *slog.Logger, kmsKeyIDInput string, context map[string]string, _ *kms.Client) (encryption.IEncrypter, error) {
+		expectedContext := map[string]string{"aws:ssm:SessionId": sessionID, "aws:ssm:TargetId": instanceID}
 
-		assert.Equal(t, kmsKeyId, kmsKeyIdInput)
+		assert.Equal(t, kmsKeyID, kmsKeyIDInput)
 		assert.Equal(t, expectedContext, context)
 		mockEncrypter.On("GetEncryptedDataKey").Return(cipherTextKey)
 
@@ -533,7 +533,7 @@ func TestHandshakeRequestHandler(t *testing.T) {
 	}
 	mockChannel.On("SendMessage", mock.Anything, mock.MatchedBy(handshakeResponseMatcher), mock.Anything).Return(nil)
 
-	if err := dataChannel.OutputMessageHandler(context.TODO(), mockLogger, func(log *slog.Logger) error { return nil }, sessionId, handshakeRequestMessageBytes); err != nil {
+	if err := dataChannel.OutputMessageHandler(context.TODO(), mockLogger, func(_ *slog.Logger) error { return nil }, sessionID, handshakeRequestMessageBytes); err != nil {
 		t.Errorf("Failed to handle output message: %v", err)
 	}
 
@@ -548,7 +548,7 @@ func TestHandleOutputMessageForDefaultTypeWithError(t *testing.T) {
 		uint32(message.Output), payload)
 	rawMessage := []byte("rawMessage")
 
-	var handler OutputStreamDataMessageHandler = func(log *slog.Logger, outputMessage message.ClientMessage) (bool, error) {
+	var handler OutputStreamDataMessageHandler = func(_ *slog.Logger, _ message.ClientMessage) (bool, error) {
 		return true, errors.New("OutputStreamDataMessageHandler Error")
 	}
 
@@ -597,7 +597,7 @@ func TestProcessOutputMessageWithHandlers(t *testing.T) {
 	mockChannel := &communicatorMocks.IWebSocketChannel{}
 	dataChannel.wsChannel = mockChannel
 
-	var handler OutputStreamDataMessageHandler = func(log *slog.Logger, outputMessage message.ClientMessage) (bool, error) {
+	var handler OutputStreamDataMessageHandler = func(_ *slog.Logger, _ message.ClientMessage) (bool, error) {
 		return true, errors.New("OutputStreamDataMessageHandler Error")
 	}
 
@@ -651,7 +651,7 @@ func buildHandshakeRequest(t *testing.T) message.HandshakeRequestPayload {
 	requestedAction.ActionType = message.KMSEncryption
 
 	var err error
-	requestedAction.ActionParameters, err = json.Marshal(message.KMSEncryptionRequest{KMSKeyID: kmsKeyId})
+	requestedAction.ActionParameters, err = json.Marshal(message.KMSEncryptionRequest{KMSKeyID: kmsKeyID})
 	assert.NoError(t, err)
 
 	handshakeRquest.RequestedClientActions = append(handshakeRquest.RequestedClientActions, requestedAction)
@@ -668,7 +668,7 @@ func buildHandshakeRequest(t *testing.T) message.HandshakeRequestPayload {
 
 func getDataChannel() *DataChannel {
 	dataChannel := &DataChannel{}
-	dataChannel.Initialize(mockLogger, clientId, sessionId, instanceId, false)
+	dataChannel.Initialize(mockLogger, clientID, sessionID, instanceID, false)
 	dataChannel.wsChannel = mockWsChannel
 
 	return dataChannel
@@ -676,7 +676,7 @@ func getDataChannel() *DataChannel {
 
 // GetClientMessage constructs and returns ClientMessage with given sequenceNumber, messageType & payload.
 func getClientMessage(sequenceNumber int64, messageType string, payloadType uint32, payload []byte) message.ClientMessage {
-	messageUUID, err := uuid.Parse(messageId)
+	messageUUID, err := uuid.Parse(messageID)
 	if err != nil {
 		panic(err)
 	}
@@ -687,7 +687,7 @@ func getClientMessage(sequenceNumber int64, messageType string, payloadType uint
 		CreatedDate:    createdDate,
 		SequenceNumber: sequenceNumber,
 		Flags:          2,
-		MessageId:      messageUUID,
+		MessageID:      messageUUID,
 		PayloadType:    payloadType,
 		Payload:        payload,
 	}

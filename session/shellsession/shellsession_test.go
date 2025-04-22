@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log/slog"
 	"os"
 	"os/signal"
 	"sync"
@@ -40,9 +39,9 @@ import (
 var (
 	expectedSequenceNumber = int64(0)
 	logger                 = log.NewMockLog()
-	clientId               = "clientId"
-	sessionId              = "sessionId"
-	instanceId             = "instanceId"
+	clientID               = "clientId"
+	sessionID              = "sessionId"
+	instanceID             = "instanceId"
 	mockDataChannel        = &dataChannelMock.IDataChannel{}
 	mockWsChannel          = &mocks.IWebSocketChannel{}
 )
@@ -122,7 +121,7 @@ func TestSendInputDataMessageWithPayloadTypeSize(t *testing.T) {
 	dataChannel.SetWsChannel(mockChannel)
 
 	SendMessageCallCount := 0
-	datachannel.SendMessageCall = func(log *slog.Logger, dataChannel *datachannel.DataChannel, input []byte, inputType int) error {
+	datachannel.SendMessageCall = func(_ *datachannel.DataChannel, _ []byte, _ int) error {
 		SendMessageCallCount++
 
 		return nil
@@ -150,7 +149,7 @@ func TestTerminalResizeWhenSessionSizeDataIsNotEqualToActualSize(t *testing.T) {
 		Session:  session,
 		SizeData: sizeData,
 	}
-	GetTerminalSizeCall = func(fd int) (int, int, error) {
+	GetTerminalSizeCall = func(_ int) (int, int, error) {
 		return 123, 123, nil
 	}
 
@@ -166,7 +165,7 @@ func TestTerminalResizeWhenSessionSizeDataIsNotEqualToActualSize(t *testing.T) {
 	}()
 
 	SendMessageCallCount := 0
-	datachannel.SendMessageCall = func(log *slog.Logger, dataChannel *datachannel.DataChannel, input []byte, inputType int) error {
+	datachannel.SendMessageCall = func(_ *datachannel.DataChannel, _ []byte, _ int) error {
 		SendMessageCallCount++
 
 		return nil
@@ -191,7 +190,7 @@ func TestProcessStreamMessagePayload(t *testing.T) {
 
 func getDataChannel() *datachannel.DataChannel {
 	dataChannel := &datachannel.DataChannel{}
-	dataChannel.Initialize(logger, clientId, sessionId, instanceId, false)
+	dataChannel.Initialize(logger, clientID, sessionID, instanceID, false)
 	dataChannel.SetWsChannel(mockWsChannel)
 
 	return dataChannel

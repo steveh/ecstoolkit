@@ -29,9 +29,9 @@ import (
 )
 
 var (
-	clientId   = "clientId_abc"
-	sessionId  = "sessionId_abc"
-	instanceId = "i-123456"
+	clientID   = "clientId_abc"
+	sessionID  = "sessionId_abc"
+	instanceID = "i-123456"
 )
 
 func TestOpenDataChannel(t *testing.T) {
@@ -73,7 +73,7 @@ func TestProcessFirstMessageOutputMessageFirst(t *testing.T) {
 	}
 
 	dataChannel := &datachannel.DataChannel{}
-	dataChannel.Initialize(logger, clientId, sessionId, instanceId, false)
+	dataChannel.Initialize(logger, clientID, sessionID, instanceID, false)
 	session := Session{
 		DataChannel: dataChannel,
 	}

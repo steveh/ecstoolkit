@@ -11,7 +11,7 @@
 // either express or implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-// this package implement base communicator for network connections.
+// Package communicator implements base communicator for network connections.
 package communicator
 
 import (
@@ -28,13 +28,13 @@ import (
 
 // IWebSocketChannel is the interface for DataChannel.
 type IWebSocketChannel interface {
-	Initialize(log *slog.Logger, channelUrl string, channelToken string)
+	Initialize(log *slog.Logger, channelURL string, channelToken string)
 	Open(log *slog.Logger) error
 	Close(log *slog.Logger) error
-	SendMessage(log *slog.Logger, input []byte, inputType int) error
+	SendMessage(input []byte, inputType int) error
 	StartPings(log *slog.Logger, pingInterval time.Duration)
 	GetChannelToken() string
-	GetStreamUrl() string
+	GetStreamURL() string
 	SetChannelToken(channelToken string)
 	SetOnError(onErrorHandler func(error))
 	SetOnMessage(onMessageHandler func([]byte))
@@ -43,7 +43,7 @@ type IWebSocketChannel interface {
 // WebSocketChannel parent class for DataChannel.
 type WebSocketChannel struct {
 	IWebSocketChannel
-	Url          string
+	URL          string
 	OnMessage    func([]byte)
 	OnError      func(error)
 	IsOpen       bool
@@ -62,9 +62,9 @@ func (webSocketChannel *WebSocketChannel) SetChannelToken(channelToken string) {
 	webSocketChannel.ChannelToken = channelToken
 }
 
-// GetStreamUrl gets stream url.
-func (webSocketChannel *WebSocketChannel) GetStreamUrl() string {
-	return webSocketChannel.Url
+// GetStreamURL gets stream url.
+func (webSocketChannel *WebSocketChannel) GetStreamURL() string {
+	return webSocketChannel.URL
 }
 
 // SetOnError sets OnError field of websocket channel.
@@ -78,9 +78,9 @@ func (webSocketChannel *WebSocketChannel) SetOnMessage(onMessageHandler func([]b
 }
 
 // Initialize initializes websocket channel fields.
-func (webSocketChannel *WebSocketChannel) Initialize(log *slog.Logger, channelUrl string, channelToken string) {
+func (webSocketChannel *WebSocketChannel) Initialize(_ *slog.Logger, channelURL string, channelToken string) {
 	webSocketChannel.ChannelToken = channelToken
-	webSocketChannel.Url = channelUrl
+	webSocketChannel.URL = channelURL
 }
 
 // StartPings starts the pinging process to keep the websocket channel alive.
@@ -109,7 +109,7 @@ func (webSocketChannel *WebSocketChannel) StartPings(log *slog.Logger, pingInter
 
 // SendMessage sends a byte message through the websocket connection.
 // Examples of message type are websocket.TextMessage or websocket.Binary.
-func (webSocketChannel *WebSocketChannel) SendMessage(log *slog.Logger, input []byte, inputType int) error {
+func (webSocketChannel *WebSocketChannel) SendMessage(input []byte, inputType int) error {
 	if !webSocketChannel.IsOpen {
 		return errors.New("connection is closed")
 	}
@@ -131,7 +131,7 @@ func (webSocketChannel *WebSocketChannel) SendMessage(log *slog.Logger, input []
 
 // Close closes the corresponding connection.
 func (webSocketChannel *WebSocketChannel) Close(log *slog.Logger) error {
-	log.Debug("Closing websocket channel connection to: " + webSocketChannel.Url)
+	log.Debug("Closing websocket channel connection to: " + webSocketChannel.URL)
 
 	if webSocketChannel.IsOpen {
 		// Send signal to stop receiving message
@@ -144,7 +144,7 @@ func (webSocketChannel *WebSocketChannel) Close(log *slog.Logger) error {
 		return nil
 	}
 
-	log.Warn("Websocket channel connection to: " + webSocketChannel.Url + " is already Closed!")
+	log.Warn("Websocket channel connection to: " + webSocketChannel.URL + " is already Closed!")
 
 	return nil
 }
@@ -154,7 +154,7 @@ func (webSocketChannel *WebSocketChannel) Open(log *slog.Logger) error {
 	// initialize the write mutex
 	webSocketChannel.writeLock = &sync.Mutex{}
 
-	ws, err := websocketutil.NewWebsocketUtil(log, nil).OpenConnection(webSocketChannel.Url)
+	ws, err := websocketutil.NewWebsocketUtil(log, nil).OpenConnection(webSocketChannel.URL)
 	if err != nil {
 		return fmt.Errorf("opening websocket connection: %w", err)
 	}
@@ -175,7 +175,7 @@ func (webSocketChannel *WebSocketChannel) Open(log *slog.Logger) error {
 
 		for {
 			if !webSocketChannel.IsOpen {
-				log.Debug("Ending the channel listening routine since the channel is closed", "url", webSocketChannel.Url)
+				log.Debug("Ending the channel listening routine since the channel is closed", "url", webSocketChannel.URL)
 
 				break
 			}

@@ -27,9 +27,11 @@ import (
 )
 
 const (
+	// LocalPortForwardingType represents the type for local port forwarding.
 	LocalPortForwardingType = "LocalPortForwarding"
 )
 
+// PortSession represents a session for port forwarding.
 type PortSession struct {
 	session.Session
 	portParameters  PortParameters
@@ -38,6 +40,7 @@ type PortSession struct {
 
 var _ session.ISessionPlugin = (*PortSession)(nil)
 
+// IPortSession defines the interface for port session operations.
 type IPortSession interface {
 	IsStreamNotSet() (status bool)
 	InitializeStreams(ctx context.Context, log *slog.Logger, agentVersion string) (err error)
@@ -46,6 +49,7 @@ type IPortSession interface {
 	Stop(log *slog.Logger) error
 }
 
+// PortParameters contains the configuration parameters for port forwarding.
 type PortParameters struct {
 	PortNumber          string `json:"portNumber"`
 	LocalPortNumber     string `json:"localPortNumber"`
@@ -59,6 +63,7 @@ func (s *PortSession) Name() string {
 	return config.PortPluginName
 }
 
+// Initialize sets up the port session with the provided session parameters.
 func (s *PortSession) Initialize(ctx context.Context, log *slog.Logger, sessionVar *session.Session) {
 	s.Session = *sessionVar
 	if err := jsonutil.Remarshal(s.SessionProperties, &s.portParameters); err != nil {
@@ -68,13 +73,13 @@ func (s *PortSession) Initialize(ctx context.Context, log *slog.Logger, sessionV
 	if s.portParameters.Type == LocalPortForwardingType {
 		if version.DoesAgentSupportTCPMultiplexing(log, s.DataChannel.GetAgentVersion()) {
 			s.portSessionType = &MuxPortForwarding{
-				sessionId:      s.SessionId,
+				sessionID:      s.SessionID,
 				portParameters: s.portParameters,
 				session:        s.Session,
 			}
 		} else {
 			s.portSessionType = &BasicPortForwarding{
-				sessionId:      s.SessionId,
+				sessionID:      s.SessionID,
 				portParameters: s.portParameters,
 				session:        s.Session,
 			}
@@ -100,18 +105,19 @@ func (s *PortSession) Initialize(ctx context.Context, log *slog.Logger, sessionV
 				log.Warn("Waiting for user to establish connection before processing incoming messages")
 
 				return
-			} else {
-				log.Warn("Received message while establishing connection", "messageType", outputMessage.MessageType)
 			}
+
+			log.Warn("Received message while establishing connection", "messageType", outputMessage.MessageType)
 		}
 
-		if err := s.DataChannel.OutputMessageHandler(ctx, log, s.Stop, s.SessionId, input); err != nil {
+		if err := s.DataChannel.OutputMessageHandler(ctx, log, s.Stop, s.SessionID, input); err != nil {
 			log.Error("Failed to handle output message", "error", err)
 		}
 	})
-	log.Debug("Connected to instance", "targetId", sessionVar.TargetId, "port", s.portParameters.PortNumber)
+	log.Debug("Connected to instance", "targetId", sessionVar.TargetID, "port", s.portParameters.PortNumber)
 }
 
+// Stop terminates the port session and cleans up resources.
 func (s *PortSession) Stop(log *slog.Logger) error {
 	if err := s.portSessionType.Stop(log); err != nil {
 		return fmt.Errorf("stopping port session: %w", err)
@@ -120,7 +126,7 @@ func (s *PortSession) Stop(log *slog.Logger) error {
 	return nil
 }
 
-// StartSession redirects inputStream/outputStream data to datachannel.
+// SetSessionHandlers redirects inputStream/outputStream data to datachannel.
 func (s *PortSession) SetSessionHandlers(ctx context.Context, log *slog.Logger) error {
 	var err error
 	if err = s.portSessionType.InitializeStreams(ctx, log, s.DataChannel.GetAgentVersion()); err != nil {

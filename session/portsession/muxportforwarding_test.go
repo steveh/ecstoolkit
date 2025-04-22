@@ -16,7 +16,6 @@ package portsession
 
 import (
 	"context"
-	"log/slog"
 	"net"
 	"testing"
 	"time"
@@ -60,7 +59,7 @@ func TestReadStream(t *testing.T) {
 
 	var actualPayload []byte
 
-	datachannel.SendMessageCall = func(log *slog.Logger, dataChannel *datachannel.DataChannel, input []byte, inputType int) error {
+	datachannel.SendMessageCall = func(_ *datachannel.DataChannel, input []byte, _ int) error {
 		actualPayload = input
 
 		return nil

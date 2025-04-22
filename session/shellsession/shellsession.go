@@ -31,10 +31,13 @@ import (
 )
 
 const (
+	// ResizeSleepInterval defines the interval between terminal size checks.
 	ResizeSleepInterval = time.Millisecond * 500
-	StdinBufferLimit    = 1024
+	// StdinBufferLimit defines the maximum size of the standard input buffer.
+	StdinBufferLimit = 1024
 )
 
+// ShellSession represents a shell session that handles terminal interactions.
 type ShellSession struct {
 	session.Session
 
@@ -47,6 +50,7 @@ type ShellSession struct {
 
 var _ session.ISessionPlugin = (*ShellSession)(nil)
 
+// GetTerminalSizeCall is a function that retrieves the terminal dimensions.
 var GetTerminalSizeCall = term.GetSize
 
 // Name is the session name used in the plugin.
@@ -54,18 +58,19 @@ func (s *ShellSession) Name() string {
 	return config.ShellPluginName
 }
 
+// Initialize sets up the shell session with the provided session parameters.
 func (s *ShellSession) Initialize(ctx context.Context, log *slog.Logger, sessionVar *session.Session) {
 	s.Session = *sessionVar
 	s.DataChannel.RegisterOutputStreamHandler(s.ProcessStreamMessagePayload, true)
 	s.DataChannel.GetWsChannel().SetOnMessage(
 		func(input []byte) {
-			if err := s.DataChannel.OutputMessageHandler(ctx, log, s.Stop, s.SessionId, input); err != nil {
+			if err := s.DataChannel.OutputMessageHandler(ctx, log, s.Stop, s.SessionID, input); err != nil {
 				log.Error("Failed to handle output message", "error", err)
 			}
 		})
 }
 
-// StartSession takes input and write it to data channel.
+// SetSessionHandlers sets up handlers for terminal input, resizing, and control signals.
 func (s *ShellSession) SetSessionHandlers(ctx context.Context, log *slog.Logger) error {
 	// handle re-size
 	s.handleTerminalResize(log)

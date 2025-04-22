@@ -1,3 +1,4 @@
+// Package executor implements ECS task execution and session management.
 package executor
 
 import (
@@ -28,6 +29,7 @@ func init() {
 	session.Register(&shellsession.ShellSession{})
 }
 
+// ExecuteSessionOptions contains the configuration options for executing a session.
 type ExecuteSessionOptions struct {
 	ClusterName        string
 	TaskARN            string
@@ -36,6 +38,7 @@ type ExecuteSessionOptions struct {
 	Command            string
 }
 
+// Executor manages ECS task execution and session management.
 type Executor struct {
 	ecsClient *ecs.Client
 	kmsClient *kms.Client
@@ -43,6 +46,7 @@ type Executor struct {
 	logger    *slog.Logger
 }
 
+// NewExecutor creates a new Executor instance with the provided AWS clients and logger.
 func NewExecutor(ecsClient *ecs.Client, kmsClient *kms.Client, ssmClient *ssm.Client, logger *slog.Logger) *Executor {
 	return &Executor{
 		ecsClient: ecsClient,
@@ -52,6 +56,7 @@ func NewExecutor(ecsClient *ecs.Client, kmsClient *kms.Client, ssmClient *ssm.Cl
 	}
 }
 
+// NewFromConfig creates a new Executor instance using the provided AWS configuration and logger.
 func NewFromConfig(cfg aws.Config, logger *slog.Logger) *Executor {
 	ecsClient := ecs.NewFromConfig(cfg)
 	kmsClient := kms.NewFromConfig(cfg)
@@ -111,12 +116,12 @@ func (e *Executor) newSession(options *ExecuteSessionOptions, execute *ecs.Execu
 
 	sess := session.Session{
 		DataChannel: &dc,
-		SessionId:   *execute.Session.SessionId,
-		StreamUrl:   *execute.Session.StreamUrl,
+		SessionID:   *execute.Session.SessionId,
+		StreamURL:   *execute.Session.StreamUrl,
 		TokenValue:  *execute.Session.TokenValue,
 		Endpoint:    endpoint.String(),
-		ClientId:    clientID.String(),
-		TargetId:    fmt.Sprintf("ecs:%s_%s_%s", options.ClusterName, taskID, options.ContainerRuntimeID),
+		ClientID:    clientID.String(),
+		TargetID:    fmt.Sprintf("ecs:%s_%s_%s", options.ClusterName, taskID, options.ContainerRuntimeID),
 		DisplayMode: sessionutil.NewDisplayMode(e.logger),
 		SSMClient:   e.ssmClient,
 	}
@@ -137,7 +142,7 @@ func (e *Executor) initSession(ctx context.Context, sess *session.Session) error
 			time.Sleep(config.ResendSleepInterval)
 
 			if <-sess.DataChannel.IsStreamMessageResendTimeout() {
-				e.logger.Error("Stream data timeout", "sessionId", sess.SessionId)
+				e.logger.Error("Stream data timeout", "sessionID", sess.SessionID)
 
 				if err := sess.TerminateSession(ctx, e.logger); err != nil {
 					e.logger.Error("Unable to terminate session upon stream data timeout", "error", err)
@@ -170,6 +175,7 @@ func (e *Executor) initSession(ctx context.Context, sess *session.Session) error
 	return nil
 }
 
+// ExecuteSession executes a session with the provided options.
 func (e *Executor) ExecuteSession(ctx context.Context, options *ExecuteSessionOptions) error {
 	execute, err := e.executeCommand(ctx, options)
 	if err != nil {

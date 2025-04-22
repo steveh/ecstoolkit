@@ -35,7 +35,7 @@ func NewMockLog() *slog.Logger {
 	return slog.New(NoOpHandler{})
 }
 
-// This is useful for tests that need to verify log output.
+// NewMockLogWithWriter returns a new slog.Logger that writes to the provided io.Writer for test verification.
 func NewMockLogWithWriter(w io.Writer) *slog.Logger {
 	return slog.New(slog.NewTextHandler(w, &slog.HandlerOptions{
 		Level: slog.LevelDebug,

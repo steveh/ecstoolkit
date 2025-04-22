@@ -20,25 +20,26 @@ import (
 	"strings"
 )
 
-type version struct {
+// Number represents a semantic version number.
+type Number struct {
 	version []string
 }
 
-// NewVersion initializes version struct by splitting given version string into string list using separator ".".
-func NewVersion(versionString string) (version, error) {
+// NewVersion initializes Number struct by splitting given version string into string list using separator ".".
+func NewVersion(versionString string) (Number, error) {
 	if versionString == "" {
-		return version{}, fmt.Errorf("invalid version %s", versionString)
+		return Number{}, fmt.Errorf("invalid version %s", versionString)
 	}
 
-	return version{
+	return Number{
 		strings.Split(versionString, "."),
 	}, nil
 }
 
 // compare returns 0 if thisVersion is equal to otherVersion, 1 if thisVersion is greater than otherVersion, -1 otherwise.
-func (thisVersion version) compare(otherVersion version) (int, error) {
+func (thisVersion Number) compare(otherVersion Number) (int, error) {
 	if len(thisVersion.version) != len(otherVersion.version) {
-		return -1, fmt.Errorf("length mismatch for versions %s and %s", thisVersion.version, otherVersion.version)
+		return -1, fmt.Errorf("length mismatch for versions %v and %v", thisVersion.version, otherVersion.version)
 	}
 
 	var (

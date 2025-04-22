@@ -53,21 +53,21 @@ func get16ByteBuffer() []byte {
 var (
 	mockLogger                 = log.NewMockLog()
 	defaultByteBufferGenerator = get8ByteBuffer
-	messageId                  = "dd01e56b-ff48-483e-a508-b5f073f31b16"
+	messageID                  = "dd01e56b-ff48-483e-a508-b5f073f31b16"
 	messageType                = InputStreamMessage
 	schemaVersion              = uint32(1)
 	createdDate                = uint64(1503434274948)
-	destinationId              = "destination-id"
+	destinationID              = "destination-id"
 	actionType                 = "start"
 	payload                    = []byte("payload")
-	defaultUuid                = "dd01e56b-ff48-483e-a508-b5f073f31b16"
+	defaultUUID                = "dd01e56b-ff48-483e-a508-b5f073f31b16"
 	ackMessagePayload          = []byte(fmt.Sprintf(
 		`{
 			"AcknowledgedMessageType": "%s",
 			"AcknowledgedMessageId":"%s"
 		}`,
 		AcknowledgeMessage,
-		messageId))
+		messageID))
 	channelClosedPayload = []byte(fmt.Sprintf(
 		`{
 			"MessageType": "%s",
@@ -78,9 +78,9 @@ var (
 			"Output": "%s"
 		}`,
 		ChannelClosedMessage,
-		messageId,
+		messageID,
 		strconv.FormatUint(createdDate, 10),
-		sessionId,
+		sessionID,
 		strconv.FormatUint(uint64(schemaVersion), 10),
 		string(payload),
 	))
@@ -111,7 +111,7 @@ var (
 	sampleParameters = "{\"name\": \"richard\"}"
 	sequenceNumber   = int64(2)
 	agentVersion     = "3.0"
-	sessionId        = "sessionId_01234567890abcedf"
+	sessionID        = "sessionId_01234567890abcedf"
 )
 
 type TestParams struct {
@@ -702,14 +702,14 @@ func TestGetLong(t *testing.T) {
 }
 
 func TestClientMessage_Validate(t *testing.T) {
-	u, err := uuid.Parse(messageId)
+	u, err := uuid.Parse(messageID)
 	assert.NoError(t, err)
 
 	clientMessage := ClientMessage{
 		SchemaVersion:  schemaVersion,
 		SequenceNumber: 1,
 		Flags:          2,
-		MessageId:      u,
+		MessageID:      u,
 		Payload:        payload,
 		PayloadLength:  3,
 	}
@@ -741,7 +741,7 @@ func TestClientMessage_Validate(t *testing.T) {
 }
 
 func TestClientMessage_ValidateStartPublicationMessage(t *testing.T) {
-	u, err := uuid.Parse(messageId)
+	u, err := uuid.Parse(messageID)
 	assert.NoError(t, err)
 
 	clientMessage := ClientMessage{
@@ -750,7 +750,7 @@ func TestClientMessage_ValidateStartPublicationMessage(t *testing.T) {
 		CreatedDate:    createdDate,
 		SequenceNumber: 1,
 		Flags:          2,
-		MessageId:      u,
+		MessageID:      u,
 		Payload:        payload,
 		PayloadLength:  3,
 	}
@@ -778,7 +778,7 @@ func TestClientMessage_DeserializeDataStreamAcknowledgeContent(t *testing.T) {
 	testMessage.Payload = ackMessagePayload
 	ackMessage3, err := testMessage.DeserializeDataStreamAcknowledgeContent(mockLogger)
 	assert.Equal(t, AcknowledgeMessage, ackMessage3.MessageType)
-	assert.Equal(t, messageId, ackMessage3.MessageId)
+	assert.Equal(t, messageID, ackMessage3.MessageID)
 	assert.NoError(t, err, "An error was thrown when one was not expected.")
 }
 
@@ -801,10 +801,10 @@ func TestClientMessage_DeserializeChannelClosedMessage(t *testing.T) {
 	testMessage.Payload = channelClosedPayload
 	closeMessage3, err := testMessage.DeserializeChannelClosedMessage(mockLogger)
 	assert.Equal(t, ChannelClosedMessage, closeMessage3.MessageType)
-	assert.Equal(t, messageId, closeMessage3.MessageId)
+	assert.Equal(t, messageID, closeMessage3.MessageID)
 	assert.Equal(t, strconv.FormatUint(createdDate, 10), closeMessage3.CreatedDate)
 	assert.Equal(t, int(schemaVersion), closeMessage3.SchemaVersion)
-	assert.Equal(t, sessionId, closeMessage3.SessionId)
+	assert.Equal(t, sessionID, closeMessage3.SessionID)
 	assert.Equal(t, string(payload), closeMessage3.Output)
 	assert.NoError(t, err, "An error was thrown when one was not expected.")
 }
@@ -858,7 +858,7 @@ func TestClientMessage_DeserializeHandshakeComplete(t *testing.T) {
 
 func TestPutUuid(t *testing.T) {
 	t.Logf("Starting test suite: %s", t.Name())
-	// OffsetEnd is not used for putUuid as uuid are always 128-bit
+	// OffsetEnd is not used for putUUID as uuid are always 128-bit
 	testCases := []TestParams{
 		{
 			"Basic",
@@ -866,8 +866,8 @@ func TestPutUuid(t *testing.T) {
 			get16ByteBuffer(),
 			0,
 			0,
-			defaultUuid,
-			defaultUuid,
+			defaultUUID,
+			defaultUUID,
 		},
 	}
 	for _, tc := range testCases {
@@ -881,7 +881,7 @@ func TestPutUuid(t *testing.T) {
 			uuidInput, err := uuid.Parse(strInput)
 			assert.NoError(t, err)
 
-			err = putUuid(
+			err = putUUID(
 				mockLogger,
 				tc.byteArray,
 				tc.offsetStart,
@@ -897,7 +897,7 @@ func TestPutUuid(t *testing.T) {
 				assert.NoError(t, err)
 
 				expectedBuffer := get16ByteBuffer()
-				err = putUuid(mockLogger, expectedBuffer, 0, uuidOut)
+				err = putUUID(mockLogger, expectedBuffer, 0, uuidOut)
 				assert.NoError(t, err, "Error putting UUID")
 				assert.Equal(t, expectedBuffer, tc.byteArray)
 			case ERROR:
@@ -973,7 +973,7 @@ func TestGetBytesFromInteger(t *testing.T) {
 }
 
 func TestSerializeAndDeserializeClientMessage(t *testing.T) {
-	u, err := uuid.Parse(messageId)
+	u, err := uuid.Parse(messageID)
 	assert.NoError(t, err)
 
 	clientMessage := ClientMessage{
@@ -982,7 +982,7 @@ func TestSerializeAndDeserializeClientMessage(t *testing.T) {
 		CreatedDate:    createdDate,
 		SequenceNumber: 1,
 		Flags:          2,
-		MessageId:      u,
+		MessageID:      u,
 		Payload:        payload,
 	}
 
@@ -990,30 +990,30 @@ func TestSerializeAndDeserializeClientMessage(t *testing.T) {
 	serializedBytes, err := clientMessage.SerializeClientMessage(log.NewMockLog())
 	assert.NoError(t, err, "Error serializing message")
 
-	seralizedMessageType := strings.TrimRight(string(serializedBytes[ClientMessage_MessageTypeOffset:ClientMessage_MessageTypeOffset+ClientMessage_MessageTypeLength-1]), " ")
+	seralizedMessageType := strings.TrimRight(string(serializedBytes[ClientMessageMessageTypeOffset:ClientMessageMessageTypeOffset+ClientMessageMessageTypeLength-1]), " ")
 	assert.Equal(t, seralizedMessageType, messageType)
 
-	serializedVersion, err := getUInteger(log.NewMockLog(), serializedBytes, ClientMessage_SchemaVersionOffset)
+	serializedVersion, err := getUInteger(log.NewMockLog(), serializedBytes, ClientMessageSchemaVersionOffset)
 	assert.NoError(t, err)
 	assert.Equal(t, serializedVersion, schemaVersion)
 
-	serializedCD, err := getULong(log.NewMockLog(), serializedBytes, ClientMessage_CreatedDateOffset)
+	serializedCD, err := getULong(log.NewMockLog(), serializedBytes, ClientMessageCreatedDateOffset)
 	assert.NoError(t, err)
 	assert.Equal(t, serializedCD, createdDate)
 
-	serializedSequence, err := getLong(log.NewMockLog(), serializedBytes, ClientMessage_SequenceNumberOffset)
+	serializedSequence, err := getLong(log.NewMockLog(), serializedBytes, ClientMessageSequenceNumberOffset)
 	assert.NoError(t, err)
 	assert.Equal(t, int64(1), serializedSequence)
 
-	serializedFlags, err := getULong(log.NewMockLog(), serializedBytes, ClientMessage_FlagsOffset)
+	serializedFlags, err := getULong(log.NewMockLog(), serializedBytes, ClientMessageFlagsOffset)
 	assert.NoError(t, err)
 	assert.Equal(t, uint64(2), serializedFlags)
 
-	seralizedMessageId, err := getUuid(log.NewMockLog(), serializedBytes, ClientMessage_MessageIdOffset)
+	seralizedMessageID, err := getUUID(log.NewMockLog(), serializedBytes, ClientMessageMessageIDOffset)
 	assert.NoError(t, err)
-	assert.Equal(t, seralizedMessageId.String(), messageId)
+	assert.Equal(t, seralizedMessageID.String(), messageID)
 
-	serializedDigest, err := getBytes(log.NewMockLog(), serializedBytes, ClientMessage_PayloadDigestOffset, ClientMessage_PayloadDigestLength)
+	serializedDigest, err := getBytes(log.NewMockLog(), serializedBytes, ClientMessagePayloadDigestOffset, ClientMessagePayloadDigestLength)
 	assert.NoError(t, err)
 
 	hasher := sha256.New()
@@ -1027,7 +1027,7 @@ func TestSerializeAndDeserializeClientMessage(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, messageType, deserializedClientMessage.MessageType)
 	assert.Equal(t, schemaVersion, deserializedClientMessage.SchemaVersion)
-	assert.Equal(t, messageId, deserializedClientMessage.MessageId.String())
+	assert.Equal(t, messageID, deserializedClientMessage.MessageID.String())
 	assert.Equal(t, createdDate, deserializedClientMessage.CreatedDate)
 	assert.Equal(t, uint64(2), deserializedClientMessage.Flags)
 	assert.Equal(t, int64(1), deserializedClientMessage.SequenceNumber)
@@ -1043,7 +1043,7 @@ func TestSerializeMessagePayloadNegative(t *testing.T) {
 func TestSerializeAndDeserializeClientMessageWithAcknowledgeContent(t *testing.T) {
 	acknowledgeContent := AcknowledgeContent{
 		MessageType:         messageType,
-		MessageId:           messageId,
+		MessageID:           messageID,
 		SequenceNumber:      sequenceNumber,
 		IsSequentialMessage: true,
 	}
@@ -1056,7 +1056,7 @@ func TestSerializeAndDeserializeClientMessageWithAcknowledgeContent(t *testing.T
 
 	assert.NoError(t, err)
 	assert.Equal(t, messageType, deserializedAcknowledgeContent.MessageType)
-	assert.Equal(t, messageId, deserializedAcknowledgeContent.MessageId)
+	assert.Equal(t, messageID, deserializedAcknowledgeContent.MessageID)
 	assert.Equal(t, sequenceNumber, deserializedAcknowledgeContent.SequenceNumber)
 	assert.True(t, deserializedAcknowledgeContent.IsSequentialMessage)
 }
@@ -1064,17 +1064,17 @@ func TestSerializeAndDeserializeClientMessageWithAcknowledgeContent(t *testing.T
 func TestDeserializeAgentMessageWithChannelClosed(t *testing.T) {
 	channelClosed := ChannelClosed{
 		MessageType:   ChannelClosedMessage,
-		MessageId:     messageId,
-		DestinationId: destinationId,
-		SessionId:     sessionId,
+		MessageID:     messageID,
+		DestinationID: destinationID,
+		SessionID:     sessionID,
 		SchemaVersion: 1,
 		CreatedDate:   "2018-01-01",
 	}
 
-	u, err := uuid.Parse(messageId)
+	u, err := uuid.Parse(messageID)
 	assert.NoError(t, err)
 
-	channelClosedJson, err := json.Marshal(channelClosed)
+	channelClosedJSON, err := json.Marshal(channelClosed)
 	if err != nil {
 		t.Fatalf("marshaling channel closed: %v", err)
 	}
@@ -1085,15 +1085,15 @@ func TestDeserializeAgentMessageWithChannelClosed(t *testing.T) {
 		CreatedDate:    createdDate,
 		SequenceNumber: 1,
 		Flags:          2,
-		MessageId:      u,
-		Payload:        channelClosedJson,
+		MessageID:      u,
+		Payload:        channelClosedJSON,
 	}
 
 	deserializedChannelClosed, err := agentMessage.DeserializeChannelClosedMessage(log.NewMockLog())
 
 	assert.NoError(t, err)
 	assert.Equal(t, ChannelClosedMessage, deserializedChannelClosed.MessageType)
-	assert.Equal(t, messageId, deserializedChannelClosed.MessageId)
-	assert.Equal(t, sessionId, deserializedChannelClosed.SessionId)
-	assert.Equal(t, "destination-id", deserializedChannelClosed.DestinationId)
+	assert.Equal(t, messageID, deserializedChannelClosed.MessageID)
+	assert.Equal(t, sessionID, deserializedChannelClosed.SessionID)
+	assert.Equal(t, "destination-id", deserializedChannelClosed.DestinationID)
 }

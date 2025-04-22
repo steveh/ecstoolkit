@@ -11,7 +11,7 @@
 // either express or implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-// retry implements back off retry strategy for reconnect web socket connection.
+// Package retry implements back off retry strategy for reconnect web socket connection.
 package retry
 
 import (
@@ -19,11 +19,13 @@ import (
 	"time"
 )
 
+// Retryer defines the interface for retry operations.
 type Retryer interface {
 	Call() error
 	NextSleepTime(attempt int32) time.Duration
 }
 
+// RepeatableExponentialRetryer implements exponential backoff retry strategy.
 type RepeatableExponentialRetryer struct {
 	CallableFunc        func() error
 	GeometricRatio      float64

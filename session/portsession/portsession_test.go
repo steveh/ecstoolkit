@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"os"
 	"testing"
 	"time"
@@ -126,7 +125,7 @@ func TestStartSessionWithClosedWsConn(t *testing.T) {
 	done := make(chan struct{})
 	errChan := make(chan error, 1)
 
-	datachannel.SendMessageCall = func(log *slog.Logger, dataChannel *datachannel.DataChannel, input []byte, inputType int) error {
+	datachannel.SendMessageCall = func(_ *datachannel.DataChannel, input []byte, _ int) error {
 		actualPayload = input
 
 		close(done)

@@ -97,9 +97,9 @@ func (_c *IDataChannel_AddDataToOutgoingMessageBuffer_Call) RunAndReturn(run fun
 	return _c
 }
 
-// CalculateRetransmissionTimeout provides a mock function with given fields: log, streamingMessage
-func (_m *IDataChannel) CalculateRetransmissionTimeout(log *slog.Logger, streamingMessage datachannel.StreamingMessage) {
-	_m.Called(log, streamingMessage)
+// CalculateRetransmissionTimeout provides a mock function with given fields: streamingMessage
+func (_m *IDataChannel) CalculateRetransmissionTimeout(streamingMessage datachannel.StreamingMessage) {
+	_m.Called(streamingMessage)
 }
 
 // IDataChannel_CalculateRetransmissionTimeout_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CalculateRetransmissionTimeout'
@@ -108,15 +108,14 @@ type IDataChannel_CalculateRetransmissionTimeout_Call struct {
 }
 
 // CalculateRetransmissionTimeout is a helper method to define mock.On call
-//   - log *slog.Logger
 //   - streamingMessage datachannel.StreamingMessage
-func (_e *IDataChannel_Expecter) CalculateRetransmissionTimeout(log interface{}, streamingMessage interface{}) *IDataChannel_CalculateRetransmissionTimeout_Call {
-	return &IDataChannel_CalculateRetransmissionTimeout_Call{Call: _e.mock.On("CalculateRetransmissionTimeout", log, streamingMessage)}
+func (_e *IDataChannel_Expecter) CalculateRetransmissionTimeout(streamingMessage interface{}) *IDataChannel_CalculateRetransmissionTimeout_Call {
+	return &IDataChannel_CalculateRetransmissionTimeout_Call{Call: _e.mock.On("CalculateRetransmissionTimeout", streamingMessage)}
 }
 
-func (_c *IDataChannel_CalculateRetransmissionTimeout_Call) Run(run func(log *slog.Logger, streamingMessage datachannel.StreamingMessage)) *IDataChannel_CalculateRetransmissionTimeout_Call {
+func (_c *IDataChannel_CalculateRetransmissionTimeout_Call) Run(run func(streamingMessage datachannel.StreamingMessage)) *IDataChannel_CalculateRetransmissionTimeout_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*slog.Logger), args[1].(datachannel.StreamingMessage))
+		run(args[0].(datachannel.StreamingMessage))
 	})
 	return _c
 }
@@ -126,7 +125,7 @@ func (_c *IDataChannel_CalculateRetransmissionTimeout_Call) Return() *IDataChann
 	return _c
 }
 
-func (_c *IDataChannel_CalculateRetransmissionTimeout_Call) RunAndReturn(run func(*slog.Logger, datachannel.StreamingMessage)) *IDataChannel_CalculateRetransmissionTimeout_Call {
+func (_c *IDataChannel_CalculateRetransmissionTimeout_Call) RunAndReturn(run func(datachannel.StreamingMessage)) *IDataChannel_CalculateRetransmissionTimeout_Call {
 	_c.Run(run)
 	return _c
 }
@@ -486,9 +485,9 @@ func (_c *IDataChannel_GetWsChannel_Call) RunAndReturn(run func() communicator.I
 	return _c
 }
 
-// Initialize provides a mock function with given fields: log, clientId, sessionId, targetId, isAwsCliUpgradeNeeded
-func (_m *IDataChannel) Initialize(log *slog.Logger, clientId string, sessionId string, targetId string, isAwsCliUpgradeNeeded bool) {
-	_m.Called(log, clientId, sessionId, targetId, isAwsCliUpgradeNeeded)
+// Initialize provides a mock function with given fields: log, clientID, sessionID, targetID, isAwsCliUpgradeNeeded
+func (_m *IDataChannel) Initialize(log *slog.Logger, clientID string, sessionID string, targetID string, isAwsCliUpgradeNeeded bool) {
+	_m.Called(log, clientID, sessionID, targetID, isAwsCliUpgradeNeeded)
 }
 
 // IDataChannel_Initialize_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Initialize'
@@ -498,15 +497,15 @@ type IDataChannel_Initialize_Call struct {
 
 // Initialize is a helper method to define mock.On call
 //   - log *slog.Logger
-//   - clientId string
-//   - sessionId string
-//   - targetId string
+//   - clientID string
+//   - sessionID string
+//   - targetID string
 //   - isAwsCliUpgradeNeeded bool
-func (_e *IDataChannel_Expecter) Initialize(log interface{}, clientId interface{}, sessionId interface{}, targetId interface{}, isAwsCliUpgradeNeeded interface{}) *IDataChannel_Initialize_Call {
-	return &IDataChannel_Initialize_Call{Call: _e.mock.On("Initialize", log, clientId, sessionId, targetId, isAwsCliUpgradeNeeded)}
+func (_e *IDataChannel_Expecter) Initialize(log interface{}, clientID interface{}, sessionID interface{}, targetID interface{}, isAwsCliUpgradeNeeded interface{}) *IDataChannel_Initialize_Call {
+	return &IDataChannel_Initialize_Call{Call: _e.mock.On("Initialize", log, clientID, sessionID, targetID, isAwsCliUpgradeNeeded)}
 }
 
-func (_c *IDataChannel_Initialize_Call) Run(run func(log *slog.Logger, clientId string, sessionId string, targetId string, isAwsCliUpgradeNeeded bool)) *IDataChannel_Initialize_Call {
+func (_c *IDataChannel_Initialize_Call) Run(run func(log *slog.Logger, clientID string, sessionID string, targetID string, isAwsCliUpgradeNeeded bool)) *IDataChannel_Initialize_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(*slog.Logger), args[1].(string), args[2].(string), args[3].(string), args[4].(bool))
 	})
@@ -1094,17 +1093,17 @@ func (_c *IDataChannel_SendInputDataMessage_Call) RunAndReturn(run func(*slog.Lo
 	return _c
 }
 
-// SendMessage provides a mock function with given fields: log, input, inputType
-func (_m *IDataChannel) SendMessage(log *slog.Logger, input []byte, inputType int) error {
-	ret := _m.Called(log, input, inputType)
+// SendMessage provides a mock function with given fields: input, inputType
+func (_m *IDataChannel) SendMessage(input []byte, inputType int) error {
+	ret := _m.Called(input, inputType)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SendMessage")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*slog.Logger, []byte, int) error); ok {
-		r0 = rf(log, input, inputType)
+	if rf, ok := ret.Get(0).(func([]byte, int) error); ok {
+		r0 = rf(input, inputType)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -1118,16 +1117,15 @@ type IDataChannel_SendMessage_Call struct {
 }
 
 // SendMessage is a helper method to define mock.On call
-//   - log *slog.Logger
 //   - input []byte
 //   - inputType int
-func (_e *IDataChannel_Expecter) SendMessage(log interface{}, input interface{}, inputType interface{}) *IDataChannel_SendMessage_Call {
-	return &IDataChannel_SendMessage_Call{Call: _e.mock.On("SendMessage", log, input, inputType)}
+func (_e *IDataChannel_Expecter) SendMessage(input interface{}, inputType interface{}) *IDataChannel_SendMessage_Call {
+	return &IDataChannel_SendMessage_Call{Call: _e.mock.On("SendMessage", input, inputType)}
 }
 
-func (_c *IDataChannel_SendMessage_Call) Run(run func(log *slog.Logger, input []byte, inputType int)) *IDataChannel_SendMessage_Call {
+func (_c *IDataChannel_SendMessage_Call) Run(run func(input []byte, inputType int)) *IDataChannel_SendMessage_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*slog.Logger), args[1].([]byte), args[2].(int))
+		run(args[0].([]byte), args[1].(int))
 	})
 	return _c
 }
@@ -1137,7 +1135,7 @@ func (_c *IDataChannel_SendMessage_Call) Return(_a0 error) *IDataChannel_SendMes
 	return _c
 }
 
-func (_c *IDataChannel_SendMessage_Call) RunAndReturn(run func(*slog.Logger, []byte, int) error) *IDataChannel_SendMessage_Call {
+func (_c *IDataChannel_SendMessage_Call) RunAndReturn(run func([]byte, int) error) *IDataChannel_SendMessage_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1208,9 +1206,9 @@ func (_c *IDataChannel_SetSessionType_Call) RunAndReturn(run func(string)) *IDat
 	return _c
 }
 
-// SetWebsocket provides a mock function with given fields: log, streamUrl, tokenValue
-func (_m *IDataChannel) SetWebsocket(log *slog.Logger, streamUrl string, tokenValue string) {
-	_m.Called(log, streamUrl, tokenValue)
+// SetWebsocket provides a mock function with given fields: log, streamURL, tokenValue
+func (_m *IDataChannel) SetWebsocket(log *slog.Logger, streamURL string, tokenValue string) {
+	_m.Called(log, streamURL, tokenValue)
 }
 
 // IDataChannel_SetWebsocket_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetWebsocket'
@@ -1220,13 +1218,13 @@ type IDataChannel_SetWebsocket_Call struct {
 
 // SetWebsocket is a helper method to define mock.On call
 //   - log *slog.Logger
-//   - streamUrl string
+//   - streamURL string
 //   - tokenValue string
-func (_e *IDataChannel_Expecter) SetWebsocket(log interface{}, streamUrl interface{}, tokenValue interface{}) *IDataChannel_SetWebsocket_Call {
-	return &IDataChannel_SetWebsocket_Call{Call: _e.mock.On("SetWebsocket", log, streamUrl, tokenValue)}
+func (_e *IDataChannel_Expecter) SetWebsocket(log interface{}, streamURL interface{}, tokenValue interface{}) *IDataChannel_SetWebsocket_Call {
+	return &IDataChannel_SetWebsocket_Call{Call: _e.mock.On("SetWebsocket", log, streamURL, tokenValue)}
 }
 
-func (_c *IDataChannel_SetWebsocket_Call) Run(run func(log *slog.Logger, streamUrl string, tokenValue string)) *IDataChannel_SetWebsocket_Call {
+func (_c *IDataChannel_SetWebsocket_Call) Run(run func(log *slog.Logger, streamURL string, tokenValue string)) *IDataChannel_SetWebsocket_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(*slog.Logger), args[1].(string), args[2].(string))
 	})

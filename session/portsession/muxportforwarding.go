@@ -56,7 +56,7 @@ type MgsConn struct {
 // accepts multiple client connections through multiplexing.
 type MuxPortForwarding struct {
 	port           IPortSession
-	sessionId      string
+	sessionID      string
 	socketFile     string
 	portParameters PortParameters
 	session        session.Session
@@ -107,7 +107,7 @@ func (p *MuxPortForwarding) IsStreamNotSet() bool {
 }
 
 // Stop closes all open stream.
-func (p *MuxPortForwarding) Stop(log *slog.Logger) error {
+func (p *MuxPortForwarding) Stop(_ *slog.Logger) error {
 	var errs []error
 
 	if p.mgsConn != nil {
@@ -136,7 +136,7 @@ func (p *MuxPortForwarding) Stop(log *slog.Logger) error {
 // InitializeStreams initializes i/o streams.
 func (p *MuxPortForwarding) InitializeStreams(_ context.Context, log *slog.Logger, agentVersion string) error {
 	p.handleControlSignals(log)
-	p.socketFile = getUnixSocketPath(p.sessionId, os.TempDir(), "session_manager_plugin_mux.sock")
+	p.socketFile = getUnixSocketPath(p.sessionID, os.TempDir(), "session_manager_plugin_mux.sock")
 
 	if err := p.initialize(log, agentVersion); err != nil {
 		if cleanErr := p.cleanUp(); cleanErr != nil {
@@ -155,12 +155,12 @@ func (p *MuxPortForwarding) ReadStream(ctx context.Context, log *slog.Logger) er
 
 	// reads data from smux client and transfers to server over datachannel
 	g.Go(func() error {
-		return p.transferDataToServer(log, ctx)
+		return p.transferDataToServer(ctx, log)
 	})
 
 	// set up network listener on SSM port and handle client connections
 	g.Go(func() error {
-		return p.handleClientConnections(log, ctx)
+		return p.handleClientConnections(ctx, log)
 	})
 
 	if err := g.Wait(); err != nil {
@@ -270,7 +270,7 @@ func (p *MuxPortForwarding) handleControlSignals(log *slog.Logger) {
 			log.Error("sending TerminateSession flag", "error", err)
 		}
 
-		log.Debug("Exiting session", "sessionId", p.sessionId)
+		log.Debug("Exiting session", "sessionID", p.sessionID)
 
 		if err := p.Stop(log); err != nil {
 			log.Error("Failed to stop session", "error", err)
@@ -279,7 +279,7 @@ func (p *MuxPortForwarding) handleControlSignals(log *slog.Logger) {
 }
 
 // transferDataToServer reads from smux client connection and sends on data channel.
-func (p *MuxPortForwarding) transferDataToServer(log *slog.Logger, ctx context.Context) error {
+func (p *MuxPortForwarding) transferDataToServer(ctx context.Context, log *slog.Logger) error {
 	msg := make([]byte, config.StreamDataPayloadSize)
 
 	for {
@@ -317,7 +317,7 @@ func (p *MuxPortForwarding) setupUnixListener() (net.Listener, string, error) {
 		return nil, "", fmt.Errorf("listening on unix socket: %w", err)
 	}
 
-	displayMsg := fmt.Sprintf("Unix socket %s opened for sessionId %s.", p.portParameters.LocalUnixSocket, p.sessionId)
+	displayMsg := fmt.Sprintf("Unix socket %s opened for sessionID %s.", p.portParameters.LocalUnixSocket, p.sessionID)
 
 	return listener, displayMsg, nil
 }
@@ -340,13 +340,13 @@ func (p *MuxPortForwarding) setupTCPListener() (net.Listener, string, error) {
 	}
 
 	p.portParameters.LocalPortNumber = strconv.Itoa(tcpAddr.Port)
-	displayMsg := fmt.Sprintf("Port %s opened for sessionId %s.", p.portParameters.LocalPortNumber, p.sessionId)
+	displayMsg := fmt.Sprintf("Port %s opened for sessionID %s.", p.portParameters.LocalPortNumber, p.sessionID)
 
 	return listener, displayMsg, nil
 }
 
 // handleClientConnections sets up network server on local ssm port to accept connections from clients (browser/terminal).
-func (p *MuxPortForwarding) handleClientConnections(log *slog.Logger, ctx context.Context) (err error) {
+func (p *MuxPortForwarding) handleClientConnections(ctx context.Context, log *slog.Logger) (err error) {
 	var (
 		listener   net.Listener
 		displayMsg string
@@ -385,10 +385,10 @@ func (p *MuxPortForwarding) handleClientConnections(log *slog.Logger, ctx contex
 			if conn, err := listener.Accept(); err != nil {
 				log.Error("Error while accepting connection", "error", err)
 			} else {
-				log.Debug("Connection accepted", "remoteAddr", conn.RemoteAddr(), "sessionId", p.sessionId)
+				log.Debug("Connection accepted", "remoteAddr", conn.RemoteAddr(), "sessionID", p.sessionID)
 
 				once.Do(func() {
-					log.Debug("Connection accepted", "sessionId", p.sessionId)
+					log.Debug("Connection accepted", "sessionID", p.sessionID)
 				})
 
 				stream, err := p.muxClient.session.OpenStream()
@@ -446,10 +446,10 @@ func handleDataTransfer(dst io.ReadWriteCloser, src io.ReadWriteCloser) {
 	close(errChan)
 }
 
-// getUnixSocketPath generates the unix socket file name based on sessionId and returns the path.
-func getUnixSocketPath(sessionId string, dir string, suffix string) string {
+// getUnixSocketPath generates the unix socket file name based on sessionID and returns the path.
+func getUnixSocketPath(sessionID string, dir string, suffix string) string {
 	hash := fnv.New32a()
-	hash.Write([]byte(sessionId))
+	hash.Write([]byte(sessionID))
 
 	return filepath.Join(dir, fmt.Sprintf("%d_%s", hash.Sum32(), suffix))
 }

@@ -17,7 +17,6 @@ package portsession
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"os"
 	"testing"
 	"time"
@@ -59,7 +58,7 @@ func TestStartSessionForStandardStreamForwarding(t *testing.T) {
 	done := make(chan struct{})
 	errChan := make(chan error, 1)
 
-	datachannel.SendMessageCall = func(log *slog.Logger, dataChannel *datachannel.DataChannel, input []byte, inputType int) error {
+	datachannel.SendMessageCall = func(_ *datachannel.DataChannel, input []byte, _ int) error {
 		actualPayload = input
 
 		close(done)

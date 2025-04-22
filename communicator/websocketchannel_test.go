@@ -32,7 +32,7 @@ import (
 var (
 	mockLogger          = log.NewMockLog()
 	defaultChannelToken = "channelToken"
-	defaultStreamUrl    = "streamUrl"
+	defaultStreamURL    = "streamUrl"
 	errDefault          = errors.New("default error")
 	defaultMessage      = []byte("Default Message")
 )
@@ -109,15 +109,15 @@ func TestWebSocketChannel_SetChannelToken(t *testing.T) {
 	assert.Equal(t, defaultChannelToken, channel.ChannelToken)
 }
 
-func TestWebSocketChannel_GetStreamUrl(t *testing.T) {
-	t.Log("Starting test: webSocketChannel.GetStreamUrl")
+func TestWebSocketChannel_GetStreamURL(t *testing.T) {
+	t.Log("Starting test: webSocketChannel.GetStreamURL")
 
 	channel := &WebSocketChannel{
-		Url: defaultStreamUrl,
+		URL: defaultStreamURL,
 	}
 
-	url := channel.GetStreamUrl()
-	assert.Equal(t, defaultStreamUrl, url)
+	url := channel.GetStreamURL()
+	assert.Equal(t, defaultStreamURL, url)
 }
 
 func TestWebSocketChannel_SetOnError(t *testing.T) {
@@ -152,9 +152,9 @@ func TestWebsocketchannel_Initialize(t *testing.T) {
 	t.Log("Starting test: webSocketChannel.Initialize")
 
 	channel := &WebSocketChannel{}
-	channel.Initialize(mockLogger, defaultStreamUrl, defaultChannelToken)
+	channel.Initialize(mockLogger, defaultStreamURL, defaultChannelToken)
 
-	assert.Equal(t, defaultStreamUrl, channel.Url)
+	assert.Equal(t, defaultStreamURL, channel.URL)
 	assert.Equal(t, defaultChannelToken, channel.ChannelToken)
 }
 
@@ -168,7 +168,7 @@ func TestOpenCloseWebSocketChannel(t *testing.T) {
 	log := log.NewMockLog()
 
 	websocketchannel := WebSocketChannel{
-		Url: u.String(),
+		URL: u.String(),
 	}
 
 	err := websocketchannel.Open(log)
@@ -203,7 +203,7 @@ func TestReadWriteTextToWebSocketChannel(t *testing.T) {
 	}
 
 	websocketchannel := WebSocketChannel{
-		Url:       u.String(),
+		URL:       u.String(),
 		OnMessage: onMessage,
 	}
 
@@ -212,7 +212,7 @@ func TestReadWriteTextToWebSocketChannel(t *testing.T) {
 	assert.NoError(t, err, "Error opening the websocket connection.")
 	assert.NotNil(t, websocketchannel.Connection, "Open connection failed.")
 
-	if err := websocketchannel.SendMessage(log, []byte("channelreadwrite"), websocket.TextMessage); err != nil {
+	if err := websocketchannel.SendMessage([]byte("channelreadwrite"), websocket.TextMessage); err != nil {
 		t.Errorf("Failed to send message: %v", err)
 	}
 
@@ -245,7 +245,7 @@ func TestReadWriteBinaryToWebSocketChannel(t *testing.T) {
 	}
 
 	websocketchannel := WebSocketChannel{
-		Url:       u.String(),
+		URL:       u.String(),
 		OnMessage: onMessage,
 	}
 
@@ -254,7 +254,7 @@ func TestReadWriteBinaryToWebSocketChannel(t *testing.T) {
 	assert.NoError(t, err, "Error opening the websocket connection.")
 	assert.NotNil(t, websocketchannel.Connection, "Open connection failed.")
 
-	if err := websocketchannel.SendMessage(log, []byte("channelreadwrite"), websocket.BinaryMessage); err != nil {
+	if err := websocketchannel.SendMessage([]byte("channelreadwrite"), websocket.BinaryMessage); err != nil {
 		t.Errorf("Failed to send message: %v", err)
 	}
 
@@ -291,7 +291,7 @@ func TestMultipleReadWriteWebSocketChannel(t *testing.T) {
 	}
 
 	websocketchannel := WebSocketChannel{
-		Url:       u.String(),
+		URL:       u.String(),
 		OnMessage: onMessage,
 	}
 
@@ -301,9 +301,9 @@ func TestMultipleReadWriteWebSocketChannel(t *testing.T) {
 	assert.NotNil(t, websocketchannel.Connection, "Open connection failed.")
 
 	// Verify writes to websocket server
-	err = websocketchannel.SendMessage(log, []byte("channelreadwrite1"), websocket.TextMessage)
+	err = websocketchannel.SendMessage([]byte("channelreadwrite1"), websocket.TextMessage)
 	assert.NoError(t, err, "Error sending message 1")
-	err = websocketchannel.SendMessage(log, []byte("channelreadwrite2"), websocket.TextMessage)
+	err = websocketchannel.SendMessage([]byte("channelreadwrite2"), websocket.TextMessage)
 	assert.NoError(t, err, "Error sending message 2")
 	assert.True(t, <-read1, "Didn't read value 1 correctly")
 	assert.True(t, <-read2, "Didn't ready value 2 correctly")
