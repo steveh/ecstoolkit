@@ -684,172 +684,237 @@ func (dataChannel *DataChannel) processOutputMessageWithHandlers(log *slog.Logge
 	return isHandlerReady, err
 }
 
-// handleOutputMessage handles incoming stream data message by processing the payload and updating expectedSequenceNumber.
-func (dataChannel *DataChannel) HandleOutputMessage(
+// handleHandshakeRequestOutputMessage handles output messages of type HandshakeRequestPayloadType.
+func (dataChannel *DataChannel) handleHandshakeRequestOutputMessage(
 	ctx context.Context,
 	log *slog.Logger,
 	outputMessage message.ClientMessage,
-	rawMessage []byte,
 ) error {
-	// On receiving expected stream data message, send acknowledgement, process it and increment expected sequence number by 1.
-	// Further process messages from IncomingMessageBuffer
-	if outputMessage.SequenceNumber == dataChannel.ExpectedSequenceNumber {
-		//nolint:exhaustive
-		switch message.PayloadType(outputMessage.PayloadType) {
-		case message.HandshakeRequestPayloadType:
-			{
-				if err := SendAcknowledgeMessageCall(log, dataChannel, outputMessage); err != nil {
-					return err
-				}
+	if err := SendAcknowledgeMessageCall(log, dataChannel, outputMessage); err != nil {
+		return err
+	}
 
-				// PayloadType is HandshakeRequest so we call our own handler instead of the provided handler
-				log.Debug("Processing HandshakeRequest message", "message", outputMessage)
+	// PayloadType is HandshakeRequest so we call our own handler instead of the provided handler
+	log.Debug("Processing HandshakeRequest message", "message", outputMessage)
 
-				if err := dataChannel.handleHandshakeRequest(ctx, log, outputMessage); err != nil {
-					log.Error("processing stream data message", "error", err.Error())
+	if err := dataChannel.handleHandshakeRequest(ctx, log, outputMessage); err != nil {
+		log.Error("processing stream data message", "error", err.Error())
 
-					return err
-				}
-			}
-		case message.HandshakeCompletePayloadType:
-			{
-				if err := SendAcknowledgeMessageCall(log, dataChannel, outputMessage); err != nil {
-					return err
-				}
+		return err
+	}
 
-				if err := dataChannel.handleHandshakeComplete(log, outputMessage); err != nil {
-					log.Error("processing stream data message", "error", err.Error())
+	return nil
+}
 
-					return err
-				}
-			}
-		case message.EncChallengeRequest:
-			{
-				if err := SendAcknowledgeMessageCall(log, dataChannel, outputMessage); err != nil {
-					return err
-				}
+// handleHandshakeCompleteOutputMessage handles output messages of type HandshakeCompletePayloadType.
+func (dataChannel *DataChannel) handleHandshakeCompleteOutputMessage(
+	log *slog.Logger,
+	outputMessage message.ClientMessage,
+) error {
+	if err := SendAcknowledgeMessageCall(log, dataChannel, outputMessage); err != nil {
+		return err
+	}
 
-				if err := dataChannel.handleEncryptionChallengeRequest(log, outputMessage); err != nil {
-					log.Error("processing stream data message", "error", err.Error())
+	if err := dataChannel.handleHandshakeComplete(log, outputMessage); err != nil {
+		log.Error("processing stream data message", "error", err.Error())
 
-					return err
-				}
-			}
-		default:
-			log.Debug("Process new incoming stream data message", "sequenceNumber", outputMessage.SequenceNumber)
+		return err
+	}
 
-			// Decrypt if encryption is enabled and payload type is output
-			if dataChannel.encryptionEnabled &&
-				(outputMessage.PayloadType == uint32(message.Output) ||
-					outputMessage.PayloadType == uint32(message.StdErr) ||
-					outputMessage.PayloadType == uint32(message.ExitCode)) {
-				var err error
+	return nil
+}
 
-				outputMessage.Payload, err = dataChannel.encryption.Decrypt(log, outputMessage.Payload)
-				if err != nil {
-					log.Error("Unable to decrypt incoming data payload", "messageType", outputMessage.MessageType, "payloadType", outputMessage.PayloadType, "error", err)
+// handleEncryptionChallengeRequestOutputMessage handles output messages of type EncChallengeRequest.
+func (dataChannel *DataChannel) handleEncryptionChallengeRequestOutputMessage(
+	log *slog.Logger,
+	outputMessage message.ClientMessage,
+) error {
+	if err := SendAcknowledgeMessageCall(log, dataChannel, outputMessage); err != nil {
+		return err
+	}
 
-					return fmt.Errorf("decrypting incoming data payload: %w", err)
-				}
-			}
+	if err := dataChannel.handleEncryptionChallengeRequest(log, outputMessage); err != nil {
+		log.Error("processing stream data message", "error", err.Error())
 
-			isHandlerReady, err := dataChannel.processOutputMessageWithHandlers(log, outputMessage)
-			if err != nil {
-				log.Error("processing stream data message", "error", err.Error())
+		return err
+	}
 
-				return fmt.Errorf("processing stream data message: %w", err)
-			}
+	return nil
+}
 
-			if !isHandlerReady {
-				log.Warn("Stream data message not processed", "sequenceNumber", outputMessage.SequenceNumber, "reason", "session handler not ready")
+// handleDefaultOutputMessage handles output messages of any other type.
+func (dataChannel *DataChannel) handleDefaultOutputMessage(
+	log *slog.Logger,
+	outputMessage message.ClientMessage,
+) error {
+	log.Debug("Process new incoming stream data message", "sequenceNumber", outputMessage.SequenceNumber)
 
-				return nil
-			} else {
-				// Acknowledge outputMessage only if session specific handler is ready
-				if err := SendAcknowledgeMessageCall(log, dataChannel, outputMessage); err != nil {
-					return err
-				}
-			}
+	// Decrypt if encryption is enabled and payload type is output
+	if dataChannel.encryptionEnabled &&
+		(outputMessage.PayloadType == uint32(message.Output) ||
+			outputMessage.PayloadType == uint32(message.StdErr) ||
+			outputMessage.PayloadType == uint32(message.ExitCode)) {
+		var err error
+
+		outputMessage.Payload, err = dataChannel.encryption.Decrypt(log, outputMessage.Payload)
+		if err != nil {
+			log.Error("Unable to decrypt incoming data payload", "messageType", outputMessage.MessageType, "payloadType", outputMessage.PayloadType, "error", err)
+
+			return fmt.Errorf("decrypting incoming data payload: %w", err)
 		}
+	}
 
-		dataChannel.ExpectedSequenceNumber++
+	isHandlerReady, err := dataChannel.processOutputMessageWithHandlers(log, outputMessage)
+	if err != nil {
+		log.Error("processing stream data message", "error", err.Error())
 
-		return dataChannel.ProcessIncomingMessageBufferItems(log, outputMessage)
+		return fmt.Errorf("processing stream data message: %w", err)
+	}
+
+	if !isHandlerReady {
+		log.Warn("Stream data message not processed", "sequenceNumber", outputMessage.SequenceNumber, "reason", "session handler not ready")
+
+		return nil
 	} else {
-		log.Debug("Unexpected sequence message received", "receivedSequence", outputMessage.SequenceNumber, "expectedSequence", dataChannel.ExpectedSequenceNumber)
-
-		// If incoming message sequence number is greater then expected sequence number and IncomingMessageBuffer has capacity,
-		// add message to IncomingMessageBuffer and send acknowledgement
-		if outputMessage.SequenceNumber > dataChannel.ExpectedSequenceNumber {
-			log.Debug("Received sequence number is higher than expected", "receivedSequence", outputMessage.SequenceNumber, "expectedSequence", dataChannel.ExpectedSequenceNumber)
-
-			if len(dataChannel.IncomingMessageBuffer.Messages) < dataChannel.IncomingMessageBuffer.Capacity {
-				if err := SendAcknowledgeMessageCall(log, dataChannel, outputMessage); err != nil {
-					return err
-				}
-
-				streamingMessage := StreamingMessage{
-					rawMessage,
-					outputMessage.SequenceNumber,
-					time.Now(),
-					new(int),
-				}
-
-				// Add message to buffer for future processing
-				dataChannel.AddDataToIncomingMessageBuffer(streamingMessage)
-			}
+		// Acknowledge outputMessage only if session specific handler is ready
+		if err := SendAcknowledgeMessageCall(log, dataChannel, outputMessage); err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
 
-// processIncomingMessageBufferItems check if new expected sequence stream data is present in IncomingMessageBuffer.
-// If so process it and increment expected sequence number.
-// Repeat until expected sequence stream data is not found in IncomingMessageBuffer.
-func (dataChannel *DataChannel) ProcessIncomingMessageBufferItems(log *slog.Logger,
+// handleUnexpectedSequenceMessage handles messages with unexpected sequence numbers.
+func (dataChannel *DataChannel) handleUnexpectedSequenceMessage(
+	log *slog.Logger,
 	outputMessage message.ClientMessage,
+	rawMessage []byte,
 ) error {
-	var err error
+	log.Debug("Unexpected sequence message received", "receivedSequence", outputMessage.SequenceNumber, "expectedSequence", dataChannel.ExpectedSequenceNumber)
 
-	for {
-		bufferedStreamMessage := dataChannel.IncomingMessageBuffer.Messages[dataChannel.ExpectedSequenceNumber]
-		if bufferedStreamMessage.Content != nil {
-			log.Debug("Process stream data message from IncomingMessageBuffer", "sequenceNumber", bufferedStreamMessage.SequenceNumber)
+	// If incoming message sequence number is greater then expected sequence number and IncomingMessageBuffer has capacity,
+	// add message to IncomingMessageBuffer and send acknowledgement
+	if outputMessage.SequenceNumber > dataChannel.ExpectedSequenceNumber {
+		log.Debug("Received sequence number is higher than expected", "receivedSequence", outputMessage.SequenceNumber, "expectedSequence", dataChannel.ExpectedSequenceNumber)
 
-			if err := outputMessage.DeserializeClientMessage(log, bufferedStreamMessage.Content); err != nil {
-				log.Error("Cannot deserialize raw message", "error", err)
-
-				return fmt.Errorf("deserializing raw message: %w", err)
+		if len(dataChannel.IncomingMessageBuffer.Messages) < dataChannel.IncomingMessageBuffer.Capacity {
+			if err := SendAcknowledgeMessageCall(log, dataChannel, outputMessage); err != nil {
+				return err
 			}
 
-			// Decrypt if encryption is enabled and payload type is output
-			if dataChannel.encryptionEnabled &&
-				(outputMessage.PayloadType == uint32(message.Output) ||
-					outputMessage.PayloadType == uint32(message.StdErr) ||
-					outputMessage.PayloadType == uint32(message.ExitCode)) {
-				outputMessage.Payload, err = dataChannel.encryption.Decrypt(log, outputMessage.Payload)
-				if err != nil {
-					log.Error("Unable to decrypt buffered message data payload", "messageType", outputMessage.MessageType, "payloadType", outputMessage.PayloadType, "error", err)
-
-					return fmt.Errorf("decrypting buffered message data payload: %w", err)
-				}
+			streamingMessage := StreamingMessage{
+				rawMessage,
+				outputMessage.SequenceNumber,
+				time.Now(),
+				new(int),
 			}
 
-			_, err = dataChannel.processOutputMessageWithHandlers(log, outputMessage)
-			if err != nil {
-				return fmt.Errorf("processing output message with handlers: %w", err)
-			}
-
-			dataChannel.ExpectedSequenceNumber++
-			dataChannel.RemoveDataFromIncomingMessageBuffer(bufferedStreamMessage.SequenceNumber)
-		} else {
-			break
+			// Add message to buffer for future processing
+			dataChannel.AddDataToIncomingMessageBuffer(streamingMessage)
 		}
 	}
 
+	return nil
+}
+
+// HandleOutputMessage handles incoming stream data message by processing the payload and updating expectedSequenceNumber.
+func (dataChannel *DataChannel) HandleOutputMessage(
+	ctx context.Context,
+	log *slog.Logger,
+	outputMessage message.ClientMessage,
+	rawMessage []byte,
+) error {
+	// Handle unexpected sequence messages first
+	if outputMessage.SequenceNumber != dataChannel.ExpectedSequenceNumber {
+		return dataChannel.handleUnexpectedSequenceMessage(log, outputMessage, rawMessage)
+	}
+
+	var err error
+
+	// Process the message based on its payload type
+	//nolint:exhaustive
+	switch message.PayloadType(outputMessage.PayloadType) {
+	case message.HandshakeRequestPayloadType:
+		err = dataChannel.handleHandshakeRequestOutputMessage(ctx, log, outputMessage)
+	case message.HandshakeCompletePayloadType:
+		err = dataChannel.handleHandshakeCompleteOutputMessage(log, outputMessage)
+	case message.EncChallengeRequest:
+		err = dataChannel.handleEncryptionChallengeRequestOutputMessage(log, outputMessage)
+	default:
+		err = dataChannel.handleDefaultOutputMessage(log, outputMessage)
+	}
+
 	if err != nil {
-		return fmt.Errorf("processing incoming message buffer items: %w", err)
+		return err
+	}
+
+	// Increment the expected sequence number after successful processing
+	dataChannel.ExpectedSequenceNumber++
+
+	// Process any buffered messages that are now in sequence
+	return dataChannel.ProcessIncomingMessageBufferItems(log, outputMessage)
+}
+
+// processBufferedMessage processes a single buffered message and updates the expected sequence number.
+func (dataChannel *DataChannel) processBufferedMessage(
+	log *slog.Logger,
+	outputMessage message.ClientMessage,
+	bufferedStreamMessage StreamingMessage,
+) error {
+	log.Debug("Process stream data message from IncomingMessageBuffer", "sequenceNumber", bufferedStreamMessage.SequenceNumber)
+
+	if err := outputMessage.DeserializeClientMessage(log, bufferedStreamMessage.Content); err != nil {
+		log.Error("Cannot deserialize raw message", "error", err)
+
+		return fmt.Errorf("deserializing raw message: %w", err)
+	}
+
+	// Decrypt if encryption is enabled and payload type is output
+	if dataChannel.encryptionEnabled &&
+		(outputMessage.PayloadType == uint32(message.Output) ||
+			outputMessage.PayloadType == uint32(message.StdErr) ||
+			outputMessage.PayloadType == uint32(message.ExitCode)) {
+		var err error
+
+		outputMessage.Payload, err = dataChannel.encryption.Decrypt(log, outputMessage.Payload)
+		if err != nil {
+			log.Error("Unable to decrypt buffered message data payload", "messageType", outputMessage.MessageType, "payloadType", outputMessage.PayloadType, "error", err)
+
+			return fmt.Errorf("decrypting buffered message data payload: %w", err)
+		}
+	}
+
+	_, err := dataChannel.processOutputMessageWithHandlers(log, outputMessage)
+	if err != nil {
+		return fmt.Errorf("processing output message with handlers: %w", err)
+	}
+
+	dataChannel.ExpectedSequenceNumber++
+	dataChannel.RemoveDataFromIncomingMessageBuffer(bufferedStreamMessage.SequenceNumber)
+
+	return nil
+}
+
+// ProcessIncomingMessageBufferItems checks if new expected sequence stream data is present in IncomingMessageBuffer.
+// If so, processes it and increments the expected sequence number.
+// Repeats until expected sequence stream data is not found in IncomingMessageBuffer.
+func (dataChannel *DataChannel) ProcessIncomingMessageBufferItems(
+	log *slog.Logger,
+	outputMessage message.ClientMessage,
+) error {
+	for {
+		// Check if there's a message with the expected sequence number
+		bufferedStreamMessage, exists := dataChannel.IncomingMessageBuffer.Messages[dataChannel.ExpectedSequenceNumber]
+		if !exists || bufferedStreamMessage.Content == nil {
+			// No more messages to process
+			break
+		}
+
+		// Process the buffered message
+		if err := dataChannel.processBufferedMessage(log, outputMessage, bufferedStreamMessage); err != nil {
+			return fmt.Errorf("processing incoming message buffer items: %w", err)
+		}
 	}
 
 	return nil

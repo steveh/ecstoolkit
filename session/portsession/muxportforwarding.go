@@ -310,6 +310,41 @@ func (p *MuxPortForwarding) transferDataToServer(log *slog.Logger, ctx context.C
 	}
 }
 
+// setupUnixListener sets up a Unix socket listener.
+func (p *MuxPortForwarding) setupUnixListener() (net.Listener, string, error) {
+	listener, err := net.Listen(p.portParameters.LocalConnectionType, p.portParameters.LocalUnixSocket)
+	if err != nil {
+		return nil, "", fmt.Errorf("listening on unix socket: %w", err)
+	}
+
+	displayMsg := fmt.Sprintf("Unix socket %s opened for sessionId %s.", p.portParameters.LocalUnixSocket, p.sessionId)
+
+	return listener, displayMsg, nil
+}
+
+// setupTCPListener sets up a TCP listener.
+func (p *MuxPortForwarding) setupTCPListener() (net.Listener, string, error) {
+	localPortNumber := p.portParameters.LocalPortNumber
+	if p.portParameters.LocalPortNumber == "" {
+		localPortNumber = "0"
+	}
+
+	listener, err := net.Listen("tcp", "localhost:"+localPortNumber)
+	if err != nil {
+		return nil, "", fmt.Errorf("listening on TCP port: %w", err)
+	}
+
+	tcpAddr, ok := listener.Addr().(*net.TCPAddr)
+	if !ok {
+		return nil, "", errors.New("failed to type assert listener.Addr() to *net.TCPAddr")
+	}
+
+	p.portParameters.LocalPortNumber = strconv.Itoa(tcpAddr.Port)
+	displayMsg := fmt.Sprintf("Port %s opened for sessionId %s.", p.portParameters.LocalPortNumber, p.sessionId)
+
+	return listener, displayMsg, nil
+}
+
 // handleClientConnections sets up network server on local ssm port to accept connections from clients (browser/terminal).
 func (p *MuxPortForwarding) handleClientConnections(log *slog.Logger, ctx context.Context) (err error) {
 	var (
@@ -318,28 +353,13 @@ func (p *MuxPortForwarding) handleClientConnections(log *slog.Logger, ctx contex
 	)
 
 	if p.portParameters.LocalConnectionType == "unix" {
-		if listener, err = net.Listen(p.portParameters.LocalConnectionType, p.portParameters.LocalUnixSocket); err != nil {
-			return fmt.Errorf("listening on unix socket: %w", err)
-		}
-
-		displayMsg = fmt.Sprintf("Unix socket %s opened for sessionId %s.", p.portParameters.LocalUnixSocket, p.sessionId)
+		listener, displayMsg, err = p.setupUnixListener()
 	} else {
-		localPortNumber := p.portParameters.LocalPortNumber
-		if p.portParameters.LocalPortNumber == "" {
-			localPortNumber = "0"
-		}
+		listener, displayMsg, err = p.setupTCPListener()
+	}
 
-		if listener, err = net.Listen("tcp", "localhost:"+localPortNumber); err != nil {
-			return fmt.Errorf("listening on TCP port: %w", err)
-		}
-
-		tcpAddr, ok := listener.Addr().(*net.TCPAddr)
-		if !ok {
-			return errors.New("failed to type assert listener.Addr() to *net.TCPAddr")
-		}
-
-		p.portParameters.LocalPortNumber = strconv.Itoa(tcpAddr.Port)
-		displayMsg = fmt.Sprintf("Port %s opened for sessionId %s.", p.portParameters.LocalPortNumber, p.sessionId)
+	if err != nil {
+		return err
 	}
 
 	defer func() {
