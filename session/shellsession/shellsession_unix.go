@@ -98,7 +98,7 @@ func (s *ShellSession) enableEchoAndInputBuffering() error {
 }
 
 // handleKeyboardInput handles input entered by customer on terminal.
-func (s *ShellSession) handleKeyboardInput(ctx context.Context, log *slog.Logger) (err error) {
+func (s *ShellSession) handleKeyboardInput(ctx context.Context, log *slog.Logger) error {
 	ctx, cancelFunc := context.WithCancel(ctx)
 	s.shutdown = cancelFunc
 
@@ -117,9 +117,11 @@ func (s *ShellSession) handleKeyboardInput(ctx context.Context, log *slog.Logger
 		stdinBytes := make([]byte, StdinBufferLimit)
 		reader := bufio.NewReader(os.Stdin)
 
-		for {
-			var stdinBytesLen int
+		var err error
 
+		var stdinBytesLen int
+
+		for {
 			if stdinBytesLen, err = reader.Read(stdinBytes); err != nil {
 				log.Error("Unable to read from Stdin", "error", err)
 

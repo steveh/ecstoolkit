@@ -573,7 +573,7 @@ func TestHandleOutputMessageForExitCodePayloadTypeWithError(t *testing.T) {
 	rawMessage := []byte("rawMessage")
 
 	err := dataChannel.HandleOutputMessage(context.TODO(), mockLogger, clientMessage, rawMessage)
-	assert.True(t, errors.Is(err, mockErr))
+	assert.ErrorIs(t, err, mockErr)
 }
 
 func TestHandleHandshakeRequestWithMessageDeserializeError(t *testing.T) {
@@ -695,11 +695,11 @@ func getClientMessage(sequenceNumber int64, messageType string, payloadType uint
 	return clientMessage
 }
 
-func getClientAndStreamingMessageList(size int) (serializedClientMessage [][]byte, streamingMessages []StreamingMessage) {
+func getClientAndStreamingMessageList(size int) ([][]byte, []StreamingMessage) {
 	var payload string
 
-	streamingMessages = make([]StreamingMessage, size)
-	serializedClientMessage = make([][]byte, size)
+	streamingMessages := make([]StreamingMessage, size)
+	serializedClientMessage := make([][]byte, size)
 
 	for i := range size {
 		payload = "testPayload" + strconv.Itoa(i)
@@ -713,5 +713,5 @@ func getClientAndStreamingMessageList(size int) (serializedClientMessage [][]byt
 		}
 	}
 
-	return
+	return serializedClientMessage, streamingMessages
 }

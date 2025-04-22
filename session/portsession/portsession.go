@@ -121,7 +121,8 @@ func (s *PortSession) Stop(log *slog.Logger) error {
 }
 
 // StartSession redirects inputStream/outputStream data to datachannel.
-func (s *PortSession) SetSessionHandlers(ctx context.Context, log *slog.Logger) (err error) {
+func (s *PortSession) SetSessionHandlers(ctx context.Context, log *slog.Logger) error {
+	var err error
 	if err = s.portSessionType.InitializeStreams(ctx, log, s.DataChannel.GetAgentVersion()); err != nil {
 		return fmt.Errorf("initializing streams: %w", err)
 	}
@@ -134,7 +135,7 @@ func (s *PortSession) SetSessionHandlers(ctx context.Context, log *slog.Logger) 
 }
 
 // ProcessStreamMessagePayload writes messages received on datachannel to stdout.
-func (s *PortSession) ProcessStreamMessagePayload(log *slog.Logger, outputMessage message.ClientMessage) (isHandlerReady bool, err error) {
+func (s *PortSession) ProcessStreamMessagePayload(log *slog.Logger, outputMessage message.ClientMessage) (bool, error) {
 	if s.portSessionType.IsStreamNotSet() {
 		log.Debug("Waiting for streams to be established before processing incoming messages")
 

@@ -38,7 +38,7 @@ func (retryer *RepeatableExponentialRetryer) NextSleepTime(attempt int) time.Dur
 }
 
 // Call calls the operation and does exponential retry if error happens.
-func (retryer *RepeatableExponentialRetryer) Call() (err error) {
+func (retryer *RepeatableExponentialRetryer) Call() error {
 	attempt := 0
 	failedAttemptsSoFar := 0
 

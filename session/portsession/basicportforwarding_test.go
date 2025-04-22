@@ -74,7 +74,7 @@ func TestSetSessionHandlers(t *testing.T) {
 	}()
 
 	go func() {
-		acceptConnection = func(log *slog.Logger, listener net.Listener) (tcpConn net.Conn, err error) {
+		acceptConnection = func(log *slog.Logger, listener net.Listener) (net.Conn, error) {
 			return in, nil
 		}
 
@@ -97,7 +97,7 @@ func TestSetSessionHandlers(t *testing.T) {
 }
 
 func TestStartSessionTCPLocalPortFromDocument(t *testing.T) {
-	acceptConnection = func(log *slog.Logger, listener net.Listener) (tcpConn net.Conn, err error) {
+	acceptConnection = func(log *slog.Logger, listener net.Listener) (net.Conn, error) {
 		return nil, errors.New("accept failed")
 	}
 
@@ -118,7 +118,7 @@ func TestStartSessionTCPLocalPortFromDocument(t *testing.T) {
 
 func TestStartSessionTCPAcceptFailed(t *testing.T) {
 	connErr := errors.New("accept failed")
-	acceptConnection = func(log *slog.Logger, listener net.Listener) (tcpConn net.Conn, err error) {
+	acceptConnection = func(log *slog.Logger, listener net.Listener) (net.Conn, error) {
 		return nil, connErr
 	}
 	portSession := PortSession{
@@ -129,12 +129,12 @@ func TestStartSessionTCPAcceptFailed(t *testing.T) {
 			portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding"},
 		},
 	}
-	assert.True(t, errors.Is(portSession.SetSessionHandlers(context.TODO(), mockLog), connErr))
+	assert.ErrorIs(t, portSession.SetSessionHandlers(context.TODO(), mockLog), connErr)
 }
 
 func TestStartSessionTCPConnectFailed(t *testing.T) {
 	listenerError := errors.New("TCP connection failed")
-	getNewListener = func(listenerType string, listenerAddress string) (listener net.Listener, err error) {
+	getNewListener = func(listenerType string, listenerAddress string) (net.Listener, error) {
 		return nil, listenerError
 	}
 	portSession := PortSession{
@@ -145,5 +145,5 @@ func TestStartSessionTCPConnectFailed(t *testing.T) {
 			portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding"},
 		},
 	}
-	assert.True(t, errors.Is(portSession.SetSessionHandlers(context.TODO(), mockLog), listenerError))
+	assert.ErrorIs(t, portSession.SetSessionHandlers(context.TODO(), mockLog), listenerError)
 }

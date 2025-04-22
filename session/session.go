@@ -101,13 +101,13 @@ var handleStreamMessageResendTimeout = func(ctx context.Context, session *Sessio
 }
 
 // Execute create data channel and start the session.
-func (s *Session) Execute(ctx context.Context, log *slog.Logger) (err error) {
+func (s *Session) Execute(ctx context.Context, log *slog.Logger) error {
 	log.Debug("Starting session", "sessionId", s.SessionId)
 
 	// sets the display mode
 	s.DisplayMode = sessionutil.NewDisplayMode(log)
 
-	if err = s.OpenDataChannel(ctx, log); err != nil {
+	if err := s.OpenDataChannel(ctx, log); err != nil {
 		log.Error("Error opening data channel", "error", err)
 
 		return err
@@ -120,16 +120,16 @@ func (s *Session) Execute(ctx context.Context, log *slog.Logger) (err error) {
 		log.Error("Unable to set SessionType", "sessionId", s.SessionId)
 
 		return errors.New("unable to determine SessionType")
-	} else {
-		s.SessionType = s.DataChannel.GetSessionType()
-		s.SessionProperties = s.DataChannel.GetSessionProperties()
-
-		if err = setSessionHandlersWithSessionType(ctx, s, log); err != nil {
-			log.Error("Session ending with error", "error", err)
-
-			return err
-		}
 	}
 
-	return err
+	s.SessionType = s.DataChannel.GetSessionType()
+	s.SessionProperties = s.DataChannel.GetSessionProperties()
+
+	if err := setSessionHandlersWithSessionType(ctx, s, log); err != nil {
+		log.Error("Session ending with error", "error", err)
+
+		return err
+	}
+
+	return nil
 }

@@ -47,7 +47,7 @@ type ShellSession struct {
 
 var _ session.ISessionPlugin = (*ShellSession)(nil)
 
-var GetTerminalSizeCall = func(fd int) (width int, height int, err error) {
+var GetTerminalSizeCall = func(fd int) (int, int, error) {
 	return term.GetSize(fd)
 }
 
@@ -138,7 +138,7 @@ func (s *ShellSession) handleTerminalResize(log *slog.Logger) {
 }
 
 // ProcessStreamMessagePayload prints payload received on datachannel to console.
-func (s *ShellSession) ProcessStreamMessagePayload(log *slog.Logger, outputMessage message.ClientMessage) (isHandlerReady bool, err error) {
+func (s *ShellSession) ProcessStreamMessagePayload(log *slog.Logger, outputMessage message.ClientMessage) (bool, error) {
 	s.DisplayMode.DisplayMessage(log, outputMessage)
 
 	return true, nil

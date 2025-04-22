@@ -40,7 +40,7 @@ type StandardStreamForwarding struct {
 var _ IPortSession = (*StandardStreamForwarding)(nil)
 
 // IsStreamNotSet checks if streams are not set.
-func (p *StandardStreamForwarding) IsStreamNotSet() (status bool) {
+func (p *StandardStreamForwarding) IsStreamNotSet() bool {
 	return p.inputStream == nil || p.outputStream == nil
 }
 
@@ -64,15 +64,15 @@ func (p *StandardStreamForwarding) Stop(log *slog.Logger) error {
 }
 
 // InitializeStreams initializes the streams with its file descriptors.
-func (p *StandardStreamForwarding) InitializeStreams(_ context.Context, log *slog.Logger, agentVersion string) (err error) {
+func (p *StandardStreamForwarding) InitializeStreams(_ context.Context, log *slog.Logger, agentVersion string) error {
 	p.inputStream = os.Stdin
 	p.outputStream = os.Stdout
 
-	return
+	return nil
 }
 
 // ReadStream reads data from the input stream.
-func (p *StandardStreamForwarding) ReadStream(_ context.Context, log *slog.Logger) (err error) {
+func (p *StandardStreamForwarding) ReadStream(_ context.Context, log *slog.Logger) error {
 	msg := make([]byte, config.StreamDataPayloadSize)
 
 	for {

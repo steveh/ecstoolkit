@@ -21,23 +21,23 @@ import (
 )
 
 // DoesAgentSupportTCPMultiplexing returns true if given agentVersion supports TCP multiplexing in port plugin, false otherwise.
-func DoesAgentSupportTCPMultiplexing(log *slog.Logger, agentVersion string) (supported bool) {
+func DoesAgentSupportTCPMultiplexing(log *slog.Logger, agentVersion string) bool {
 	return isAgentVersionGreaterThanSupportedVersion(log, agentVersion, config.TCPMultiplexingSupportedAfterThisAgentVersion)
 }
 
 // DoesAgentSupportDisableSmuxKeepAlive returns true if given agentVersion disables smux KeepAlive in TCP multiplexing in port plugin, false otherwise.
-func DoesAgentSupportDisableSmuxKeepAlive(log *slog.Logger, agentVersion string) (supported bool) {
+func DoesAgentSupportDisableSmuxKeepAlive(log *slog.Logger, agentVersion string) bool {
 	return isAgentVersionGreaterThanSupportedVersion(log, agentVersion, config.TCPMultiplexingWithSmuxKeepAliveDisabledAfterThisAgentVersion)
 }
 
 // DoesAgentSupportTerminateSessionFlag returns true if given agentVersion supports TerminateSession flag, false otherwise.
-func DoesAgentSupportTerminateSessionFlag(log *slog.Logger, agentVersion string) (supported bool) {
+func DoesAgentSupportTerminateSessionFlag(log *slog.Logger, agentVersion string) bool {
 	return isAgentVersionGreaterThanSupportedVersion(log, agentVersion, config.TerminateSessionFlagSupportedAfterThisAgentVersion)
 }
 
 // isAgentVersionGreaterThanSupportedVersion returns true if agentVersion is greater than supportedVersion,
 // false in case of any error and agentVersion is equalTo or less than supportedVersion.
-func isAgentVersionGreaterThanSupportedVersion(log *slog.Logger, agentVersionString string, supportedVersionString string) (supported bool) {
+func isAgentVersionGreaterThanSupportedVersion(log *slog.Logger, agentVersionString string, supportedVersionString string) bool {
 	var (
 		supportedVersion version
 		agentVersion     version
@@ -48,24 +48,24 @@ func isAgentVersionGreaterThanSupportedVersion(log *slog.Logger, agentVersionStr
 	if supportedVersion, err = NewVersion(supportedVersionString); err != nil {
 		log.Warn("Supported version initialization failed", "error", err)
 
-		return supported
+		return false
 	}
 
 	if agentVersion, err = NewVersion(agentVersionString); err != nil {
 		log.Warn("Agent version initialization failed", "error", err)
 
-		return supported
+		return false
 	}
 
 	if compareResult, err = agentVersion.compare(supportedVersion); err != nil {
 		log.Warn("Version comparison failed", "error", err)
 
-		return supported
+		return false
 	}
 
 	if compareResult == 1 {
-		supported = true
+		return true
 	}
 
-	return supported
+	return false
 }

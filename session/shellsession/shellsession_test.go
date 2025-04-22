@@ -150,7 +150,7 @@ func TestTerminalResizeWhenSessionSizeDataIsNotEqualToActualSize(t *testing.T) {
 		Session:  session,
 		SizeData: sizeData,
 	}
-	GetTerminalSizeCall = func(fd int) (width int, height int, err error) {
+	GetTerminalSizeCall = func(fd int) (int, int, error) {
 		return 123, 123, nil
 	}
 

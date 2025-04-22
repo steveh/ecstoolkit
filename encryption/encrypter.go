@@ -73,18 +73,22 @@ func (encrypter *Encrypter) generateEncryptionKey(ctx context.Context, log *slog
 }
 
 // GetEncryptedDataKey returns the cipherText that was pulled from KMS.
-func (encrypter *Encrypter) GetEncryptedDataKey() (ciptherTextBlob []byte) {
+func (encrypter *Encrypter) GetEncryptedDataKey() []byte {
 	return encrypter.cipherTextKey
 }
 
 // GetKMSKeyId gets the KMS key id that is used to generate the encryption key.
-func (encrypter *Encrypter) GetKMSKeyId() (kmsKey string) {
+func (encrypter *Encrypter) GetKMSKeyId() string {
 	return encrypter.kmsKeyId
 }
 
 // getAEAD gets AEAD which is a GCM cipher mode providing authenticated encryption with associated data.
-func getAEAD(plainTextKey []byte) (aesgcm cipher.AEAD, err error) {
+func getAEAD(plainTextKey []byte) (cipher.AEAD, error) {
 	var block cipher.Block
+
+	var aesgcm cipher.AEAD
+
+	var err error
 
 	if block, err = aes.NewCipher(plainTextKey); err != nil {
 		return nil, fmt.Errorf("error creating NewCipher, %w", err)
@@ -98,22 +102,20 @@ func getAEAD(plainTextKey []byte) (aesgcm cipher.AEAD, err error) {
 }
 
 // Encrypt encrypts a byte slice and returns the encrypted slice.
-func (encrypter *Encrypter) Encrypt(log *slog.Logger, plainText []byte) (cipherText []byte, err error) {
+func (encrypter *Encrypter) Encrypt(log *slog.Logger, plainText []byte) ([]byte, error) {
 	var aesgcm cipher.AEAD
 
-	if aesgcm, err = getAEAD(encrypter.encryptionKey); err != nil {
-		err = fmt.Errorf("%w", err)
+	var err error
 
-		return
+	if aesgcm, err = getAEAD(encrypter.encryptionKey); err != nil {
+		return nil, fmt.Errorf("%w", err)
 	}
 
-	cipherText = make([]byte, nonceSize+len(plainText))
+	cipherText := make([]byte, nonceSize+len(plainText))
 
 	nonce := make([]byte, nonceSize)
 	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
-		err = fmt.Errorf("error when generating nonce for encryption, %w", err)
-
-		return
+		return nil, fmt.Errorf("error when generating nonce for encryption, %w", err)
 	}
 
 	// Encrypt plain text using given key and newly generated nonce
@@ -127,13 +129,13 @@ func (encrypter *Encrypter) Encrypt(log *slog.Logger, plainText []byte) (cipherT
 }
 
 // Decrypt decrypts a byte slice and returns the decrypted slice.
-func (encrypter *Encrypter) Decrypt(log *slog.Logger, cipherText []byte) (plainText []byte, err error) {
+func (encrypter *Encrypter) Decrypt(log *slog.Logger, cipherText []byte) ([]byte, error) {
 	var aesgcm cipher.AEAD
 
-	if aesgcm, err = getAEAD(encrypter.decryptionKey); err != nil {
-		err = fmt.Errorf("%w", err)
+	var err error
 
-		return
+	if aesgcm, err = getAEAD(encrypter.decryptionKey); err != nil {
+		return nil, fmt.Errorf("%w", err)
 	}
 
 	// Pull the nonce out of the cipherText
@@ -141,10 +143,9 @@ func (encrypter *Encrypter) Decrypt(log *slog.Logger, cipherText []byte) (plainT
 	cipherTextWithoutNonce := cipherText[nonceSize:]
 
 	// Decrypt just the actual cipherText using nonce extracted above
-	if plainText, err = aesgcm.Open(nil, nonce, cipherTextWithoutNonce, nil); err != nil {
-		err = fmt.Errorf("error decrypting encrypted test, %w", err)
-
-		return
+	plainText, err := aesgcm.Open(nil, nonce, cipherTextWithoutNonce, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error decrypting encrypted test, %w", err)
 	}
 
 	return plainText, nil

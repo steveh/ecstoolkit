@@ -17,7 +17,6 @@ package message
 import (
 	"crypto/sha256"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -188,7 +187,7 @@ func TestPutString(t *testing.T) {
 				assert.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
 				expectedErr, ok := tc.expected.(error)
 				assert.True(t, ok, "%s:%s expected value is not an error", t.Name(), tc.name)
-				assert.True(t, errors.Is(err, expectedErr), "%s:%s does not match the expected error", t.Name(), tc.name)
+				assert.ErrorIs(t, err, expectedErr, "%s:%s does not match the expected error", t.Name(), tc.name)
 			default:
 				t.Fatal("Test expectation was not correctly set.")
 			}
@@ -259,7 +258,7 @@ func TestPutBytes(t *testing.T) {
 				assert.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
 				expectedErr, ok := tc.expected.(error)
 				assert.True(t, ok, "%s:%s expected value is not an error", t.Name(), tc.name)
-				assert.True(t, errors.Is(err, expectedErr), "%s:%s does not match the expected error", t.Name(), tc.name)
+				assert.ErrorIs(t, err, expectedErr, "%s:%s does not match the expected error", t.Name(), tc.name)
 			default:
 				t.Fatal("Test expectation was not correctly set.")
 			}
@@ -382,7 +381,7 @@ func TestPutLong(t *testing.T) {
 				assert.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
 				expectedErr, ok := tc.expected.(error)
 				assert.True(t, ok, "%s:%s expected value is not an error", t.Name(), tc.name)
-				assert.True(t, errors.Is(err, expectedErr), "%s:%s does not match the expected error", t.Name(), tc.name)
+				assert.ErrorIs(t, err, expectedErr, "%s:%s does not match the expected error", t.Name(), tc.name)
 			default:
 				t.Fatal("Test expectation was not correctly set.")
 			}
@@ -471,7 +470,7 @@ func TestPutInteger(t *testing.T) {
 				assert.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
 				expectedErr, ok := tc.expected.(error)
 				assert.True(t, ok, "%s:%s expected value is not an error", t.Name(), tc.name)
-				assert.True(t, errors.Is(err, expectedErr), "%s:%s does not match the expected error", t.Name(), tc.name)
+				assert.ErrorIs(t, err, expectedErr, "%s:%s does not match the expected error", t.Name(), tc.name)
 			default:
 				t.Fatal("Test expectation was not correctly set.")
 			}
@@ -539,7 +538,7 @@ func TestGetString(t *testing.T) {
 				assert.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
 				expectedErr, ok := tc.expected.(error)
 				assert.True(t, ok, "%s:%s expected value is not an error", t.Name(), tc.name)
-				assert.True(t, errors.Is(err, expectedErr), "%s:%s does not match the expected error", t.Name(), tc.name)
+				assert.ErrorIs(t, err, expectedErr, "%s:%s does not match the expected error", t.Name(), tc.name)
 			default:
 				t.Fatal("Test expectation was not correctly set.")
 			}
@@ -605,7 +604,7 @@ func TestGetBytes(t *testing.T) {
 				assert.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
 				expectedErr, ok := tc.expected.(error)
 				assert.True(t, ok, "%s:%s expected value is not an error", t.Name(), tc.name)
-				assert.True(t, errors.Is(err, expectedErr), "%s:%s does not match the expected error", t.Name(), tc.name)
+				assert.ErrorIs(t, err, expectedErr, "%s:%s does not match the expected error", t.Name(), tc.name)
 			default:
 				t.Fatal("Test expectation was not correctly set.")
 			}
@@ -694,7 +693,7 @@ func TestGetLong(t *testing.T) {
 				assert.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
 				expectedErr, ok := tc.expected.(error)
 				assert.True(t, ok, "%s:%s expected value is not an error", t.Name(), tc.name)
-				assert.True(t, errors.Is(err, expectedErr), "%s:%s does not match the expected error", t.Name(), tc.name)
+				assert.ErrorIs(t, err, expectedErr, "%s:%s does not match the expected error", t.Name(), tc.name)
 			default:
 				t.Fatal("Test expectation was not correctly set.")
 			}
@@ -905,7 +904,7 @@ func TestPutUuid(t *testing.T) {
 				assert.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
 				expectedErr, ok := tc.expected.(error)
 				assert.True(t, ok, "%s:%s expected value is not an error", t.Name(), tc.name)
-				assert.True(t, errors.Is(err, expectedErr), "%s:%s does not match the expected error", t.Name(), tc.name)
+				assert.ErrorIs(t, err, expectedErr, "%s:%s does not match the expected error", t.Name(), tc.name)
 			default:
 				t.Fatal("Test expectation was not correctly set.")
 			}
