@@ -4,10 +4,12 @@ linters:
   disable:
     - cyclop
     - depguard
+    - dupl
     - exhaustruct
     - funlen
     - gocognit
     - lll
+    - tagliatelle
     - varnamelen
   exclusions:
     generated: lax
