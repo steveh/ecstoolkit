@@ -12,7 +12,7 @@
 // permissions and limitations under the License.
 
 // retry implements back off retry strategy for reconnect web socket connection.
-package retry
+package retry_test
 
 import (
 	"errors"
@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/steveh/ecstoolkit/config"
+	"github.com/steveh/ecstoolkit/retry"
 	"github.com/stretchr/testify/require"
 )
 
@@ -28,7 +29,7 @@ var callableFunc = func() error {
 }
 
 func TestRepeatableExponentialRetryerRetriesForGivenNumberOfMaxRetries(t *testing.T) {
-	retryer := RepeatableExponentialRetryer{
+	retryer := retry.RepeatableExponentialRetryer{
 		callableFunc,
 		config.RetryBase,
 		rand.Intn(config.DataChannelRetryInitialDelayMillis) + config.DataChannelRetryInitialDelayMillis, //nolint:gosec

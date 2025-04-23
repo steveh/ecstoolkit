@@ -12,7 +12,7 @@
 // permissions and limitations under the License.
 
 // message package defines data channel messages structure.
-package message
+package message_test
 
 import (
 	"crypto/sha256"
@@ -26,6 +26,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/steveh/ecstoolkit/log"
+	"github.com/steveh/ecstoolkit/message"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -55,7 +56,7 @@ var (
 	mockLogger                 = log.NewMockLog()
 	defaultByteBufferGenerator = get8ByteBuffer
 	messageID                  = "dd01e56b-ff48-483e-a508-b5f073f31b16"
-	messageType                = InputStreamMessage
+	messageType                = message.InputStreamMessage
 	schemaVersion              = uint32(1)
 	createdDate                = uint64(1503434274948)
 	destinationID              = "destination-id"
@@ -67,7 +68,7 @@ var (
 			"AcknowledgedMessageType": "%s",
 			"AcknowledgedMessageId":"%s"
 		}`,
-		AcknowledgeMessage,
+		message.AcknowledgeMessage,
 		messageID))
 	channelClosedPayload = []byte(fmt.Sprintf(
 		`{
@@ -78,7 +79,7 @@ var (
 			"SchemaVersion": %s,
 			"Output": "%s"
 		}`,
-		ChannelClosedMessage,
+		message.ChannelClosedMessage,
 		messageID,
 		strconv.FormatUint(createdDate, 10),
 		sessionID,
@@ -154,7 +155,7 @@ func TestPutString(t *testing.T) {
 			-1,
 			7,
 			"hello",
-			ErrOffsetOutside,
+			message.ErrOffsetOutside,
 		},
 		{
 			"Data too long for buffer",
@@ -162,8 +163,8 @@ func TestPutString(t *testing.T) {
 			defaultByteBufferGenerator(),
 			0,
 			7,
-			"longinputstring",
-			ErrNotEnoughSpace,
+			"longinPutString",
+			message.ErrNotEnoughSpace,
 		},
 	}
 	for _, tc := range testCases {
@@ -173,7 +174,7 @@ func TestPutString(t *testing.T) {
 			strInput, ok := tc.input.(string)
 			assert.True(t, ok, "Type assertion failed in %s:%s", t.Name(), tc.name)
 
-			err := putString(
+			err := message.PutString(
 				mockLogger,
 				tc.byteArray,
 				tc.offsetStart,
@@ -225,7 +226,7 @@ func TestPutBytes(t *testing.T) {
 			-1,
 			7,
 			[]byte{0x22, 0x55, 0x00, 0x22},
-			ErrOffsetOutsideByteArray,
+			message.ErrOffsetOutsideByteArray,
 		},
 		{
 			"Data too long for buffer",
@@ -234,7 +235,7 @@ func TestPutBytes(t *testing.T) {
 			0,
 			2,
 			[]byte{0x22, 0x55, 0x00, 0x22},
-			ErrNotEnoughSpace,
+			message.ErrNotEnoughSpace,
 		},
 	}
 	for _, tc := range testCases {
@@ -244,7 +245,7 @@ func TestPutBytes(t *testing.T) {
 			byteInput, ok := tc.input.([]byte)
 			assert.True(t, ok, "Type assertion failed in %s:%s", t.Name(), tc.name)
 
-			err := putBytes(
+			err := message.PutBytes(
 				mockLogger,
 				tc.byteArray,
 				tc.offsetStart,
@@ -287,7 +288,7 @@ func TestLongToBytes(t *testing.T) {
 	for _, tc := range testcases {
 		testString := "Running test case: " + tc.name
 		t.Run(testString, func(t *testing.T) {
-			bytes, err := longToBytes(mockLogger, tc.input)
+			bytes, err := message.LongToBytes(mockLogger, tc.input)
 
 			switch tc.expectation {
 			case SUCCESS:
@@ -339,7 +340,7 @@ func TestPutLong(t *testing.T) {
 			5,
 			0,
 			50,
-			ErrOffsetOutside,
+			message.ErrOffsetOutside,
 		},
 		{
 			"Negative offset",
@@ -348,7 +349,7 @@ func TestPutLong(t *testing.T) {
 			-1,
 			0,
 			5748,
-			ErrOffsetOutside,
+			message.ErrOffsetOutside,
 		},
 		{
 			"Offset out of bounds",
@@ -357,7 +358,7 @@ func TestPutLong(t *testing.T) {
 			10,
 			0,
 			938283,
-			ErrOffsetOutside,
+			message.ErrOffsetOutside,
 		},
 	}
 	for _, tc := range testCases {
@@ -368,7 +369,7 @@ func TestPutLong(t *testing.T) {
 			assert.True(t, reflect.DeepEqual(tc.input, longInput), "Cast went wrong. Expected: %v, Got: %v", tc.input, longInput)
 			assert.True(t, ok, "Type assertion failed in %s:%s", t.Name(), tc.name)
 
-			err := putLong(
+			err := message.PutLong(
 				mockLogger,
 				tc.byteArray,
 				tc.offsetStart,
@@ -428,7 +429,7 @@ func TestPutInteger(t *testing.T) {
 			5,
 			0,
 			50,
-			ErrOffsetOutside,
+			message.ErrOffsetOutside,
 		},
 		{
 			"Negative offset",
@@ -437,7 +438,7 @@ func TestPutInteger(t *testing.T) {
 			-1,
 			0,
 			5748,
-			ErrOffsetOutside,
+			message.ErrOffsetOutside,
 		},
 		{
 			"Offset out of bounds",
@@ -446,7 +447,7 @@ func TestPutInteger(t *testing.T) {
 			10,
 			0,
 			938283,
-			ErrOffsetOutside,
+			message.ErrOffsetOutside,
 		},
 	}
 	for _, tc := range testCases {
@@ -457,7 +458,7 @@ func TestPutInteger(t *testing.T) {
 			assert.True(t, reflect.DeepEqual(tc.input, intInput), "Cast went wrong. Expected: %v, Got: %v", tc.input, intInput)
 			assert.True(t, ok, "Type assertion failed in %s:%s", t.Name(), tc.name)
 
-			err := putInteger(
+			err := message.PutInteger(
 				mockLogger,
 				tc.byteArray,
 				tc.offsetStart,
@@ -509,7 +510,7 @@ func TestGetString(t *testing.T) {
 			-1,
 			0,
 			nil,
-			ErrOffsetOutsideByteArrayNoPoint,
+			message.ErrOffsetOutsideByteArrayNoPoint,
 		},
 		{
 			"Offset out of bounds",
@@ -518,13 +519,13 @@ func TestGetString(t *testing.T) {
 			10,
 			2,
 			nil,
-			ErrOffsetOutsideByteArrayNoPoint,
+			message.ErrOffsetOutsideByteArrayNoPoint,
 		},
 	}
 	for _, tc := range testCases {
 		testString := "Running test case: " + tc.name
 		t.Run(testString, func(t *testing.T) {
-			strOut, err := getString(
+			strOut, err := message.GetString(
 				mockLogger,
 				tc.byteArray,
 				tc.offsetStart,
@@ -577,7 +578,7 @@ func TestGetBytes(t *testing.T) {
 			-1,
 			0,
 			nil,
-			ErrOffsetOutsideByteArray,
+			message.ErrOffsetOutsideByteArray,
 		},
 		{
 			"Offset out of bounds",
@@ -586,13 +587,13 @@ func TestGetBytes(t *testing.T) {
 			10,
 			2,
 			nil,
-			ErrOffsetOutsideByteArray,
+			message.ErrOffsetOutsideByteArray,
 		},
 	}
 	for _, tc := range testCases {
 		testString := "Running test case: " + tc.name
 		t.Run(testString, func(t *testing.T) {
-			byteOut, err := getBytes(
+			byteOut, err := message.GetBytes(
 				mockLogger,
 				tc.byteArray,
 				tc.offsetStart,
@@ -652,7 +653,7 @@ func TestGetLong(t *testing.T) {
 			1,
 			0,
 			nil,
-			ErrOffsetOutsideByteArray,
+			message.ErrOffsetOutsideByteArray,
 		},
 		{
 			"Negative offset",
@@ -661,7 +662,7 @@ func TestGetLong(t *testing.T) {
 			-1,
 			0,
 			nil,
-			ErrOffsetOutsideByteArray,
+			message.ErrOffsetOutsideByteArray,
 		},
 		{
 			"Offset out of bounds",
@@ -670,13 +671,13 @@ func TestGetLong(t *testing.T) {
 			10,
 			2,
 			nil,
-			ErrOffsetOutsideByteArray,
+			message.ErrOffsetOutsideByteArray,
 		},
 	}
 	for _, tc := range testCases {
 		testString := "Running test case: " + tc.name
 		t.Run(testString, func(t *testing.T) {
-			longOut, err := getLong(
+			longOut, err := message.GetLong(
 				mockLogger,
 				tc.byteArray,
 				tc.offsetStart)
@@ -707,7 +708,7 @@ func TestClientMessage_Validate(t *testing.T) {
 	u, err := uuid.Parse(messageID)
 	require.NoError(t, err)
 
-	clientMessage := ClientMessage{
+	clientMessage := message.ClientMessage{
 		SchemaVersion:  schemaVersion,
 		SequenceNumber: 1,
 		Flags:          2,
@@ -746,8 +747,8 @@ func TestClientMessage_ValidateStartPublicationMessage(t *testing.T) {
 	u, err := uuid.Parse(messageID)
 	require.NoError(t, err)
 
-	clientMessage := ClientMessage{
-		MessageType:    StartPublicationMessage,
+	clientMessage := message.ClientMessage{
+		MessageType:    message.StartPublicationMessage,
 		SchemaVersion:  schemaVersion,
 		CreatedDate:    createdDate,
 		SequenceNumber: 1,
@@ -764,22 +765,22 @@ func TestClientMessage_ValidateStartPublicationMessage(t *testing.T) {
 func TestClientMessage_DeserializeDataStreamAcknowledgeContent(t *testing.T) {
 	t.Logf("Starting test: %s", t.Name())
 	// ClientMessage is initialized with improperly formatted json data
-	testMessage := ClientMessage{
+	testMessage := message.ClientMessage{
 		Payload: payload,
 	}
 
 	ackMessage, err := testMessage.DeserializeDataStreamAcknowledgeContent(mockLogger)
-	assert.Equal(t, AcknowledgeContent{}, ackMessage)
+	assert.Equal(t, message.AcknowledgeContent{}, ackMessage)
 	require.Error(t, err, "An error was not thrown when one was expected.")
 
-	testMessage.MessageType = AcknowledgeMessage
+	testMessage.MessageType = message.AcknowledgeMessage
 	ackMessage2, err := testMessage.DeserializeDataStreamAcknowledgeContent(mockLogger)
-	assert.Equal(t, AcknowledgeContent{}, ackMessage2)
+	assert.Equal(t, message.AcknowledgeContent{}, ackMessage2)
 	require.Error(t, err, "An error was not thrown when one was expected.")
 
 	testMessage.Payload = ackMessagePayload
 	ackMessage3, err := testMessage.DeserializeDataStreamAcknowledgeContent(mockLogger)
-	assert.Equal(t, AcknowledgeMessage, ackMessage3.MessageType)
+	assert.Equal(t, message.AcknowledgeMessage, ackMessage3.MessageType)
 	assert.Equal(t, messageID, ackMessage3.MessageID)
 	require.NoError(t, err, "An error was thrown when one was not expected.")
 }
@@ -787,22 +788,22 @@ func TestClientMessage_DeserializeDataStreamAcknowledgeContent(t *testing.T) {
 func TestClientMessage_DeserializeChannelClosedMessage(t *testing.T) {
 	t.Logf("Starting test: %s", t.Name())
 	// ClientMessage is initialized with improperly formatted json data
-	testMessage := ClientMessage{
+	testMessage := message.ClientMessage{
 		Payload: payload,
 	}
 
 	closeMessage, err := testMessage.DeserializeChannelClosedMessage(mockLogger)
-	assert.Equal(t, ChannelClosed{}, closeMessage)
+	assert.Equal(t, message.ChannelClosed{}, closeMessage)
 	require.Error(t, err, "An error was not thrown when one was expected.")
 
-	testMessage.MessageType = ChannelClosedMessage
+	testMessage.MessageType = message.ChannelClosedMessage
 	closeMessage2, err := testMessage.DeserializeChannelClosedMessage(mockLogger)
-	assert.Equal(t, ChannelClosed{}, closeMessage2)
+	assert.Equal(t, message.ChannelClosed{}, closeMessage2)
 	require.Error(t, err, "An error was not thrown when one was expected.")
 
 	testMessage.Payload = channelClosedPayload
 	closeMessage3, err := testMessage.DeserializeChannelClosedMessage(mockLogger)
-	assert.Equal(t, ChannelClosedMessage, closeMessage3.MessageType)
+	assert.Equal(t, message.ChannelClosedMessage, closeMessage3.MessageType)
 	assert.Equal(t, messageID, closeMessage3.MessageID)
 	assert.Equal(t, strconv.FormatUint(createdDate, 10), closeMessage3.CreatedDate)
 	assert.Equal(t, int(schemaVersion), closeMessage3.SchemaVersion)
@@ -814,23 +815,23 @@ func TestClientMessage_DeserializeChannelClosedMessage(t *testing.T) {
 func TestClientMessage_DeserializeHandshakeRequest(t *testing.T) {
 	t.Logf("Starting test: %s", t.Name())
 	// ClientMessage is initialized with improperly formatted json data
-	testMessage := ClientMessage{
+	testMessage := message.ClientMessage{
 		Payload: payload,
 	}
 
 	handshakeReq, err := testMessage.DeserializeHandshakeRequest(mockLogger)
-	assert.Equal(t, HandshakeRequestPayload{}, handshakeReq)
+	assert.Equal(t, message.HandshakeRequestPayload{}, handshakeReq)
 	require.Error(t, err, "An error was not thrown when one was expected.")
 
-	testMessage.PayloadType = uint32(HandshakeRequestPayloadType)
+	testMessage.PayloadType = uint32(message.HandshakeRequestPayloadType)
 	handshakeReq2, err := testMessage.DeserializeHandshakeRequest(mockLogger)
-	assert.Equal(t, HandshakeRequestPayload{}, handshakeReq2)
+	assert.Equal(t, message.HandshakeRequestPayload{}, handshakeReq2)
 	require.Error(t, err, "An error was not thrown when one was expected.")
 
 	testMessage.Payload = handshakeReqPayload
 	handshakeReq3, err := testMessage.DeserializeHandshakeRequest(mockLogger)
 	assert.Equal(t, agentVersion, handshakeReq3.AgentVersion)
-	assert.Equal(t, ActionType(actionType), handshakeReq3.RequestedClientActions[0].ActionType)
+	assert.Equal(t, message.ActionType(actionType), handshakeReq3.RequestedClientActions[0].ActionType)
 	assert.JSONEq(t, sampleParameters, string(handshakeReq3.RequestedClientActions[0].ActionParameters))
 	require.NoError(t, err, "An error was thrown when one was not expected.")
 }
@@ -838,17 +839,17 @@ func TestClientMessage_DeserializeHandshakeRequest(t *testing.T) {
 func TestClientMessage_DeserializeHandshakeComplete(t *testing.T) {
 	t.Logf("Starting test: %s", t.Name())
 	// ClientMessage is initialized with improperly formatted json data
-	testMessage := ClientMessage{
+	testMessage := message.ClientMessage{
 		Payload: payload,
 	}
 
 	handshakeComplete, err := testMessage.DeserializeHandshakeComplete(mockLogger)
-	assert.Equal(t, HandshakeCompletePayload{}, handshakeComplete)
+	assert.Equal(t, message.HandshakeCompletePayload{}, handshakeComplete)
 	require.Error(t, err, "An error was not thrown when one was expected.")
 
-	testMessage.PayloadType = uint32(HandshakeCompletePayloadType)
+	testMessage.PayloadType = uint32(message.HandshakeCompletePayloadType)
 	handshakeComplete2, err := testMessage.DeserializeHandshakeComplete(mockLogger)
-	assert.Equal(t, HandshakeCompletePayload{}, handshakeComplete2)
+	assert.Equal(t, message.HandshakeCompletePayload{}, handshakeComplete2)
 	require.Error(t, err, "An error was not thrown when one was expected.")
 
 	testMessage.Payload = handshakeCompletePayload
@@ -883,7 +884,7 @@ func TestPutUuid(t *testing.T) {
 			uuidInput, err := uuid.Parse(strInput)
 			require.NoError(t, err)
 
-			err = putUUID(
+			err = message.PutUUID(
 				mockLogger,
 				tc.byteArray,
 				tc.offsetStart,
@@ -899,7 +900,7 @@ func TestPutUuid(t *testing.T) {
 				require.NoError(t, err)
 
 				expectedBuffer := get16ByteBuffer()
-				err = putUUID(mockLogger, expectedBuffer, 0, uuidOut)
+				err = message.PutUUID(mockLogger, expectedBuffer, 0, uuidOut)
 				require.NoError(t, err, "Error putting UUID")
 				assert.Equal(t, expectedBuffer, tc.byteArray)
 			case ERROR:
@@ -916,39 +917,39 @@ func TestPutUuid(t *testing.T) {
 
 func TestPutGetString(t *testing.T) {
 	input := []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x01}
-	err1 := putString(log.NewMockLog(), input, 1, 8, "hello")
+	err1 := message.PutString(log.NewMockLog(), input, 1, 8, "hello")
 	require.NoError(t, err1)
 
-	result, err := getString(log.NewMockLog(), input, 1, 8)
+	result, err := message.GetString(log.NewMockLog(), input, 1, 8)
 	require.NoError(t, err)
 	assert.Equal(t, "hello", result)
 }
 
 func TestPutGetInteger(t *testing.T) {
 	input := []byte{0x00, 0x00, 0x00, 0x00, 0xFF, 0x00}
-	err := putInteger(log.NewMockLog(), input, 1, 256)
+	err := message.PutInteger(log.NewMockLog(), input, 1, 256)
 	require.NoError(t, err)
 	assert.Equal(t, byte(0x00), input[1])
 	assert.Equal(t, byte(0x00), input[2])
 	assert.Equal(t, byte(0x01), input[3])
 	assert.Equal(t, byte(0x00), input[4])
 
-	result, err2 := getInteger(log.NewMockLog(), input, 1)
+	result, err2 := message.GetInteger(log.NewMockLog(), input, 1)
 	require.NoError(t, err2)
 	assert.Equal(t, int32(256), result)
 
-	result2, err3 := getInteger(log.NewMockLog(), input, 2)
+	result2, err3 := message.GetInteger(log.NewMockLog(), input, 2)
 	assert.Equal(t, int32(65536), result2)
 	require.NoError(t, err3)
 
-	result3, err4 := getInteger(mockLogger, input, 3)
+	result3, err4 := message.GetInteger(mockLogger, input, 3)
 	assert.Equal(t, int32(0), result3)
 	require.Error(t, err4)
 }
 
 func TestPutGetLong(t *testing.T) {
 	input := []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00}
-	err := putLong(log.NewMockLog(), input, 1, 4294967296) // 2 to the 32 + 1
+	err := message.PutLong(log.NewMockLog(), input, 1, 4294967296) // 2 to the 32 + 1
 	require.NoError(t, err)
 	assert.Equal(t, byte(0x00), input[1])
 	assert.Equal(t, byte(0x00), input[2])
@@ -959,14 +960,14 @@ func TestPutGetLong(t *testing.T) {
 	assert.Equal(t, byte(0x00), input[7])
 	assert.Equal(t, byte(0x00), input[8])
 
-	testLong, err2 := getLong(log.NewMockLog(), input, 1)
+	testLong, err2 := message.GetLong(log.NewMockLog(), input, 1)
 	require.NoError(t, err2)
 	assert.Equal(t, int64(4294967296), testLong)
 }
 
 func TestGetBytesFromInteger(t *testing.T) {
 	input := int32(256)
-	result, err := integerToBytes(log.NewMockLog(), input)
+	result, err := message.IntegerToBytes(log.NewMockLog(), input)
 	require.NoError(t, err)
 	assert.Equal(t, byte(0x00), result[0])
 	assert.Equal(t, byte(0x00), result[1])
@@ -978,7 +979,7 @@ func TestSerializeAndDeserializeClientMessage(t *testing.T) {
 	u, err := uuid.Parse(messageID)
 	require.NoError(t, err)
 
-	clientMessage := ClientMessage{
+	clientMessage := message.ClientMessage{
 		MessageType:    messageType,
 		SchemaVersion:  schemaVersion,
 		CreatedDate:    createdDate,
@@ -992,30 +993,30 @@ func TestSerializeAndDeserializeClientMessage(t *testing.T) {
 	serializedBytes, err := clientMessage.SerializeClientMessage(log.NewMockLog())
 	require.NoError(t, err, "Error serializing message")
 
-	seralizedMessageType := strings.TrimRight(string(serializedBytes[ClientMessageMessageTypeOffset:ClientMessageMessageTypeOffset+ClientMessageMessageTypeLength-1]), " ")
+	seralizedMessageType := strings.TrimRight(string(serializedBytes[message.ClientMessageMessageTypeOffset:message.ClientMessageMessageTypeOffset+message.ClientMessageMessageTypeLength-1]), " ")
 	assert.Equal(t, seralizedMessageType, messageType)
 
-	serializedVersion, err := getUInteger(log.NewMockLog(), serializedBytes, ClientMessageSchemaVersionOffset)
+	serializedVersion, err := message.GetUInteger(log.NewMockLog(), serializedBytes, message.ClientMessageSchemaVersionOffset)
 	require.NoError(t, err)
 	assert.Equal(t, serializedVersion, schemaVersion)
 
-	serializedCD, err := getULong(log.NewMockLog(), serializedBytes, ClientMessageCreatedDateOffset)
+	serializedCD, err := message.GetULong(log.NewMockLog(), serializedBytes, message.ClientMessageCreatedDateOffset)
 	require.NoError(t, err)
 	assert.Equal(t, serializedCD, createdDate)
 
-	serializedSequence, err := getLong(log.NewMockLog(), serializedBytes, ClientMessageSequenceNumberOffset)
+	serializedSequence, err := message.GetLong(log.NewMockLog(), serializedBytes, message.ClientMessageSequenceNumberOffset)
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), serializedSequence)
 
-	serializedFlags, err := getULong(log.NewMockLog(), serializedBytes, ClientMessageFlagsOffset)
+	serializedFlags, err := message.GetULong(log.NewMockLog(), serializedBytes, message.ClientMessageFlagsOffset)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(2), serializedFlags)
 
-	seralizedMessageID, err := getUUID(log.NewMockLog(), serializedBytes, ClientMessageMessageIDOffset)
+	seralizedMessageID, err := message.GetUUID(log.NewMockLog(), serializedBytes, message.ClientMessageMessageIDOffset)
 	require.NoError(t, err)
 	assert.Equal(t, seralizedMessageID.String(), messageID)
 
-	serializedDigest, err := getBytes(log.NewMockLog(), serializedBytes, ClientMessagePayloadDigestOffset, ClientMessagePayloadDigestLength)
+	serializedDigest, err := message.GetBytes(log.NewMockLog(), serializedBytes, message.ClientMessagePayloadDigestOffset, message.ClientMessagePayloadDigestLength)
 	require.NoError(t, err)
 
 	hasher := sha256.New()
@@ -1024,7 +1025,7 @@ func TestSerializeAndDeserializeClientMessage(t *testing.T) {
 	assert.True(t, reflect.DeepEqual(serializedDigest, expectedHash))
 
 	// Test DeserializeClientMessage
-	deserializedClientMessage := &ClientMessage{}
+	deserializedClientMessage := &message.ClientMessage{}
 	err = deserializedClientMessage.DeserializeClientMessage(log.NewMockLog(), serializedBytes)
 	require.NoError(t, err)
 	assert.Equal(t, messageType, deserializedClientMessage.MessageType)
@@ -1038,20 +1039,20 @@ func TestSerializeAndDeserializeClientMessage(t *testing.T) {
 
 func TestSerializeMessagePayloadNegative(t *testing.T) {
 	functionEx := func() {}
-	_, err := SerializeClientMessagePayload(mockLogger, functionEx)
+	_, err := message.SerializeClientMessagePayload(mockLogger, functionEx)
 	require.Error(t, err)
 }
 
 func TestSerializeAndDeserializeClientMessageWithAcknowledgeContent(t *testing.T) {
-	acknowledgeContent := AcknowledgeContent{
+	acknowledgeContent := message.AcknowledgeContent{
 		MessageType:         messageType,
 		MessageID:           messageID,
 		SequenceNumber:      sequenceNumber,
 		IsSequentialMessage: true,
 	}
 
-	serializedClientMsg, _ := SerializeClientMessageWithAcknowledgeContent(log.NewMockLog(), acknowledgeContent)
-	deserializedClientMsg := &ClientMessage{}
+	serializedClientMsg, _ := message.SerializeClientMessageWithAcknowledgeContent(log.NewMockLog(), acknowledgeContent)
+	deserializedClientMsg := &message.ClientMessage{}
 	err := deserializedClientMsg.DeserializeClientMessage(log.NewMockLog(), serializedClientMsg)
 	require.NoError(t, err)
 	deserializedAcknowledgeContent, err := deserializedClientMsg.DeserializeDataStreamAcknowledgeContent(log.NewMockLog())
@@ -1064,8 +1065,8 @@ func TestSerializeAndDeserializeClientMessageWithAcknowledgeContent(t *testing.T
 }
 
 func TestDeserializeAgentMessageWithChannelClosed(t *testing.T) {
-	channelClosed := ChannelClosed{
-		MessageType:   ChannelClosedMessage,
+	channelClosed := message.ChannelClosed{
+		MessageType:   message.ChannelClosedMessage,
 		MessageID:     messageID,
 		DestinationID: destinationID,
 		SessionID:     sessionID,
@@ -1081,8 +1082,8 @@ func TestDeserializeAgentMessageWithChannelClosed(t *testing.T) {
 		t.Fatalf("marshaling channel closed: %v", err)
 	}
 
-	agentMessage := ClientMessage{
-		MessageType:    ChannelClosedMessage,
+	agentMessage := message.ClientMessage{
+		MessageType:    message.ChannelClosedMessage,
 		SchemaVersion:  schemaVersion,
 		CreatedDate:    createdDate,
 		SequenceNumber: 1,
@@ -1094,7 +1095,7 @@ func TestDeserializeAgentMessageWithChannelClosed(t *testing.T) {
 	deserializedChannelClosed, err := agentMessage.DeserializeChannelClosedMessage(log.NewMockLog())
 
 	require.NoError(t, err)
-	assert.Equal(t, ChannelClosedMessage, deserializedChannelClosed.MessageType)
+	assert.Equal(t, message.ChannelClosedMessage, deserializedChannelClosed.MessageType)
 	assert.Equal(t, messageID, deserializedChannelClosed.MessageID)
 	assert.Equal(t, sessionID, deserializedChannelClosed.SessionID)
 	assert.Equal(t, "destination-id", deserializedChannelClosed.DestinationID)
