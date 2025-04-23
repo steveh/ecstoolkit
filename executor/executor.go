@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/url"
 	"strings"
 	"time"
@@ -18,6 +17,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/steveh/ecstoolkit/config"
 	"github.com/steveh/ecstoolkit/datachannel"
+	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/session"
 	"github.com/steveh/ecstoolkit/session/portsession"
 	"github.com/steveh/ecstoolkit/session/sessionutil"
@@ -43,11 +43,11 @@ type Executor struct {
 	ecsClient *ecs.Client
 	kmsClient *kms.Client
 	ssmClient *ssm.Client
-	logger    *slog.Logger
+	logger    log.T
 }
 
 // NewExecutor creates a new Executor instance with the provided AWS clients and logger.
-func NewExecutor(ecsClient *ecs.Client, kmsClient *kms.Client, ssmClient *ssm.Client, logger *slog.Logger) *Executor {
+func NewExecutor(ecsClient *ecs.Client, kmsClient *kms.Client, ssmClient *ssm.Client, logger log.T) *Executor {
 	return &Executor{
 		ecsClient: ecsClient,
 		kmsClient: kmsClient,
@@ -57,7 +57,7 @@ func NewExecutor(ecsClient *ecs.Client, kmsClient *kms.Client, ssmClient *ssm.Cl
 }
 
 // NewFromConfig creates a new Executor instance using the provided AWS configuration and logger.
-func NewFromConfig(cfg aws.Config, logger *slog.Logger) *Executor {
+func NewFromConfig(cfg aws.Config, logger log.T) *Executor {
 	ecsClient := ecs.NewFromConfig(cfg)
 	kmsClient := kms.NewFromConfig(cfg)
 	ssmClient := ssm.NewFromConfig(cfg)

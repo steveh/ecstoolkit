@@ -17,7 +17,6 @@ package session
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"sync"
 	"testing"
 	"time"
@@ -52,7 +51,7 @@ func TestExecute(t *testing.T) {
 	isStreamMessageResendTimeout := make(chan bool, 1)
 	mockDataChannel.On("IsStreamMessageResendTimeout").Return(isStreamMessageResendTimeout)
 
-	setSessionHandlersWithSessionType = func(_ context.Context, session *Session, _ *slog.Logger) error {
+	setSessionHandlersWithSessionType = func(_ context.Context, session *Session, _ log.T) error {
 		return fmt.Errorf("start session error for %s", session.SessionType)
 	}
 
@@ -75,7 +74,7 @@ func TestExecuteAndStreamMessageResendTimesOut(t *testing.T) {
 
 	wg.Add(1)
 
-	handleStreamMessageResendTimeout = func(_ context.Context, _ *Session, _ *slog.Logger) {
+	handleStreamMessageResendTimeout = func(_ context.Context, _ *Session, _ log.T) {
 		time.Sleep(10 * time.Millisecond)
 		isStreamMessageResendTimeout <- true
 
@@ -88,7 +87,7 @@ func TestExecuteAndStreamMessageResendTimesOut(t *testing.T) {
 	mockDataChannel.On("GetSessionType").Return("Standard_Stream")
 	mockDataChannel.On("GetSessionProperties").Return("SessionProperties")
 
-	setSessionHandlersWithSessionType = func(_ context.Context, _ *Session, _ *slog.Logger) error {
+	setSessionHandlersWithSessionType = func(_ context.Context, _ *Session, _ log.T) error {
 		return nil
 	}
 

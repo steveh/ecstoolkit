@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"math"
 	"reflect"
 	"sync"
@@ -21,6 +20,7 @@ import (
 	"github.com/steveh/ecstoolkit/communicator"
 	"github.com/steveh/ecstoolkit/config"
 	"github.com/steveh/ecstoolkit/encryption"
+	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
 	"github.com/steveh/ecstoolkit/service"
 	"github.com/steveh/ecstoolkit/version"
@@ -74,7 +74,7 @@ type DataChannel struct {
 }
 
 // Initialize populates the data channel object with the correct values.
-func (dataChannel *DataChannel) Initialize(log *slog.Logger, clientID string, sessionID string, targetID string, isAwsCliUpgradeNeeded bool) {
+func (dataChannel *DataChannel) Initialize(log log.T, clientID string, sessionID string, targetID string, isAwsCliUpgradeNeeded bool) {
 	// open data channel as publish_subscribe
 	log.Debug("Calling Initialize Datachannel", "role", config.RolePublishSubscribe)
 
@@ -106,12 +106,12 @@ func (dataChannel *DataChannel) Initialize(log *slog.Logger, clientID string, se
 }
 
 // SetWebsocket function populates websocket channel object.
-func (dataChannel *DataChannel) SetWebsocket(log *slog.Logger, channelURL string, channelToken string) {
+func (dataChannel *DataChannel) SetWebsocket(log log.T, channelURL string, channelToken string) {
 	dataChannel.wsChannel.Initialize(log, channelURL, channelToken)
 }
 
 // FinalizeDataChannelHandshake sends the token for service to acknowledge the connection.
-func (dataChannel *DataChannel) FinalizeDataChannelHandshake(log *slog.Logger, tokenValue string) error {
+func (dataChannel *DataChannel) FinalizeDataChannelHandshake(log log.T, tokenValue string) error {
 	uid := uuid.New().String()
 
 	log.Debug("Sending token through data channel to acknowledge connection", "url", dataChannel.wsChannel.GetStreamURL())
@@ -144,7 +144,7 @@ func (dataChannel *DataChannel) SendMessage(input []byte, inputType int) error {
 }
 
 // Open opens websocket connects and does final handshake to acknowledge connection.
-func (dataChannel *DataChannel) Open(log *slog.Logger) error {
+func (dataChannel *DataChannel) Open(log log.T) error {
 	if err := dataChannel.wsChannel.Open(log); err != nil {
 		return fmt.Errorf("opening data channel: %w", err)
 	}
@@ -157,7 +157,7 @@ func (dataChannel *DataChannel) Open(log *slog.Logger) error {
 }
 
 // Close closes datachannel - its web socket connection.
-func (dataChannel *DataChannel) Close(log *slog.Logger) error {
+func (dataChannel *DataChannel) Close(log log.T) error {
 	log.Debug("Closing datachannel", "url", dataChannel.wsChannel.GetStreamURL())
 
 	if err := dataChannel.wsChannel.Close(log); err != nil {
@@ -168,7 +168,7 @@ func (dataChannel *DataChannel) Close(log *slog.Logger) error {
 }
 
 // Reconnect calls ResumeSession API to reconnect datachannel when connection is lost.
-func (dataChannel *DataChannel) Reconnect(log *slog.Logger) error {
+func (dataChannel *DataChannel) Reconnect(log log.T) error {
 	var err error
 	if err = dataChannel.Close(log); err != nil {
 		log.Warn("Closing datachannel failed", "error", err)
@@ -185,7 +185,7 @@ func (dataChannel *DataChannel) Reconnect(log *slog.Logger) error {
 
 // SendFlag sends a data message with PayloadType as given flag.
 func (dataChannel *DataChannel) SendFlag(
-	log *slog.Logger,
+	log log.T,
 	flagType message.PayloadTypeFlag,
 ) error {
 	flagBuf := new(bytes.Buffer)
@@ -198,7 +198,7 @@ func (dataChannel *DataChannel) SendFlag(
 
 // SendInputDataMessage sends a data message in a form of ClientMessage.
 func (dataChannel *DataChannel) SendInputDataMessage(
-	log *slog.Logger,
+	log log.T,
 	payloadType message.PayloadType,
 	inputData []byte,
 ) error {
@@ -263,7 +263,7 @@ func (dataChannel *DataChannel) SendInputDataMessage(
 
 // ResendStreamDataMessageScheduler spawns a separate go thread which keeps checking OutgoingMessageBuffer at fixed interval
 // and resends first message if time elapsed since lastSentTime of the message is more than acknowledge wait time.
-func (dataChannel *DataChannel) ResendStreamDataMessageScheduler(log *slog.Logger) error {
+func (dataChannel *DataChannel) ResendStreamDataMessageScheduler(log log.T) error {
 	go func() {
 		for {
 			time.Sleep(config.ResendSleepInterval)
@@ -304,7 +304,7 @@ func (dataChannel *DataChannel) ResendStreamDataMessageScheduler(log *slog.Logge
 }
 
 // ProcessAcknowledgedMessage processes acknowledge messages by deleting them from OutgoingMessageBuffer.
-func (dataChannel *DataChannel) ProcessAcknowledgedMessage(log *slog.Logger, acknowledgeMessageContent message.AcknowledgeContent) error {
+func (dataChannel *DataChannel) ProcessAcknowledgedMessage(log log.T, acknowledgeMessageContent message.AcknowledgeContent) error {
 	acknowledgeSequenceNumber := acknowledgeMessageContent.SequenceNumber
 
 	for streamMessageElement := dataChannel.OutgoingMessageBuffer.Messages.Front(); streamMessageElement != nil; streamMessageElement = streamMessageElement.Next() {
@@ -329,7 +329,7 @@ func (dataChannel *DataChannel) ProcessAcknowledgedMessage(log *slog.Logger, ack
 }
 
 // SendAcknowledgeMessage sends acknowledge message for stream data over data channel.
-func (dataChannel *DataChannel) SendAcknowledgeMessage(log *slog.Logger, streamDataMessage message.ClientMessage) error {
+func (dataChannel *DataChannel) SendAcknowledgeMessage(log log.T, streamDataMessage message.ClientMessage) error {
 	dataStreamAcknowledgeContent := message.AcknowledgeContent{
 		MessageType:         streamDataMessage.MessageType,
 		MessageID:           streamDataMessage.MessageID.String(),
@@ -357,7 +357,7 @@ func (dataChannel *DataChannel) SendAcknowledgeMessage(log *slog.Logger, streamD
 }
 
 // OutputMessageHandler gets output on the data channel.
-func (dataChannel *DataChannel) OutputMessageHandler(ctx context.Context, log *slog.Logger, stopHandler Stop, sessionID string, rawMessage []byte) error {
+func (dataChannel *DataChannel) OutputMessageHandler(ctx context.Context, log log.T, stopHandler Stop, sessionID string, rawMessage []byte) error {
 	outputMessage := &message.ClientMessage{}
 
 	err := outputMessage.DeserializeClientMessage(log, rawMessage)
@@ -412,7 +412,7 @@ func (dataChannel *DataChannel) DeregisterOutputStreamHandler(handler OutputStre
 // HandleOutputMessage handles incoming stream data message by processing the payload and updating expectedSequenceNumber.
 func (dataChannel *DataChannel) HandleOutputMessage(
 	ctx context.Context,
-	log *slog.Logger,
+	log log.T,
 	outputMessage message.ClientMessage,
 	rawMessage []byte,
 ) error {
@@ -451,7 +451,7 @@ func (dataChannel *DataChannel) HandleOutputMessage(
 // If so, processes it and increments the expected sequence number.
 // Repeats until expected sequence stream data is not found in IncomingMessageBuffer.
 func (dataChannel *DataChannel) ProcessIncomingMessageBufferItems(
-	log *slog.Logger,
+	log log.T,
 	outputMessage message.ClientMessage,
 ) error {
 	for {
@@ -473,7 +473,7 @@ func (dataChannel *DataChannel) ProcessIncomingMessageBufferItems(
 
 // HandleAcknowledgeMessage deserializes acknowledge content and processes it.
 func (dataChannel *DataChannel) HandleAcknowledgeMessage(
-	log *slog.Logger,
+	log log.T,
 	outputMessage message.ClientMessage,
 ) error {
 	acknowledgeMessage, err := outputMessage.DeserializeDataStreamAcknowledgeContent(log)
@@ -492,7 +492,7 @@ func (dataChannel *DataChannel) HandleAcknowledgeMessage(
 }
 
 // HandleChannelClosedMessage handles the channel closed message and exits the shell.
-func (dataChannel *DataChannel) HandleChannelClosedMessage(log *slog.Logger, stopHandler Stop, sessionID string, outputMessage message.ClientMessage) {
+func (dataChannel *DataChannel) HandleChannelClosedMessage(log log.T, stopHandler Stop, sessionID string, outputMessage message.ClientMessage) {
 	var (
 		channelClosedMessage message.ChannelClosed
 		err                  error
@@ -568,7 +568,7 @@ func (dataChannel *DataChannel) CalculateRetransmissionTimeout(streamingMessage 
 
 // ProcessKMSEncryptionHandshakeAction sets up the encrypter and calls KMS to generate a new data key. This is triggered
 // when encryption is specified in HandshakeRequest.
-func (dataChannel *DataChannel) ProcessKMSEncryptionHandshakeAction(ctx context.Context, log *slog.Logger, actionParams json.RawMessage) error {
+func (dataChannel *DataChannel) ProcessKMSEncryptionHandshakeAction(ctx context.Context, log log.T, actionParams json.RawMessage) error {
 	if dataChannel.IsAwsCliUpgradeNeeded {
 		return errors.New("installed version of CLI does not support Session Manager encryption feature. Please upgrade to the latest version of your CLI (e.g., AWS CLI)")
 	}
@@ -670,7 +670,7 @@ func (dataChannel *DataChannel) SetAgentVersion(agentVersion string) {
 }
 
 // handleHandshakeRequest is the handler for payloads of type HandshakeRequest.
-func (dataChannel *DataChannel) handleHandshakeRequest(ctx context.Context, log *slog.Logger, clientMessage message.ClientMessage) error {
+func (dataChannel *DataChannel) handleHandshakeRequest(ctx context.Context, log log.T, clientMessage message.ClientMessage) error {
 	handshakeRequest, err := clientMessage.DeserializeHandshakeRequest(log)
 	if err != nil {
 		log.Error("Deserialize Handshake Request failed", "error", err)
@@ -742,7 +742,7 @@ func (dataChannel *DataChannel) handleHandshakeRequest(ctx context.Context, log 
 
 // handleHandshakeComplete is the handler for when the payload type is HandshakeComplete. This will trigger
 // the plugin to start.
-func (dataChannel *DataChannel) handleHandshakeComplete(log *slog.Logger, clientMessage message.ClientMessage) error {
+func (dataChannel *DataChannel) handleHandshakeComplete(log log.T, clientMessage message.ClientMessage) error {
 	var err error
 
 	var handshakeComplete message.HandshakeCompletePayload
@@ -770,7 +770,7 @@ func (dataChannel *DataChannel) handleHandshakeComplete(log *slog.Logger, client
 }
 
 // handleEncryptionChallengeRequest receives EncryptionChallenge and responds.
-func (dataChannel *DataChannel) handleEncryptionChallengeRequest(log *slog.Logger, clientMessage message.ClientMessage) error {
+func (dataChannel *DataChannel) handleEncryptionChallengeRequest(log log.T, clientMessage message.ClientMessage) error {
 	var err error
 
 	var encChallengeReq message.EncryptionChallengeRequest
@@ -802,7 +802,7 @@ func (dataChannel *DataChannel) handleEncryptionChallengeRequest(log *slog.Logge
 }
 
 // sendEncryptionChallengeResponse sends EncryptionChallengeResponse.
-func (dataChannel *DataChannel) sendEncryptionChallengeResponse(log *slog.Logger, response message.EncryptionChallengeResponse) error {
+func (dataChannel *DataChannel) sendEncryptionChallengeResponse(log log.T, response message.EncryptionChallengeResponse) error {
 	resultBytes, err := json.Marshal(response)
 	if err != nil {
 		return fmt.Errorf("could not serialize EncChallengeResponse message: %v, err: %w", response, err)
@@ -818,7 +818,7 @@ func (dataChannel *DataChannel) sendEncryptionChallengeResponse(log *slog.Logger
 }
 
 // sendHandshakeResponse sends HandshakeResponse.
-func (dataChannel *DataChannel) sendHandshakeResponse(log *slog.Logger, response message.HandshakeResponsePayload) error {
+func (dataChannel *DataChannel) sendHandshakeResponse(log log.T, response message.HandshakeResponsePayload) error {
 	resultBytes, err := json.Marshal(response)
 	if err != nil {
 		log.Error("Could not serialize HandshakeResponse message", "response", response, "error", err)
@@ -833,7 +833,7 @@ func (dataChannel *DataChannel) sendHandshakeResponse(log *slog.Logger, response
 	return nil
 }
 
-func (dataChannel *DataChannel) processOutputMessageWithHandlers(log *slog.Logger, message message.ClientMessage) (bool, error) {
+func (dataChannel *DataChannel) processOutputMessageWithHandlers(log log.T, message message.ClientMessage) (bool, error) {
 	// Return false if sessionType is known but session specific handler is not set
 	if dataChannel.sessionType != "" && !dataChannel.isSessionSpecificHandlerSet {
 		return false, nil
@@ -857,7 +857,7 @@ func (dataChannel *DataChannel) processOutputMessageWithHandlers(log *slog.Logge
 // handleHandshakeRequestOutputMessage handles output messages of type HandshakeRequestPayloadType.
 func (dataChannel *DataChannel) handleHandshakeRequestOutputMessage(
 	ctx context.Context,
-	log *slog.Logger,
+	log log.T,
 	outputMessage message.ClientMessage,
 ) error {
 	if err := SendAcknowledgeMessageCall(log, dataChannel, outputMessage); err != nil {
@@ -878,7 +878,7 @@ func (dataChannel *DataChannel) handleHandshakeRequestOutputMessage(
 
 // handleHandshakeCompleteOutputMessage handles output messages of type HandshakeCompletePayloadType.
 func (dataChannel *DataChannel) handleHandshakeCompleteOutputMessage(
-	log *slog.Logger,
+	log log.T,
 	outputMessage message.ClientMessage,
 ) error {
 	if err := SendAcknowledgeMessageCall(log, dataChannel, outputMessage); err != nil {
@@ -896,7 +896,7 @@ func (dataChannel *DataChannel) handleHandshakeCompleteOutputMessage(
 
 // handleEncryptionChallengeRequestOutputMessage handles output messages of type EncChallengeRequest.
 func (dataChannel *DataChannel) handleEncryptionChallengeRequestOutputMessage(
-	log *slog.Logger,
+	log log.T,
 	outputMessage message.ClientMessage,
 ) error {
 	if err := SendAcknowledgeMessageCall(log, dataChannel, outputMessage); err != nil {
@@ -914,7 +914,7 @@ func (dataChannel *DataChannel) handleEncryptionChallengeRequestOutputMessage(
 
 // handleDefaultOutputMessage handles output messages of any other type.
 func (dataChannel *DataChannel) handleDefaultOutputMessage(
-	log *slog.Logger,
+	log log.T,
 	outputMessage message.ClientMessage,
 ) error {
 	log.Debug("Process new incoming stream data message", "sequenceNumber", outputMessage.SequenceNumber)
@@ -957,7 +957,7 @@ func (dataChannel *DataChannel) handleDefaultOutputMessage(
 
 // handleUnexpectedSequenceMessage handles messages with unexpected sequence numbers.
 func (dataChannel *DataChannel) handleUnexpectedSequenceMessage(
-	log *slog.Logger,
+	log log.T,
 	outputMessage message.ClientMessage,
 	rawMessage []byte,
 ) error {
@@ -990,7 +990,7 @@ func (dataChannel *DataChannel) handleUnexpectedSequenceMessage(
 
 // processBufferedMessage processes a single buffered message and updates the expected sequence number.
 func (dataChannel *DataChannel) processBufferedMessage(
-	log *slog.Logger,
+	log log.T,
 	outputMessage message.ClientMessage,
 	bufferedStreamMessage StreamingMessage,
 ) error {

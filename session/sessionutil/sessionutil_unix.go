@@ -20,10 +20,10 @@ package sessionutil
 import (
 	"fmt"
 	"io"
-	"log/slog"
 	"net"
 	"os"
 
+	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
 )
 
@@ -31,11 +31,11 @@ import (
 type DisplayMode struct{}
 
 // InitDisplayMode initializes the display mode for Unix-like systems.
-func (d *DisplayMode) InitDisplayMode(_ *slog.Logger) {
+func (d *DisplayMode) InitDisplayMode(_ log.T) {
 }
 
 // DisplayMessage function displays the output on the screen.
-func (d *DisplayMode) DisplayMessage(log *slog.Logger, message message.ClientMessage) {
+func (d *DisplayMode) DisplayMessage(log log.T, message message.ClientMessage) {
 	var out io.Writer = os.Stdout
 
 	if _, err := fmt.Fprint(out, string(message.Payload)); err != nil {
@@ -44,7 +44,7 @@ func (d *DisplayMode) DisplayMessage(log *slog.Logger, message message.ClientMes
 }
 
 // NewListener starts a new socket listener on the address.
-func NewListener(_ *slog.Logger, address string) (net.Listener, error) {
+func NewListener(_ log.T, address string) (net.Listener, error) {
 	listener, err := net.Listen("unix", address)
 	if err != nil {
 		return nil, fmt.Errorf("creating unix socket listener: %w", err)

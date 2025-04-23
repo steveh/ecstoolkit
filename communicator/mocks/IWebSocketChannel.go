@@ -3,8 +3,7 @@
 package mocks
 
 import (
-	slog "log/slog"
-
+	log "github.com/steveh/ecstoolkit/log"
 	mock "github.com/stretchr/testify/mock"
 
 	time "time"
@@ -23,17 +22,17 @@ func (_m *IWebSocketChannel) EXPECT() *IWebSocketChannel_Expecter {
 	return &IWebSocketChannel_Expecter{mock: &_m.Mock}
 }
 
-// Close provides a mock function with given fields: log
-func (_m *IWebSocketChannel) Close(log *slog.Logger) error {
-	ret := _m.Called(log)
+// Close provides a mock function with given fields: _a0
+func (_m *IWebSocketChannel) Close(_a0 log.T) error {
+	ret := _m.Called(_a0)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Close")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*slog.Logger) error); ok {
-		r0 = rf(log)
+	if rf, ok := ret.Get(0).(func(log.T) error); ok {
+		r0 = rf(_a0)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -47,14 +46,14 @@ type IWebSocketChannel_Close_Call struct {
 }
 
 // Close is a helper method to define mock.On call
-//   - log *slog.Logger
-func (_e *IWebSocketChannel_Expecter) Close(log interface{}) *IWebSocketChannel_Close_Call {
-	return &IWebSocketChannel_Close_Call{Call: _e.mock.On("Close", log)}
+//   - _a0 log.T
+func (_e *IWebSocketChannel_Expecter) Close(_a0 interface{}) *IWebSocketChannel_Close_Call {
+	return &IWebSocketChannel_Close_Call{Call: _e.mock.On("Close", _a0)}
 }
 
-func (_c *IWebSocketChannel_Close_Call) Run(run func(log *slog.Logger)) *IWebSocketChannel_Close_Call {
+func (_c *IWebSocketChannel_Close_Call) Run(run func(_a0 log.T)) *IWebSocketChannel_Close_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*slog.Logger))
+		run(args[0].(log.T))
 	})
 	return _c
 }
@@ -64,7 +63,7 @@ func (_c *IWebSocketChannel_Close_Call) Return(_a0 error) *IWebSocketChannel_Clo
 	return _c
 }
 
-func (_c *IWebSocketChannel_Close_Call) RunAndReturn(run func(*slog.Logger) error) *IWebSocketChannel_Close_Call {
+func (_c *IWebSocketChannel_Close_Call) RunAndReturn(run func(log.T) error) *IWebSocketChannel_Close_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -159,9 +158,9 @@ func (_c *IWebSocketChannel_GetStreamURL_Call) RunAndReturn(run func() string) *
 	return _c
 }
 
-// Initialize provides a mock function with given fields: log, channelURL, channelToken
-func (_m *IWebSocketChannel) Initialize(log *slog.Logger, channelURL string, channelToken string) {
-	_m.Called(log, channelURL, channelToken)
+// Initialize provides a mock function with given fields: _a0, channelURL, channelToken
+func (_m *IWebSocketChannel) Initialize(_a0 log.T, channelURL string, channelToken string) {
+	_m.Called(_a0, channelURL, channelToken)
 }
 
 // IWebSocketChannel_Initialize_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Initialize'
@@ -170,16 +169,16 @@ type IWebSocketChannel_Initialize_Call struct {
 }
 
 // Initialize is a helper method to define mock.On call
-//   - log *slog.Logger
+//   - _a0 log.T
 //   - channelURL string
 //   - channelToken string
-func (_e *IWebSocketChannel_Expecter) Initialize(log interface{}, channelURL interface{}, channelToken interface{}) *IWebSocketChannel_Initialize_Call {
-	return &IWebSocketChannel_Initialize_Call{Call: _e.mock.On("Initialize", log, channelURL, channelToken)}
+func (_e *IWebSocketChannel_Expecter) Initialize(_a0 interface{}, channelURL interface{}, channelToken interface{}) *IWebSocketChannel_Initialize_Call {
+	return &IWebSocketChannel_Initialize_Call{Call: _e.mock.On("Initialize", _a0, channelURL, channelToken)}
 }
 
-func (_c *IWebSocketChannel_Initialize_Call) Run(run func(log *slog.Logger, channelURL string, channelToken string)) *IWebSocketChannel_Initialize_Call {
+func (_c *IWebSocketChannel_Initialize_Call) Run(run func(_a0 log.T, channelURL string, channelToken string)) *IWebSocketChannel_Initialize_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*slog.Logger), args[1].(string), args[2].(string))
+		run(args[0].(log.T), args[1].(string), args[2].(string))
 	})
 	return _c
 }
@@ -189,22 +188,22 @@ func (_c *IWebSocketChannel_Initialize_Call) Return() *IWebSocketChannel_Initial
 	return _c
 }
 
-func (_c *IWebSocketChannel_Initialize_Call) RunAndReturn(run func(*slog.Logger, string, string)) *IWebSocketChannel_Initialize_Call {
+func (_c *IWebSocketChannel_Initialize_Call) RunAndReturn(run func(log.T, string, string)) *IWebSocketChannel_Initialize_Call {
 	_c.Run(run)
 	return _c
 }
 
-// Open provides a mock function with given fields: log
-func (_m *IWebSocketChannel) Open(log *slog.Logger) error {
-	ret := _m.Called(log)
+// Open provides a mock function with given fields: _a0
+func (_m *IWebSocketChannel) Open(_a0 log.T) error {
+	ret := _m.Called(_a0)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Open")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*slog.Logger) error); ok {
-		r0 = rf(log)
+	if rf, ok := ret.Get(0).(func(log.T) error); ok {
+		r0 = rf(_a0)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -218,14 +217,14 @@ type IWebSocketChannel_Open_Call struct {
 }
 
 // Open is a helper method to define mock.On call
-//   - log *slog.Logger
-func (_e *IWebSocketChannel_Expecter) Open(log interface{}) *IWebSocketChannel_Open_Call {
-	return &IWebSocketChannel_Open_Call{Call: _e.mock.On("Open", log)}
+//   - _a0 log.T
+func (_e *IWebSocketChannel_Expecter) Open(_a0 interface{}) *IWebSocketChannel_Open_Call {
+	return &IWebSocketChannel_Open_Call{Call: _e.mock.On("Open", _a0)}
 }
 
-func (_c *IWebSocketChannel_Open_Call) Run(run func(log *slog.Logger)) *IWebSocketChannel_Open_Call {
+func (_c *IWebSocketChannel_Open_Call) Run(run func(_a0 log.T)) *IWebSocketChannel_Open_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*slog.Logger))
+		run(args[0].(log.T))
 	})
 	return _c
 }
@@ -235,7 +234,7 @@ func (_c *IWebSocketChannel_Open_Call) Return(_a0 error) *IWebSocketChannel_Open
 	return _c
 }
 
-func (_c *IWebSocketChannel_Open_Call) RunAndReturn(run func(*slog.Logger) error) *IWebSocketChannel_Open_Call {
+func (_c *IWebSocketChannel_Open_Call) RunAndReturn(run func(log.T) error) *IWebSocketChannel_Open_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -386,9 +385,9 @@ func (_c *IWebSocketChannel_SetOnMessage_Call) RunAndReturn(run func(func([]byte
 	return _c
 }
 
-// StartPings provides a mock function with given fields: log, pingInterval
-func (_m *IWebSocketChannel) StartPings(log *slog.Logger, pingInterval time.Duration) {
-	_m.Called(log, pingInterval)
+// StartPings provides a mock function with given fields: _a0, pingInterval
+func (_m *IWebSocketChannel) StartPings(_a0 log.T, pingInterval time.Duration) {
+	_m.Called(_a0, pingInterval)
 }
 
 // IWebSocketChannel_StartPings_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'StartPings'
@@ -397,15 +396,15 @@ type IWebSocketChannel_StartPings_Call struct {
 }
 
 // StartPings is a helper method to define mock.On call
-//   - log *slog.Logger
+//   - _a0 log.T
 //   - pingInterval time.Duration
-func (_e *IWebSocketChannel_Expecter) StartPings(log interface{}, pingInterval interface{}) *IWebSocketChannel_StartPings_Call {
-	return &IWebSocketChannel_StartPings_Call{Call: _e.mock.On("StartPings", log, pingInterval)}
+func (_e *IWebSocketChannel_Expecter) StartPings(_a0 interface{}, pingInterval interface{}) *IWebSocketChannel_StartPings_Call {
+	return &IWebSocketChannel_StartPings_Call{Call: _e.mock.On("StartPings", _a0, pingInterval)}
 }
 
-func (_c *IWebSocketChannel_StartPings_Call) Run(run func(log *slog.Logger, pingInterval time.Duration)) *IWebSocketChannel_StartPings_Call {
+func (_c *IWebSocketChannel_StartPings_Call) Run(run func(_a0 log.T, pingInterval time.Duration)) *IWebSocketChannel_StartPings_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*slog.Logger), args[1].(time.Duration))
+		run(args[0].(log.T), args[1].(time.Duration))
 	})
 	return _c
 }
@@ -415,7 +414,7 @@ func (_c *IWebSocketChannel_StartPings_Call) Return() *IWebSocketChannel_StartPi
 	return _c
 }
 
-func (_c *IWebSocketChannel_StartPings_Call) RunAndReturn(run func(*slog.Logger, time.Duration)) *IWebSocketChannel_StartPings_Call {
+func (_c *IWebSocketChannel_StartPings_Call) RunAndReturn(run func(log.T, time.Duration)) *IWebSocketChannel_StartPings_Call {
 	_c.Run(run)
 	return _c
 }

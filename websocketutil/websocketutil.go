@@ -17,9 +17,9 @@ package websocketutil
 import (
 	"errors"
 	"fmt"
-	"log/slog"
 
 	"github.com/gorilla/websocket"
+	"github.com/steveh/ecstoolkit/log"
 )
 
 // IWebsocketUtil is the interface for the websocketutil.
@@ -31,11 +31,11 @@ type IWebsocketUtil interface {
 // WebsocketUtil struct provides functionality around creating and maintaining websockets.
 type WebsocketUtil struct {
 	dialer *websocket.Dialer
-	log    *slog.Logger
+	log    log.T
 }
 
 // NewWebsocketUtil is the factory function for websocketutil.
-func NewWebsocketUtil(logger *slog.Logger, dialerInput *websocket.Dialer) *WebsocketUtil {
+func NewWebsocketUtil(logger log.T, dialerInput *websocket.Dialer) *WebsocketUtil {
 	var websocketUtil *WebsocketUtil
 
 	if dialerInput == nil {

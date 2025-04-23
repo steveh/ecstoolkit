@@ -17,12 +17,12 @@ package session
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/steveh/ecstoolkit/config"
 	"github.com/steveh/ecstoolkit/datachannel"
+	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
 	"github.com/steveh/ecstoolkit/retry"
 	"github.com/steveh/ecstoolkit/session/sessionutil"
@@ -33,22 +33,22 @@ var SessionRegistry = map[string]ISessionPlugin{}
 
 // ISessionPlugin defines the interface for session type implementations.
 type ISessionPlugin interface {
-	SetSessionHandlers(ctx context.Context, log *slog.Logger) error
-	ProcessStreamMessagePayload(log *slog.Logger, streamDataMessage message.ClientMessage) (isHandlerReady bool, err error)
-	Initialize(ctx context.Context, log *slog.Logger, sessionVar *Session)
-	Stop(log *slog.Logger) error
+	SetSessionHandlers(ctx context.Context, log log.T) error
+	ProcessStreamMessagePayload(log log.T, streamDataMessage message.ClientMessage) (isHandlerReady bool, err error)
+	Initialize(ctx context.Context, log log.T, sessionVar *Session)
+	Stop(log log.T) error
 	Name() string
 }
 
 // ISession defines the interface for session operations.
 type ISession interface {
-	Execute(log slog.Logger) error
-	OpenDataChannel(log slog.Logger) error
-	ProcessFirstMessage(log *slog.Logger, outputMessage message.ClientMessage) (isHandlerReady bool, err error)
-	Stop(log *slog.Logger) error
-	GetResumeSessionParams(log slog.Logger) (string, error)
-	ResumeSessionHandler(log slog.Logger) error
-	TerminateSession(log slog.Logger) error
+	Execute(log log.T) error
+	OpenDataChannel(log log.T) error
+	ProcessFirstMessage(log log.T, outputMessage message.ClientMessage) (isHandlerReady bool, err error)
+	Stop(log log.T) error
+	GetResumeSessionParams(log log.T) (string, error)
+	ResumeSessionHandler(log log.T) error
+	TerminateSession(log log.T) error
 }
 
 func init() {
@@ -78,7 +78,7 @@ type Session struct {
 }
 
 // setSessionHandlersWithSessionType set session handlers based on session subtype.
-var setSessionHandlersWithSessionType = func(ctx context.Context, session *Session, log *slog.Logger) error {
+var setSessionHandlersWithSessionType = func(ctx context.Context, session *Session, log log.T) error {
 	// SessionType is set inside DataChannel
 	sessionSubType := SessionRegistry[session.SessionType]
 	sessionSubType.Initialize(ctx, log, session)
@@ -87,7 +87,7 @@ var setSessionHandlersWithSessionType = func(ctx context.Context, session *Sessi
 }
 
 // Set up a scheduler to listen on stream data resend timeout event.
-var handleStreamMessageResendTimeout = func(ctx context.Context, session *Session, log *slog.Logger) {
+var handleStreamMessageResendTimeout = func(ctx context.Context, session *Session, log log.T) {
 	log.Debug("Setting up scheduler to listen on IsStreamMessageResendTimeout event.")
 	go func() {
 		for {
@@ -106,7 +106,7 @@ var handleStreamMessageResendTimeout = func(ctx context.Context, session *Sessio
 }
 
 // Execute create data channel and start the session.
-func (s *Session) Execute(ctx context.Context, log *slog.Logger) error {
+func (s *Session) Execute(ctx context.Context, log log.T) error {
 	log.Debug("Starting session", "sessionID", s.SessionID)
 
 	// sets the display mode

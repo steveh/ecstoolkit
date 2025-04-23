@@ -21,11 +21,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/util"
 )
 
@@ -42,7 +42,7 @@ var (
 // * | HL|         MessageType           |Ver|  CD   |  Seq  | Flags |
 // * |         MessageID                     |           Digest              | PayType | PayLen|
 // * |         Payload      			|.
-func (clientMessage *ClientMessage) DeserializeClientMessage(log *slog.Logger, input []byte) error {
+func (clientMessage *ClientMessage) DeserializeClientMessage(log log.T, input []byte) error {
 	var err error
 
 	clientMessage.MessageType, err = GetString(log, input, ClientMessageMessageTypeOffset, ClientMessageMessageTypeLength)
@@ -117,7 +117,7 @@ func (clientMessage *ClientMessage) DeserializeClientMessage(log *slog.Logger, i
 }
 
 // GetString gets a string value from the byte array starting from the specified offset to the defined length.
-func GetString(log *slog.Logger, byteArray []byte, offset int, stringLength int) (string, error) {
+func GetString(log log.T, byteArray []byte, offset int, stringLength int) (string, error) {
 	byteArrayLength := len(byteArray)
 	if offset > byteArrayLength-1 || offset+stringLength-1 > byteArrayLength-1 || offset < 0 {
 		log.Error("GetString failed: Offset is invalid.")
@@ -132,7 +132,7 @@ func GetString(log *slog.Logger, byteArray []byte, offset int, stringLength int)
 }
 
 // GetUInteger gets an unsigned integer.
-func GetUInteger(log *slog.Logger, byteArray []byte, offset int) (uint32, error) {
+func GetUInteger(log log.T, byteArray []byte, offset int) (uint32, error) {
 	temp, err := GetInteger(log, byteArray, offset)
 	if err != nil {
 		return 0, err
@@ -146,7 +146,7 @@ func GetUInteger(log *slog.Logger, byteArray []byte, offset int) (uint32, error)
 }
 
 // GetInteger gets an integer value from a byte array starting from the specified offset.
-func GetInteger(log *slog.Logger, byteArray []byte, offset int) (int32, error) {
+func GetInteger(log log.T, byteArray []byte, offset int) (int32, error) {
 	byteArrayLength := len(byteArray)
 	if offset > byteArrayLength-1 || offset+4 > byteArrayLength || offset < 0 {
 		log.Error("GetInteger failed: Offset is invalid.")
@@ -158,7 +158,7 @@ func GetInteger(log *slog.Logger, byteArray []byte, offset int) (int32, error) {
 }
 
 // bytesToInteger gets an integer from a byte array.
-func bytesToInteger(log *slog.Logger, input []byte) (int32, error) {
+func bytesToInteger(log log.T, input []byte) (int32, error) {
 	var res int32
 
 	inputLength := len(input)
@@ -177,7 +177,7 @@ func bytesToInteger(log *slog.Logger, input []byte) (int32, error) {
 }
 
 // GetULong gets an unsigned long integer.
-func GetULong(log *slog.Logger, byteArray []byte, offset int) (uint64, error) {
+func GetULong(log log.T, byteArray []byte, offset int) (uint64, error) {
 	temp, err := GetLong(log, byteArray, offset)
 	if err != nil {
 		return 0, err
@@ -191,7 +191,7 @@ func GetULong(log *slog.Logger, byteArray []byte, offset int) (uint64, error) {
 }
 
 // GetLong gets a long integer value from a byte array starting from the specified offset. 64 bit.
-func GetLong(log *slog.Logger, byteArray []byte, offset int) (int64, error) {
+func GetLong(log log.T, byteArray []byte, offset int) (int64, error) {
 	byteArrayLength := len(byteArray)
 	if offset > byteArrayLength-1 || offset+8 > byteArrayLength || offset < 0 {
 		log.Error("GetLong failed: Offset is invalid.")
@@ -203,7 +203,7 @@ func GetLong(log *slog.Logger, byteArray []byte, offset int) (int64, error) {
 }
 
 // bytesToLong gets a Long integer from a byte array.
-func bytesToLong(log *slog.Logger, input []byte) (int64, error) {
+func bytesToLong(log log.T, input []byte) (int64, error) {
 	var res int64
 
 	inputLength := len(input)
@@ -222,7 +222,7 @@ func bytesToLong(log *slog.Logger, input []byte) (int64, error) {
 }
 
 // GetUUID gets the 128bit uuid from an array of bytes starting from the offset.
-func GetUUID(log *slog.Logger, byteArray []byte, offset int) (uuid.UUID, error) {
+func GetUUID(log log.T, byteArray []byte, offset int) (uuid.UUID, error) {
 	byteArrayLength := len(byteArray)
 	if offset > byteArrayLength-1 || offset+16-1 > byteArrayLength-1 || offset < 0 {
 		log.Error("getUUID failed: Offset is invalid.")
@@ -269,7 +269,7 @@ func GetUUID(log *slog.Logger, byteArray []byte, offset int) (uuid.UUID, error) 
 }
 
 // LongToBytes gets bytes array from a long integer.
-func LongToBytes(log *slog.Logger, input int64) ([]byte, error) {
+func LongToBytes(log log.T, input int64) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	if err := binary.Write(buf, binary.BigEndian, input); err != nil {
 		return nil, fmt.Errorf("writing long to bytes: %w", err)
@@ -285,7 +285,7 @@ func LongToBytes(log *slog.Logger, input int64) ([]byte, error) {
 }
 
 // GetBytes gets an array of bytes starting from the offset.
-func GetBytes(log *slog.Logger, byteArray []byte, offset int, byteLength int) ([]byte, error) {
+func GetBytes(log log.T, byteArray []byte, offset int, byteLength int) ([]byte, error) {
 	byteArrayLength := len(byteArray)
 	if offset > byteArrayLength-1 || offset+byteLength-1 > byteArrayLength-1 || offset < 0 {
 		log.Error("GetBytes failed: Offset is invalid.")
@@ -332,7 +332,7 @@ func (clientMessage *ClientMessage) Validate() error {
 // * | HL|         MessageType           |Ver|  CD   |  Seq  | Flags |
 // * |         MessageID                     |           Digest              |PayType| PayLen|
 // * |         Payload      			|.
-func (clientMessage *ClientMessage) SerializeClientMessage(log *slog.Logger) ([]byte, error) {
+func (clientMessage *ClientMessage) SerializeClientMessage(log log.T) ([]byte, error) {
 	payloadLength, err := util.SafeUint32(len(clientMessage.Payload))
 	if err != nil {
 		return nil, fmt.Errorf("converting payload length to uint32: %w", err)
@@ -438,7 +438,7 @@ func (clientMessage *ClientMessage) SerializeClientMessage(log *slog.Logger) ([]
 }
 
 // putUInteger puts a uint32 into a byte array starting from the specified offset.
-func putUInteger(log *slog.Logger, byteArray []byte, offset int, value uint32) error {
+func putUInteger(log log.T, byteArray []byte, offset int, value uint32) error {
 	safe, err := util.SafeInt32(value)
 	if err != nil {
 		return fmt.Errorf("getting int32: %w", err)
@@ -448,7 +448,7 @@ func putUInteger(log *slog.Logger, byteArray []byte, offset int, value uint32) e
 }
 
 // PutInteger puts an int32 into a byte array starting from the specified offset.
-func PutInteger(log *slog.Logger, byteArray []byte, offset int, value int32) error {
+func PutInteger(log log.T, byteArray []byte, offset int, value int32) error {
 	byteArrayLength := len(byteArray)
 	if offset > byteArrayLength-1 || offset+4 > byteArrayLength || offset < 0 {
 		log.Error("PutInteger failed: Offset is invalid.")
@@ -469,7 +469,7 @@ func PutInteger(log *slog.Logger, byteArray []byte, offset int, value int32) err
 }
 
 // IntegerToBytes gets bytes array from an integer.
-func IntegerToBytes(log *slog.Logger, input int32) ([]byte, error) {
+func IntegerToBytes(log log.T, input int32) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	if err := binary.Write(buf, binary.BigEndian, input); err != nil {
 		return nil, fmt.Errorf("writing integer to bytes: %w", err)
@@ -485,7 +485,7 @@ func IntegerToBytes(log *slog.Logger, input int32) ([]byte, error) {
 }
 
 // PutString puts a string value to a byte array starting from the specified offset.
-func PutString(log *slog.Logger, byteArray []byte, offsetStart int, offsetEnd int, inputString string) error {
+func PutString(log log.T, byteArray []byte, offsetStart int, offsetEnd int, inputString string) error {
 	byteArrayLength := len(byteArray)
 	if offsetStart > byteArrayLength-1 || offsetEnd > byteArrayLength-1 || offsetStart > offsetEnd || offsetStart < 0 {
 		log.Error("putString failed: Offset is invalid.")
@@ -510,7 +510,7 @@ func PutString(log *slog.Logger, byteArray []byte, offsetStart int, offsetEnd in
 }
 
 // PutBytes puts bytes into the array at the correct offset.
-func PutBytes(log *slog.Logger, byteArray []byte, offsetStart int, offsetEnd int, inputBytes []byte) error {
+func PutBytes(log log.T, byteArray []byte, offsetStart int, offsetEnd int, inputBytes []byte) error {
 	byteArrayLength := len(byteArray)
 	if offsetStart > byteArrayLength-1 || offsetEnd > byteArrayLength-1 || offsetStart > offsetEnd || offsetStart < 0 {
 		log.Error("PutBytes failed: Offset is invalid.")
@@ -530,7 +530,7 @@ func PutBytes(log *slog.Logger, byteArray []byte, offsetStart int, offsetEnd int
 }
 
 // PutUUID puts the 128 bit uuid to an array of bytes starting from the offset.
-func PutUUID(log *slog.Logger, byteArray []byte, offset int, input uuid.UUID) error {
+func PutUUID(log log.T, byteArray []byte, offset int, input uuid.UUID) error {
 	if input == uuid.Nil {
 		log.Error("PutUUID failed: input is null.")
 
@@ -583,7 +583,7 @@ func PutUUID(log *slog.Logger, byteArray []byte, offset int, input uuid.UUID) er
 }
 
 // PutLong puts a long integer value to a byte array starting from the specified offset.
-func PutLong(log *slog.Logger, byteArray []byte, offset int, value int64) error {
+func PutLong(log log.T, byteArray []byte, offset int, value int64) error {
 	byteArrayLength := len(byteArray)
 	if offset > byteArrayLength-1 || offset+8 > byteArrayLength || offset < 0 {
 		log.Error("PutLong failed: Offset is invalid.")
@@ -604,7 +604,7 @@ func PutLong(log *slog.Logger, byteArray []byte, offset int, value int64) error 
 }
 
 // putULong puts an unsigned long integer.
-func putULong(log *slog.Logger, byteArray []byte, offset int, value uint64) error {
+func putULong(log log.T, byteArray []byte, offset int, value uint64) error {
 	safe, err := util.SafeInt64(value)
 	if err != nil {
 		return fmt.Errorf("getting int64: %w", err)
@@ -614,7 +614,7 @@ func putULong(log *slog.Logger, byteArray []byte, offset int, value uint64) erro
 }
 
 // SerializeClientMessagePayload marshals payloads for all session specific messages into bytes.
-func SerializeClientMessagePayload(log *slog.Logger, obj interface{}) ([]byte, error) {
+func SerializeClientMessagePayload(log log.T, obj interface{}) ([]byte, error) {
 	reply, err := json.Marshal(obj)
 	if err != nil {
 		log.Error("Could not serialize message", "error", err)
@@ -626,7 +626,7 @@ func SerializeClientMessagePayload(log *slog.Logger, obj interface{}) ([]byte, e
 }
 
 // SerializeClientMessageWithAcknowledgeContent marshals client message with payloads of acknowledge contents into bytes.
-func SerializeClientMessageWithAcknowledgeContent(log *slog.Logger, acknowledgeContent AcknowledgeContent) ([]byte, error) {
+func SerializeClientMessageWithAcknowledgeContent(log log.T, acknowledgeContent AcknowledgeContent) ([]byte, error) {
 	acknowledgeContentBytes, err := SerializeClientMessagePayload(log, acknowledgeContent)
 	if err != nil {
 		log.Error("Could not serialize acknowledge content to json", "content", acknowledgeContentBytes)
@@ -656,7 +656,7 @@ func SerializeClientMessageWithAcknowledgeContent(log *slog.Logger, acknowledgeC
 }
 
 // DeserializeDataStreamAcknowledgeContent parses acknowledge content from payload of ClientMessage.
-func (clientMessage *ClientMessage) DeserializeDataStreamAcknowledgeContent(log *slog.Logger) (AcknowledgeContent, error) {
+func (clientMessage *ClientMessage) DeserializeDataStreamAcknowledgeContent(log log.T) (AcknowledgeContent, error) {
 	if clientMessage.MessageType != AcknowledgeMessage {
 		err := fmt.Errorf("ClientMessage is not of type AcknowledgeMessage. Found message type: %s", clientMessage.MessageType)
 
@@ -676,7 +676,7 @@ func (clientMessage *ClientMessage) DeserializeDataStreamAcknowledgeContent(log 
 }
 
 // DeserializeChannelClosedMessage parses channelClosed message from payload of ClientMessage.
-func (clientMessage *ClientMessage) DeserializeChannelClosedMessage(log *slog.Logger) (ChannelClosed, error) {
+func (clientMessage *ClientMessage) DeserializeChannelClosedMessage(log log.T) (ChannelClosed, error) {
 	if clientMessage.MessageType != ChannelClosedMessage {
 		err := fmt.Errorf("ClientMessage is not of type ChannelClosed. Found message type: %s", clientMessage.MessageType)
 
@@ -696,7 +696,7 @@ func (clientMessage *ClientMessage) DeserializeChannelClosedMessage(log *slog.Lo
 }
 
 // DeserializeHandshakeRequest deserializes the handshake request payload from the client message.
-func (clientMessage *ClientMessage) DeserializeHandshakeRequest(log *slog.Logger) (HandshakeRequestPayload, error) {
+func (clientMessage *ClientMessage) DeserializeHandshakeRequest(log log.T) (HandshakeRequestPayload, error) {
 	if clientMessage.PayloadType != uint32(HandshakeRequestPayloadType) {
 		err := fmt.Errorf("ClientMessage PayloadType is not of type HandshakeRequestPayloadType. Found payload type: %d",
 			clientMessage.PayloadType)
@@ -718,7 +718,7 @@ func (clientMessage *ClientMessage) DeserializeHandshakeRequest(log *slog.Logger
 }
 
 // DeserializeHandshakeComplete deserializes the handshake complete payload from the client message.
-func (clientMessage *ClientMessage) DeserializeHandshakeComplete(log *slog.Logger) (HandshakeCompletePayload, error) {
+func (clientMessage *ClientMessage) DeserializeHandshakeComplete(log log.T) (HandshakeCompletePayload, error) {
 	var handshakeComplete HandshakeCompletePayload
 
 	var err error

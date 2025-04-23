@@ -17,22 +17,22 @@ package communicator
 import (
 	"errors"
 	"fmt"
-	"log/slog"
 	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/steveh/ecstoolkit/config"
+	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/websocketutil"
 )
 
 // IWebSocketChannel is the interface for DataChannel.
 type IWebSocketChannel interface {
-	Initialize(log *slog.Logger, channelURL string, channelToken string)
-	Open(log *slog.Logger) error
-	Close(log *slog.Logger) error
+	Initialize(log log.T, channelURL string, channelToken string)
+	Open(log log.T) error
+	Close(log log.T) error
 	SendMessage(input []byte, inputType int) error
-	StartPings(log *slog.Logger, pingInterval time.Duration)
+	StartPings(log log.T, pingInterval time.Duration)
 	GetChannelToken() string
 	GetStreamURL() string
 	SetChannelToken(channelToken string)
@@ -78,13 +78,13 @@ func (webSocketChannel *WebSocketChannel) SetOnMessage(onMessageHandler func([]b
 }
 
 // Initialize initializes websocket channel fields.
-func (webSocketChannel *WebSocketChannel) Initialize(_ *slog.Logger, channelURL string, channelToken string) {
+func (webSocketChannel *WebSocketChannel) Initialize(_ log.T, channelURL string, channelToken string) {
 	webSocketChannel.ChannelToken = channelToken
 	webSocketChannel.URL = channelURL
 }
 
 // StartPings starts the pinging process to keep the websocket channel alive.
-func (webSocketChannel *WebSocketChannel) StartPings(log *slog.Logger, pingInterval time.Duration) {
+func (webSocketChannel *WebSocketChannel) StartPings(log log.T, pingInterval time.Duration) {
 	go func() {
 		for {
 			if !webSocketChannel.IsOpen {
@@ -130,7 +130,7 @@ func (webSocketChannel *WebSocketChannel) SendMessage(input []byte, inputType in
 }
 
 // Close closes the corresponding connection.
-func (webSocketChannel *WebSocketChannel) Close(log *slog.Logger) error {
+func (webSocketChannel *WebSocketChannel) Close(log log.T) error {
 	log.Debug("Closing websocket channel connection to: " + webSocketChannel.URL)
 
 	if webSocketChannel.IsOpen {
@@ -150,7 +150,7 @@ func (webSocketChannel *WebSocketChannel) Close(log *slog.Logger) error {
 }
 
 // Open upgrades the http connection to a websocket connection.
-func (webSocketChannel *WebSocketChannel) Open(log *slog.Logger) error {
+func (webSocketChannel *WebSocketChannel) Open(log log.T) error {
 	// initialize the write mutex
 	webSocketChannel.writeLock = &sync.Mutex{}
 

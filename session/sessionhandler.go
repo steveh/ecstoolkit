@@ -18,18 +18,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"math/rand"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/steveh/ecstoolkit/config"
+	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
 	"github.com/steveh/ecstoolkit/retry"
 )
 
 // OpenDataChannel initializes datachannel.
-func (s *Session) OpenDataChannel(ctx context.Context, log *slog.Logger) error {
+func (s *Session) OpenDataChannel(ctx context.Context, log log.T) error {
 	s.retryParams = retry.RepeatableExponentialRetryer{
 		GeometricRatio:      config.RetryBase,
 		InitialDelayInMilli: rand.Intn(config.DataChannelRetryInitialDelayMillis) + config.DataChannelRetryInitialDelayMillis, //nolint:gosec
@@ -77,7 +77,7 @@ func (s *Session) OpenDataChannel(ctx context.Context, log *slog.Logger) error {
 // ProcessFirstMessage only processes messages with PayloadType Output to determine the
 // sessionType of the session to be launched. This is a fallback for agent versions that do not support handshake, they
 // immediately start sending shell output.
-func (s *Session) ProcessFirstMessage(log *slog.Logger, outputMessage message.ClientMessage) (bool, error) {
+func (s *Session) ProcessFirstMessage(log log.T, outputMessage message.ClientMessage) (bool, error) {
 	// Immediately deregister self so that this handler is only called once, for the first message
 	s.DataChannel.DeregisterOutputStreamHandler(s.ProcessFirstMessage)
 	// Only set session type if the session type has not already been set. Usually session type will be set
@@ -94,12 +94,12 @@ func (s *Session) ProcessFirstMessage(log *slog.Logger, outputMessage message.Cl
 }
 
 // Stop will end the session.
-func (s *Session) Stop(_ *slog.Logger) error {
+func (s *Session) Stop(_ log.T) error {
 	return nil
 }
 
 // GetResumeSessionParams calls ResumeSession API and gets tokenvalue for reconnecting.
-func (s *Session) GetResumeSessionParams(ctx context.Context, log *slog.Logger) (string, error) {
+func (s *Session) GetResumeSessionParams(ctx context.Context, log log.T) (string, error) {
 	resumeSessionInput := ssm.ResumeSessionInput{
 		SessionId: aws.String(s.SessionID),
 	}
@@ -121,7 +121,7 @@ func (s *Session) GetResumeSessionParams(ctx context.Context, log *slog.Logger) 
 }
 
 // ResumeSessionHandler gets token value and tries to Reconnect to datachannel.
-func (s *Session) ResumeSessionHandler(ctx context.Context, log *slog.Logger) error {
+func (s *Session) ResumeSessionHandler(ctx context.Context, log log.T) error {
 	var err error
 
 	s.TokenValue, err = s.GetResumeSessionParams(ctx, log)
@@ -146,7 +146,7 @@ func (s *Session) ResumeSessionHandler(ctx context.Context, log *slog.Logger) er
 }
 
 // TerminateSession calls TerminateSession API.
-func (s *Session) TerminateSession(ctx context.Context, log *slog.Logger) error {
+func (s *Session) TerminateSession(ctx context.Context, log log.T) error {
 	terminateSessionInput := ssm.TerminateSessionInput{
 		SessionId: &s.SessionID,
 	}

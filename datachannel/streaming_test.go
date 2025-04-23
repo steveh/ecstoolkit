@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log/slog"
 	"reflect"
 	"strconv"
 	"sync"
@@ -320,17 +319,17 @@ func TestDataChannelIncomingMessageHandlerForExpectedInputStreamDataMessage(t *t
 	dataChannel.wsChannel = mockChannel
 
 	SendAcknowledgeMessageCallCount := 0
-	SendAcknowledgeMessageCall = func(_ *slog.Logger, _ *DataChannel, _ message.ClientMessage) error {
+	SendAcknowledgeMessageCall = func(_ log.T, _ *DataChannel, _ message.ClientMessage) error {
 		SendAcknowledgeMessageCallCount++
 
 		return nil
 	}
 
-	var handler OutputStreamDataMessageHandler = func(_ *slog.Logger, _ message.ClientMessage) (bool, error) {
+	var handler OutputStreamDataMessageHandler = func(_ log.T, _ message.ClientMessage) (bool, error) {
 		return true, nil
 	}
 
-	var stopHandler Stop = func(_ *slog.Logger) error {
+	var stopHandler Stop = func(_ log.T) error {
 		return nil
 	}
 
@@ -367,13 +366,13 @@ func TestDataChannelIncomingMessageHandlerForUnexpectedInputStreamDataMessage(t 
 	dataChannel.IncomingMessageBuffer.Capacity = 2
 
 	SendAcknowledgeMessageCallCount := 0
-	SendAcknowledgeMessageCall = func(_ *slog.Logger, _ *DataChannel, _ message.ClientMessage) error {
+	SendAcknowledgeMessageCall = func(_ log.T, _ *DataChannel, _ message.ClientMessage) error {
 		SendAcknowledgeMessageCallCount++
 
 		return nil
 	}
 
-	var stopHandler Stop = func(_ *slog.Logger) error {
+	var stopHandler Stop = func(_ log.T) error {
 		return nil
 	}
 
@@ -404,7 +403,7 @@ func TestDataChannelIncomingMessageHandlerForAcknowledgeMessage(t *testing.T) {
 	mockChannel := &communicatorMocks.IWebSocketChannel{}
 	dataChannel.wsChannel = mockChannel
 
-	var stopHandler Stop = func(_ *slog.Logger) error {
+	var stopHandler Stop = func(_ log.T) error {
 		return nil
 	}
 
@@ -413,7 +412,7 @@ func TestDataChannelIncomingMessageHandlerForAcknowledgeMessage(t *testing.T) {
 	}
 
 	ProcessAcknowledgedMessageCallCount := 0
-	ProcessAcknowledgedMessageCall = func(_ *slog.Logger, _ *DataChannel, _ message.AcknowledgeContent) error {
+	ProcessAcknowledgedMessageCall = func(_ log.T, _ *DataChannel, _ message.AcknowledgeContent) error {
 		ProcessAcknowledgedMessageCallCount++
 
 		return nil
@@ -462,11 +461,11 @@ func TestDataChannelIncomingMessageHandlerForPausePublicationessage(t *testing.T
 		}
 	}
 
-	var handler OutputStreamDataMessageHandler = func(_ *slog.Logger, _ message.ClientMessage) (bool, error) {
+	var handler OutputStreamDataMessageHandler = func(_ log.T, _ message.ClientMessage) (bool, error) {
 		return true, nil
 	}
 
-	var stopHandler Stop = func(_ *slog.Logger) error {
+	var stopHandler Stop = func(_ log.T) error {
 		return nil
 	}
 
@@ -490,7 +489,7 @@ func TestHandshakeRequestHandler(t *testing.T) {
 		uint32(message.HandshakeRequestPayloadType), handshakeRequestBytes)
 	handshakeRequestMessageBytes, _ := clientMessage.SerializeClientMessage(mockLogger)
 
-	newEncrypter = func(_ context.Context, _ *slog.Logger, kmsKeyIDInput string, context map[string]string, _ *kms.Client) (encryption.IEncrypter, error) {
+	newEncrypter = func(_ context.Context, _ log.T, kmsKeyIDInput string, context map[string]string, _ *kms.Client) (encryption.IEncrypter, error) {
 		expectedContext := map[string]string{"aws:ssm:SessionId": sessionID, "aws:ssm:TargetId": instanceID}
 
 		assert.Equal(t, kmsKeyID, kmsKeyIDInput)
@@ -539,7 +538,7 @@ func TestHandshakeRequestHandler(t *testing.T) {
 	}
 	mockChannel.On("SendMessage", mock.Anything, mock.MatchedBy(handshakeResponseMatcher), mock.Anything).Return(nil)
 
-	if err := dataChannel.OutputMessageHandler(context.TODO(), mockLogger, func(_ *slog.Logger) error { return nil }, sessionID, handshakeRequestMessageBytes); err != nil {
+	if err := dataChannel.OutputMessageHandler(context.TODO(), mockLogger, func(_ log.T) error { return nil }, sessionID, handshakeRequestMessageBytes); err != nil {
 		t.Errorf("Failed to handle output message: %v", err)
 	}
 
@@ -554,7 +553,7 @@ func TestHandleOutputMessageForDefaultTypeWithError(t *testing.T) {
 		uint32(message.Output), payload)
 	rawMessage := []byte("rawMessage")
 
-	var handler OutputStreamDataMessageHandler = func(_ *slog.Logger, _ message.ClientMessage) (bool, error) {
+	var handler OutputStreamDataMessageHandler = func(_ log.T, _ message.ClientMessage) (bool, error) {
 		return true, errors.New("OutputStreamDataMessageHandler Error")
 	}
 
@@ -603,7 +602,7 @@ func TestProcessOutputMessageWithHandlers(t *testing.T) {
 	mockChannel := &communicatorMocks.IWebSocketChannel{}
 	dataChannel.wsChannel = mockChannel
 
-	var handler OutputStreamDataMessageHandler = func(_ *slog.Logger, _ message.ClientMessage) (bool, error) {
+	var handler OutputStreamDataMessageHandler = func(_ log.T, _ message.ClientMessage) (bool, error) {
 		return true, errors.New("OutputStreamDataMessageHandler Error")
 	}
 

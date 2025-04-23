@@ -17,12 +17,12 @@ package datachannel
 import (
 	"container/list"
 	"context"
-	"log/slog"
 	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/steveh/ecstoolkit/encryption"
+	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
 )
 
@@ -54,18 +54,18 @@ func (m StreamingMessage) GetRoundTripTime() time.Duration {
 }
 
 // OutputStreamDataMessageHandler is a function type that handles output stream data messages.
-type OutputStreamDataMessageHandler func(log *slog.Logger, streamDataMessage message.ClientMessage) (bool, error)
+type OutputStreamDataMessageHandler func(log log.T, streamDataMessage message.ClientMessage) (bool, error)
 
 // Stop is a function type that handles stopping the data channel.
-type Stop func(log *slog.Logger) error
+type Stop func(log log.T) error
 
 // SendAcknowledgeMessageCall is a function that sends an acknowledgment message for a stream data message.
-var SendAcknowledgeMessageCall = func(log *slog.Logger, dataChannel *DataChannel, streamDataMessage message.ClientMessage) error {
+var SendAcknowledgeMessageCall = func(log log.T, dataChannel *DataChannel, streamDataMessage message.ClientMessage) error {
 	return dataChannel.SendAcknowledgeMessage(log, streamDataMessage)
 }
 
 // ProcessAcknowledgedMessageCall is a function that processes an acknowledged message.
-var ProcessAcknowledgedMessageCall = func(log *slog.Logger, dataChannel *DataChannel, acknowledgeMessage message.AcknowledgeContent) error {
+var ProcessAcknowledgedMessageCall = func(log log.T, dataChannel *DataChannel, acknowledgeMessage message.AcknowledgeContent) error {
 	return dataChannel.ProcessAcknowledgedMessage(log, acknowledgeMessage)
 }
 
@@ -74,6 +74,6 @@ var SendMessageCall = func(dataChannel *DataChannel, input []byte, inputType int
 	return dataChannel.SendMessage(input, inputType)
 }
 
-var newEncrypter = func(ctx context.Context, log *slog.Logger, kmsKeyID string, encryptionConext map[string]string, kmsService *kms.Client) (encryption.IEncrypter, error) {
+var newEncrypter = func(ctx context.Context, log log.T, kmsKeyID string, encryptionConext map[string]string, kmsService *kms.Client) (encryption.IEncrypter, error) {
 	return encryption.NewEncrypter(ctx, log, kmsKeyID, encryptionConext, kmsService)
 }

@@ -11,6 +11,13 @@ linters:
     - lll
     - tagliatelle
     - varnamelen
+
+    - err113
+    - gochecknoglobals
+    - gochecknoinits
+    - interfacebloat
+    - paralleltest
+    - testpackage
   exclusions:
     generated: lax
 formatters:

@@ -22,11 +22,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"log/slog"
 	"os"
 	"os/exec"
 	"time"
 
+	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
 )
 
@@ -57,7 +57,7 @@ func setState(state *bytes.Buffer) error {
 }
 
 // Stop restores the terminal settings and exits.
-func (s *ShellSession) Stop(log *slog.Logger) error {
+func (s *ShellSession) Stop(log log.T) error {
 	// Must be closed to avoid errors.
 	if err := s.DataChannel.Close(log); err != nil {
 		return fmt.Errorf("closing DataChannel: %w", err)
@@ -98,7 +98,7 @@ func (s *ShellSession) enableEchoAndInputBuffering() error {
 }
 
 // handleKeyboardInput handles input entered by customer on terminal.
-func (s *ShellSession) handleKeyboardInput(ctx context.Context, log *slog.Logger) error {
+func (s *ShellSession) handleKeyboardInput(ctx context.Context, log log.T) error {
 	ctx, cancelFunc := context.WithCancel(ctx)
 	s.shutdown = cancelFunc
 

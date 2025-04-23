@@ -18,12 +18,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"log/slog"
 	"os"
 	"os/signal"
 	"time"
 
 	"github.com/steveh/ecstoolkit/config"
+	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
 	"github.com/steveh/ecstoolkit/session"
 	"github.com/steveh/ecstoolkit/session/sessionutil"
@@ -59,7 +59,7 @@ func (s *ShellSession) Name() string {
 }
 
 // Initialize sets up the shell session with the provided session parameters.
-func (s *ShellSession) Initialize(ctx context.Context, log *slog.Logger, sessionVar *session.Session) {
+func (s *ShellSession) Initialize(ctx context.Context, log log.T, sessionVar *session.Session) {
 	s.Session = *sessionVar
 	s.DataChannel.RegisterOutputStreamHandler(s.ProcessStreamMessagePayload, true)
 	s.DataChannel.GetWsChannel().SetOnMessage(
@@ -71,7 +71,7 @@ func (s *ShellSession) Initialize(ctx context.Context, log *slog.Logger, session
 }
 
 // SetSessionHandlers sets up handlers for terminal input, resizing, and control signals.
-func (s *ShellSession) SetSessionHandlers(ctx context.Context, log *slog.Logger) error {
+func (s *ShellSession) SetSessionHandlers(ctx context.Context, log log.T) error {
 	// handle re-size
 	s.handleTerminalResize(log)
 
@@ -83,14 +83,14 @@ func (s *ShellSession) SetSessionHandlers(ctx context.Context, log *slog.Logger)
 }
 
 // ProcessStreamMessagePayload prints payload received on datachannel to console.
-func (s *ShellSession) ProcessStreamMessagePayload(log *slog.Logger, outputMessage message.ClientMessage) (bool, error) {
+func (s *ShellSession) ProcessStreamMessagePayload(log log.T, outputMessage message.ClientMessage) (bool, error) {
 	s.DisplayMode.DisplayMessage(log, outputMessage)
 
 	return true, nil
 }
 
 // handleControlSignals handles control signals when given by user.
-func (s *ShellSession) handleControlSignals(log *slog.Logger) {
+func (s *ShellSession) handleControlSignals(log log.T) {
 	go func() {
 		signals := make(chan os.Signal, 1)
 		signal.Notify(signals, sessionutil.ControlSignals...)
@@ -107,7 +107,7 @@ func (s *ShellSession) handleControlSignals(log *slog.Logger) {
 }
 
 // handleTerminalResize checks size of terminal every 500ms and sends size data.
-func (s *ShellSession) handleTerminalResize(log *slog.Logger) {
+func (s *ShellSession) handleTerminalResize(log log.T) {
 	go func() {
 		for {
 			width, height := terminalSize(log)
@@ -137,7 +137,7 @@ func (s *ShellSession) handleTerminalResize(log *slog.Logger) {
 }
 
 // If running from IDE GetTerminalSizeCall will not work. Supply a fixed width and height value.
-func terminalSize(log *slog.Logger) (uint32, uint32) {
+func terminalSize(log log.T) (uint32, uint32) {
 	const (
 		defaultWidth  = 300
 		defaultHeight = 100
