@@ -55,7 +55,6 @@ type MgsConn struct {
 // MuxPortForwarding is type of port session
 // accepts multiple client connections through multiplexing.
 type MuxPortForwarding struct {
-	port           IPortSession
 	sessionID      string
 	socketFile     string
 	portParameters PortParameters

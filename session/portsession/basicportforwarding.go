@@ -35,7 +35,6 @@ import (
 // BasicPortForwarding is type of port session
 // accepts one client connection at a time.
 type BasicPortForwarding struct {
-	port           IPortSession
 	stream         *net.Conn
 	listener       *net.Listener
 	sessionID      string

@@ -30,7 +30,6 @@ import (
 
 // StandardStreamForwarding implements port forwarding using standard input and output streams.
 type StandardStreamForwarding struct {
-	port           IPortSession
 	inputStream    *os.File
 	outputStream   *os.File
 	portParameters PortParameters

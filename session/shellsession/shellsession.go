@@ -45,7 +45,6 @@ type ShellSession struct {
 	SizeData          message.SizeData
 	originalSttyState bytes.Buffer
 	shutdown          context.CancelFunc
-	log               *slog.Logger
 }
 
 var _ session.ISessionPlugin = (*ShellSession)(nil)

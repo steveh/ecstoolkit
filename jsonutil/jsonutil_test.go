@@ -210,7 +210,7 @@ func TestRemarshalInvalidInput(t *testing.T) {
 	badInput := make(chan bool)
 
 	type Output struct {
-		name string
+		name string //nolint:unused
 	}
 
 	var output Output
