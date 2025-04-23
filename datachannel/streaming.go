@@ -745,7 +745,7 @@ func (dataChannel *DataChannel) GetSessionProperties() interface{} {
 }
 
 // GetWsChannel returns WsChannel of the dataChannel.
-func (dataChannel *DataChannel) GetWsChannel() communicator.IWebSocketChannel {
+func (dataChannel *DataChannel) GetWsChannel() communicator.IWebSocketChannel { //nolint:ireturn
 	return dataChannel.wsChannel
 }
 
