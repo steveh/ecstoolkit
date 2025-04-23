@@ -65,6 +65,25 @@ func NewFromConfig(cfg aws.Config, logger *slog.Logger) *Executor {
 	return NewExecutor(ecsClient, kmsClient, ssmClient, logger)
 }
 
+// ExecuteSession executes a session with the provided options.
+func (e *Executor) ExecuteSession(ctx context.Context, options *ExecuteSessionOptions) error {
+	execute, err := e.executeCommand(ctx, options)
+	if err != nil {
+		return err
+	}
+
+	sess, err := e.newSession(options, execute)
+	if err != nil {
+		return err
+	}
+
+	if err := e.initSession(ctx, sess); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (e *Executor) parseARN(taskARN string) (string, string, error) {
 	parsedARN, err := arn.Parse(taskARN)
 	if err != nil {
@@ -170,25 +189,6 @@ func (e *Executor) initSession(ctx context.Context, sess *session.Session) error
 
 	if err := sessionSubType.SetSessionHandlers(ctx, e.logger); err != nil {
 		return fmt.Errorf("ending with error: %w", err)
-	}
-
-	return nil
-}
-
-// ExecuteSession executes a session with the provided options.
-func (e *Executor) ExecuteSession(ctx context.Context, options *ExecuteSessionOptions) error {
-	execute, err := e.executeCommand(ctx, options)
-	if err != nil {
-		return err
-	}
-
-	sess, err := e.newSession(options, execute)
-	if err != nil {
-		return err
-	}
-
-	if err := e.initSession(ctx, sess); err != nil {
-		return err
 	}
 
 	return nil

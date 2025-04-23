@@ -82,6 +82,13 @@ func (s *ShellSession) SetSessionHandlers(ctx context.Context, log *slog.Logger)
 	return s.handleKeyboardInput(ctx, log)
 }
 
+// ProcessStreamMessagePayload prints payload received on datachannel to console.
+func (s *ShellSession) ProcessStreamMessagePayload(log *slog.Logger, outputMessage message.ClientMessage) (bool, error) {
+	s.DisplayMode.DisplayMessage(log, outputMessage)
+
+	return true, nil
+}
+
 // handleControlSignals handles control signals when given by user.
 func (s *ShellSession) handleControlSignals(log *slog.Logger) {
 	go func() {
@@ -138,11 +145,4 @@ func (s *ShellSession) handleTerminalResize(log *slog.Logger) {
 			time.Sleep(ResizeSleepInterval)
 		}
 	}()
-}
-
-// ProcessStreamMessagePayload prints payload received on datachannel to console.
-func (s *ShellSession) ProcessStreamMessagePayload(log *slog.Logger, outputMessage message.ClientMessage) (bool, error) {
-	s.DisplayMode.DisplayMessage(log, outputMessage)
-
-	return true, nil
 }

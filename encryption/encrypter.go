@@ -60,23 +60,6 @@ var NewEncrypter = func(ctx context.Context, log *slog.Logger, kmsKeyID string, 
 	return &encrypter, err
 }
 
-// generateEncryptionKey calls KMS to generate a new encryption key.
-func (encrypter *Encrypter) generateEncryptionKey(ctx context.Context, log *slog.Logger, kmsKeyID string, encryptionContext map[string]string) error {
-	cipherTextKey, plainTextKey, err := KMSGenerateDataKey(ctx, kmsKeyID, encrypter.KMSService, encryptionContext)
-	if err != nil {
-		log.Error("Error generating data key from KMS", "error", err)
-
-		return err
-	}
-
-	keySize := len(plainTextKey) / 2
-	encrypter.decryptionKey = plainTextKey[:keySize]
-	encrypter.encryptionKey = plainTextKey[keySize:]
-	encrypter.cipherTextKey = cipherTextKey
-
-	return nil
-}
-
 // GetEncryptedDataKey returns the cipherText that was pulled from KMS.
 func (encrypter *Encrypter) GetEncryptedDataKey() []byte {
 	return encrypter.cipherTextKey
@@ -85,25 +68,6 @@ func (encrypter *Encrypter) GetEncryptedDataKey() []byte {
 // GetKMSKeyID gets the KMS key id that is used to generate the encryption key.
 func (encrypter *Encrypter) GetKMSKeyID() string {
 	return encrypter.kmsKeyID
-}
-
-// getAEAD gets AEAD which is a GCM cipher mode providing authenticated encryption with associated data.
-func getAEAD(plainTextKey []byte) (cipher.AEAD, error) {
-	var block cipher.Block
-
-	var aesgcm cipher.AEAD
-
-	var err error
-
-	if block, err = aes.NewCipher(plainTextKey); err != nil {
-		return nil, fmt.Errorf("error creating NewCipher, %w", err)
-	}
-
-	if aesgcm, err = cipher.NewGCM(block); err != nil {
-		return nil, fmt.Errorf("error creating NewGCM, %w", err)
-	}
-
-	return aesgcm, nil
 }
 
 // Encrypt encrypts a byte slice and returns the encrypted slice.
@@ -154,4 +118,40 @@ func (encrypter *Encrypter) Decrypt(_ *slog.Logger, cipherText []byte) ([]byte, 
 	}
 
 	return plainText, nil
+}
+
+// generateEncryptionKey calls KMS to generate a new encryption key.
+func (encrypter *Encrypter) generateEncryptionKey(ctx context.Context, log *slog.Logger, kmsKeyID string, encryptionContext map[string]string) error {
+	cipherTextKey, plainTextKey, err := KMSGenerateDataKey(ctx, kmsKeyID, encrypter.KMSService, encryptionContext)
+	if err != nil {
+		log.Error("Error generating data key from KMS", "error", err)
+
+		return err
+	}
+
+	keySize := len(plainTextKey) / 2
+	encrypter.decryptionKey = plainTextKey[:keySize]
+	encrypter.encryptionKey = plainTextKey[keySize:]
+	encrypter.cipherTextKey = cipherTextKey
+
+	return nil
+}
+
+// getAEAD gets AEAD which is a GCM cipher mode providing authenticated encryption with associated data.
+func getAEAD(plainTextKey []byte) (cipher.AEAD, error) {
+	var block cipher.Block
+
+	var aesgcm cipher.AEAD
+
+	var err error
+
+	if block, err = aes.NewCipher(plainTextKey); err != nil {
+		return nil, fmt.Errorf("error creating NewCipher, %w", err)
+	}
+
+	if aesgcm, err = cipher.NewGCM(block); err != nil {
+		return nil, fmt.Errorf("error creating NewGCM, %w", err)
+	}
+
+	return aesgcm, nil
 }

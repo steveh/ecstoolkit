@@ -491,170 +491,6 @@ func (dataChannel *DataChannel) OutputMessageHandler(ctx context.Context, log *s
 	return nil
 }
 
-// handleHandshakeRequest is the handler for payloads of type HandshakeRequest.
-func (dataChannel *DataChannel) handleHandshakeRequest(ctx context.Context, log *slog.Logger, clientMessage message.ClientMessage) error {
-	handshakeRequest, err := clientMessage.DeserializeHandshakeRequest(log)
-	if err != nil {
-		log.Error("Deserialize Handshake Request failed", "error", err)
-
-		return fmt.Errorf("deserializing handshake request: %w", err)
-	}
-
-	dataChannel.agentVersion = handshakeRequest.AgentVersion
-
-	var errorList []error
-
-	var handshakeResponse message.HandshakeResponsePayload
-	handshakeResponse.ClientVersion = version.Version
-	handshakeResponse.ProcessedClientActions = []message.ProcessedClientAction{}
-
-	for _, action := range handshakeRequest.RequestedClientActions {
-		processedAction := message.ProcessedClientAction{}
-
-		switch action.ActionType {
-		case message.KMSEncryption:
-			processedAction.ActionType = action.ActionType
-			err := dataChannel.ProcessKMSEncryptionHandshakeAction(ctx, log, action.ActionParameters)
-
-			if err != nil {
-				processedAction.ActionStatus = message.Failed
-				processedAction.Error = fmt.Sprintf("processing action %s: %s",
-					message.KMSEncryption, err)
-
-				errorList = append(errorList, err)
-			} else {
-				processedAction.ActionStatus = message.Success
-				processedAction.ActionResult = message.KMSEncryptionResponse{
-					KMSCipherTextKey: dataChannel.encryption.GetEncryptedDataKey(),
-				}
-				dataChannel.encryptionEnabled = true
-			}
-		case message.SessionType:
-			processedAction.ActionType = action.ActionType
-			err := dataChannel.ProcessSessionTypeHandshakeAction(action.ActionParameters)
-
-			if err != nil {
-				processedAction.ActionStatus = message.Failed
-				processedAction.Error = fmt.Sprintf("processing action %s: %s",
-					message.SessionType, err)
-
-				errorList = append(errorList, err)
-			} else {
-				processedAction.ActionStatus = message.Success
-			}
-
-		default:
-			processedAction.ActionType = action.ActionType
-			processedAction.ActionResult = message.Unsupported
-			processedAction.Error = fmt.Sprintf("Unsupported action %s", action.ActionType)
-			errorList = append(errorList, errors.New(processedAction.Error))
-		}
-
-		handshakeResponse.ProcessedClientActions = append(handshakeResponse.ProcessedClientActions, processedAction)
-	}
-
-	for _, x := range errorList {
-		handshakeResponse.Errors = append(handshakeResponse.Errors, x.Error())
-	}
-
-	err = dataChannel.sendHandshakeResponse(log, handshakeResponse)
-
-	return err
-}
-
-// handleHandshakeComplete is the handler for when the payload type is HandshakeComplete. This will trigger
-// the plugin to start.
-func (dataChannel *DataChannel) handleHandshakeComplete(log *slog.Logger, clientMessage message.ClientMessage) error {
-	var err error
-
-	var handshakeComplete message.HandshakeCompletePayload
-
-	handshakeComplete, err = clientMessage.DeserializeHandshakeComplete(log)
-	if err != nil {
-		return fmt.Errorf("handling handshake complete: %w", err)
-	}
-
-	// SessionType would be set when handshake request is received
-	if dataChannel.sessionType != "" {
-		dataChannel.isSessionTypeSet <- true
-	} else {
-		dataChannel.isSessionTypeSet <- false
-	}
-
-	log.Debug("Handshake Complete", "timeToComplete", handshakeComplete.HandshakeTimeToComplete.Seconds())
-
-	if handshakeComplete.CustomerMessage != "" {
-		log.Debug("Exiting session", "sessionID", dataChannel.SessionID)
-		log.Debug("Session message", "sessionID", dataChannel.SessionID, "message", handshakeComplete.CustomerMessage)
-	}
-
-	return fmt.Errorf("handling handshake complete: %w", err)
-}
-
-// handleEncryptionChallengeRequest receives EncryptionChallenge and responds.
-func (dataChannel *DataChannel) handleEncryptionChallengeRequest(log *slog.Logger, clientMessage message.ClientMessage) error {
-	var err error
-
-	var encChallengeReq message.EncryptionChallengeRequest
-
-	err = json.Unmarshal(clientMessage.Payload, &encChallengeReq)
-	if err != nil {
-		return fmt.Errorf("could not deserialize rawMessage, %s : %w", clientMessage.Payload, err)
-	}
-
-	challenge := encChallengeReq.Challenge
-
-	challenge, err = dataChannel.encryption.Decrypt(log, challenge)
-	if err != nil {
-		return fmt.Errorf("decrypting challenge: %w", err)
-	}
-
-	challenge, err = dataChannel.encryption.Encrypt(log, challenge)
-	if err != nil {
-		return fmt.Errorf("encrypting challenge: %w", err)
-	}
-
-	encChallengeResp := message.EncryptionChallengeResponse{
-		Challenge: challenge,
-	}
-
-	err = dataChannel.sendEncryptionChallengeResponse(log, encChallengeResp)
-
-	return err
-}
-
-// sendEncryptionChallengeResponse sends EncryptionChallengeResponse.
-func (dataChannel *DataChannel) sendEncryptionChallengeResponse(log *slog.Logger, response message.EncryptionChallengeResponse) error {
-	resultBytes, err := json.Marshal(response)
-	if err != nil {
-		return fmt.Errorf("could not serialize EncChallengeResponse message: %v, err: %w", response, err)
-	}
-
-	log.Debug("Sending EncChallengeResponse message")
-
-	if err := dataChannel.SendInputDataMessage(log, message.EncChallengeResponse, resultBytes); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// sendHandshakeResponse sends HandshakeResponse.
-func (dataChannel *DataChannel) sendHandshakeResponse(log *slog.Logger, response message.HandshakeResponsePayload) error {
-	resultBytes, err := json.Marshal(response)
-	if err != nil {
-		log.Error("Could not serialize HandshakeResponse message", "response", response, "error", err)
-	}
-
-	log.Debug("Sending HandshakeResponse message")
-
-	if err := dataChannel.SendInputDataMessage(log, message.HandshakeResponsePayloadType, resultBytes); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // RegisterOutputStreamHandler register a handler for messages of type OutputStream. This is usually called by the plugin.
 func (dataChannel *DataChannel) RegisterOutputStreamHandler(handler OutputStreamDataMessageHandler, isSessionSpecificHandler bool) {
 	dataChannel.isSessionSpecificHandlerSet = isSessionSpecificHandler
@@ -671,161 +507,6 @@ func (dataChannel *DataChannel) DeregisterOutputStreamHandler(handler OutputStre
 			break
 		}
 	}
-}
-
-func (dataChannel *DataChannel) processOutputMessageWithHandlers(log *slog.Logger, message message.ClientMessage) (bool, error) {
-	// Return false if sessionType is known but session specific handler is not set
-	if dataChannel.sessionType != "" && !dataChannel.isSessionSpecificHandlerSet {
-		return false, nil
-	}
-
-	var isHandlerReady bool
-
-	var err error
-
-	for _, handler := range dataChannel.outputStreamHandlers {
-		isHandlerReady, err = handler(log, message)
-		// Break the processing of message and return if session specific handler is not ready
-		if err != nil || !isHandlerReady {
-			break
-		}
-	}
-
-	return isHandlerReady, err
-}
-
-// handleHandshakeRequestOutputMessage handles output messages of type HandshakeRequestPayloadType.
-func (dataChannel *DataChannel) handleHandshakeRequestOutputMessage(
-	ctx context.Context,
-	log *slog.Logger,
-	outputMessage message.ClientMessage,
-) error {
-	if err := SendAcknowledgeMessageCall(log, dataChannel, outputMessage); err != nil {
-		return err
-	}
-
-	// PayloadType is HandshakeRequest so we call our own handler instead of the provided handler
-	log.Debug("Processing HandshakeRequest message", "message", outputMessage)
-
-	if err := dataChannel.handleHandshakeRequest(ctx, log, outputMessage); err != nil {
-		log.Error("processing stream data message", "error", err.Error())
-
-		return err
-	}
-
-	return nil
-}
-
-// handleHandshakeCompleteOutputMessage handles output messages of type HandshakeCompletePayloadType.
-func (dataChannel *DataChannel) handleHandshakeCompleteOutputMessage(
-	log *slog.Logger,
-	outputMessage message.ClientMessage,
-) error {
-	if err := SendAcknowledgeMessageCall(log, dataChannel, outputMessage); err != nil {
-		return err
-	}
-
-	if err := dataChannel.handleHandshakeComplete(log, outputMessage); err != nil {
-		log.Error("processing stream data message", "error", err.Error())
-
-		return err
-	}
-
-	return nil
-}
-
-// handleEncryptionChallengeRequestOutputMessage handles output messages of type EncChallengeRequest.
-func (dataChannel *DataChannel) handleEncryptionChallengeRequestOutputMessage(
-	log *slog.Logger,
-	outputMessage message.ClientMessage,
-) error {
-	if err := SendAcknowledgeMessageCall(log, dataChannel, outputMessage); err != nil {
-		return err
-	}
-
-	if err := dataChannel.handleEncryptionChallengeRequest(log, outputMessage); err != nil {
-		log.Error("processing stream data message", "error", err.Error())
-
-		return err
-	}
-
-	return nil
-}
-
-// handleDefaultOutputMessage handles output messages of any other type.
-func (dataChannel *DataChannel) handleDefaultOutputMessage(
-	log *slog.Logger,
-	outputMessage message.ClientMessage,
-) error {
-	log.Debug("Process new incoming stream data message", "sequenceNumber", outputMessage.SequenceNumber)
-
-	// Decrypt if encryption is enabled and payload type is output
-	if dataChannel.encryptionEnabled &&
-		(outputMessage.PayloadType == uint32(message.Output) ||
-			outputMessage.PayloadType == uint32(message.StdErr) ||
-			outputMessage.PayloadType == uint32(message.ExitCode)) {
-		var err error
-
-		outputMessage.Payload, err = dataChannel.encryption.Decrypt(log, outputMessage.Payload)
-		if err != nil {
-			log.Error("Unable to decrypt incoming data payload", "messageType", outputMessage.MessageType, "payloadType", outputMessage.PayloadType, "error", err)
-
-			return fmt.Errorf("decrypting incoming data payload: %w", err)
-		}
-	}
-
-	isHandlerReady, err := dataChannel.processOutputMessageWithHandlers(log, outputMessage)
-	if err != nil {
-		log.Error("processing stream data message", "error", err.Error())
-
-		return fmt.Errorf("processing stream data message: %w", err)
-	}
-
-	if !isHandlerReady {
-		log.Warn("Stream data message not processed", "sequenceNumber", outputMessage.SequenceNumber, "reason", "session handler not ready")
-
-		return nil
-	}
-
-	// Acknowledge outputMessage only if session specific handler is ready
-	if err := SendAcknowledgeMessageCall(log, dataChannel, outputMessage); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// handleUnexpectedSequenceMessage handles messages with unexpected sequence numbers.
-func (dataChannel *DataChannel) handleUnexpectedSequenceMessage(
-	log *slog.Logger,
-	outputMessage message.ClientMessage,
-	rawMessage []byte,
-) error {
-	log.Debug("Unexpected sequence message received", "receivedSequence", outputMessage.SequenceNumber, "expectedSequence", dataChannel.ExpectedSequenceNumber)
-
-	// If incoming message sequence number is greater then expected sequence number and IncomingMessageBuffer has capacity,
-	// add message to IncomingMessageBuffer and send acknowledgement
-	if outputMessage.SequenceNumber > dataChannel.ExpectedSequenceNumber {
-		log.Debug("Received sequence number is higher than expected", "receivedSequence", outputMessage.SequenceNumber, "expectedSequence", dataChannel.ExpectedSequenceNumber)
-
-		if len(dataChannel.IncomingMessageBuffer.Messages) < dataChannel.IncomingMessageBuffer.Capacity {
-			if err := SendAcknowledgeMessageCall(log, dataChannel, outputMessage); err != nil {
-				return err
-			}
-
-			streamingMessage := StreamingMessage{
-				rawMessage,
-				outputMessage.SequenceNumber,
-				time.Now(),
-				new(int),
-			}
-
-			// Add message to buffer for future processing
-			dataChannel.AddDataToIncomingMessageBuffer(streamingMessage)
-		}
-	}
-
-	return nil
 }
 
 // HandleOutputMessage handles incoming stream data message by processing the payload and updating expectedSequenceNumber.
@@ -864,46 +545,6 @@ func (dataChannel *DataChannel) HandleOutputMessage(
 
 	// Process any buffered messages that are now in sequence
 	return dataChannel.ProcessIncomingMessageBufferItems(log, outputMessage)
-}
-
-// processBufferedMessage processes a single buffered message and updates the expected sequence number.
-func (dataChannel *DataChannel) processBufferedMessage(
-	log *slog.Logger,
-	outputMessage message.ClientMessage,
-	bufferedStreamMessage StreamingMessage,
-) error {
-	log.Debug("Process stream data message from IncomingMessageBuffer", "sequenceNumber", bufferedStreamMessage.SequenceNumber)
-
-	if err := outputMessage.DeserializeClientMessage(log, bufferedStreamMessage.Content); err != nil {
-		log.Error("Cannot deserialize raw message", "error", err)
-
-		return fmt.Errorf("deserializing raw message: %w", err)
-	}
-
-	// Decrypt if encryption is enabled and payload type is output
-	if dataChannel.encryptionEnabled &&
-		(outputMessage.PayloadType == uint32(message.Output) ||
-			outputMessage.PayloadType == uint32(message.StdErr) ||
-			outputMessage.PayloadType == uint32(message.ExitCode)) {
-		var err error
-
-		outputMessage.Payload, err = dataChannel.encryption.Decrypt(log, outputMessage.Payload)
-		if err != nil {
-			log.Error("Unable to decrypt buffered message data payload", "messageType", outputMessage.MessageType, "payloadType", outputMessage.PayloadType, "error", err)
-
-			return fmt.Errorf("decrypting buffered message data payload: %w", err)
-		}
-	}
-
-	_, err := dataChannel.processOutputMessageWithHandlers(log, outputMessage)
-	if err != nil {
-		return fmt.Errorf("processing output message with handlers: %w", err)
-	}
-
-	dataChannel.ExpectedSequenceNumber++
-	dataChannel.RemoveDataFromIncomingMessageBuffer(bufferedStreamMessage.SequenceNumber)
-
-	return nil
 }
 
 // ProcessIncomingMessageBufferItems checks if new expected sequence stream data is present in IncomingMessageBuffer.
@@ -1126,4 +767,363 @@ func (dataChannel *DataChannel) GetAgentVersion() string {
 // SetAgentVersion set agent version of the target instance.
 func (dataChannel *DataChannel) SetAgentVersion(agentVersion string) {
 	dataChannel.agentVersion = agentVersion
+}
+
+// handleHandshakeRequest is the handler for payloads of type HandshakeRequest.
+func (dataChannel *DataChannel) handleHandshakeRequest(ctx context.Context, log *slog.Logger, clientMessage message.ClientMessage) error {
+	handshakeRequest, err := clientMessage.DeserializeHandshakeRequest(log)
+	if err != nil {
+		log.Error("Deserialize Handshake Request failed", "error", err)
+
+		return fmt.Errorf("deserializing handshake request: %w", err)
+	}
+
+	dataChannel.agentVersion = handshakeRequest.AgentVersion
+
+	var errorList []error
+
+	var handshakeResponse message.HandshakeResponsePayload
+	handshakeResponse.ClientVersion = version.Version
+	handshakeResponse.ProcessedClientActions = []message.ProcessedClientAction{}
+
+	for _, action := range handshakeRequest.RequestedClientActions {
+		processedAction := message.ProcessedClientAction{}
+
+		switch action.ActionType {
+		case message.KMSEncryption:
+			processedAction.ActionType = action.ActionType
+			err := dataChannel.ProcessKMSEncryptionHandshakeAction(ctx, log, action.ActionParameters)
+
+			if err != nil {
+				processedAction.ActionStatus = message.Failed
+				processedAction.Error = fmt.Sprintf("processing action %s: %s",
+					message.KMSEncryption, err)
+
+				errorList = append(errorList, err)
+			} else {
+				processedAction.ActionStatus = message.Success
+				processedAction.ActionResult = message.KMSEncryptionResponse{
+					KMSCipherTextKey: dataChannel.encryption.GetEncryptedDataKey(),
+				}
+				dataChannel.encryptionEnabled = true
+			}
+		case message.SessionType:
+			processedAction.ActionType = action.ActionType
+			err := dataChannel.ProcessSessionTypeHandshakeAction(action.ActionParameters)
+
+			if err != nil {
+				processedAction.ActionStatus = message.Failed
+				processedAction.Error = fmt.Sprintf("processing action %s: %s",
+					message.SessionType, err)
+
+				errorList = append(errorList, err)
+			} else {
+				processedAction.ActionStatus = message.Success
+			}
+
+		default:
+			processedAction.ActionType = action.ActionType
+			processedAction.ActionResult = message.Unsupported
+			processedAction.Error = fmt.Sprintf("Unsupported action %s", action.ActionType)
+			errorList = append(errorList, errors.New(processedAction.Error))
+		}
+
+		handshakeResponse.ProcessedClientActions = append(handshakeResponse.ProcessedClientActions, processedAction)
+	}
+
+	for _, x := range errorList {
+		handshakeResponse.Errors = append(handshakeResponse.Errors, x.Error())
+	}
+
+	err = dataChannel.sendHandshakeResponse(log, handshakeResponse)
+
+	return err
+}
+
+// handleHandshakeComplete is the handler for when the payload type is HandshakeComplete. This will trigger
+// the plugin to start.
+func (dataChannel *DataChannel) handleHandshakeComplete(log *slog.Logger, clientMessage message.ClientMessage) error {
+	var err error
+
+	var handshakeComplete message.HandshakeCompletePayload
+
+	handshakeComplete, err = clientMessage.DeserializeHandshakeComplete(log)
+	if err != nil {
+		return fmt.Errorf("handling handshake complete: %w", err)
+	}
+
+	// SessionType would be set when handshake request is received
+	if dataChannel.sessionType != "" {
+		dataChannel.isSessionTypeSet <- true
+	} else {
+		dataChannel.isSessionTypeSet <- false
+	}
+
+	log.Debug("Handshake Complete", "timeToComplete", handshakeComplete.HandshakeTimeToComplete.Seconds())
+
+	if handshakeComplete.CustomerMessage != "" {
+		log.Debug("Exiting session", "sessionID", dataChannel.SessionID)
+		log.Debug("Session message", "sessionID", dataChannel.SessionID, "message", handshakeComplete.CustomerMessage)
+	}
+
+	return fmt.Errorf("handling handshake complete: %w", err)
+}
+
+// handleEncryptionChallengeRequest receives EncryptionChallenge and responds.
+func (dataChannel *DataChannel) handleEncryptionChallengeRequest(log *slog.Logger, clientMessage message.ClientMessage) error {
+	var err error
+
+	var encChallengeReq message.EncryptionChallengeRequest
+
+	err = json.Unmarshal(clientMessage.Payload, &encChallengeReq)
+	if err != nil {
+		return fmt.Errorf("could not deserialize rawMessage, %s : %w", clientMessage.Payload, err)
+	}
+
+	challenge := encChallengeReq.Challenge
+
+	challenge, err = dataChannel.encryption.Decrypt(log, challenge)
+	if err != nil {
+		return fmt.Errorf("decrypting challenge: %w", err)
+	}
+
+	challenge, err = dataChannel.encryption.Encrypt(log, challenge)
+	if err != nil {
+		return fmt.Errorf("encrypting challenge: %w", err)
+	}
+
+	encChallengeResp := message.EncryptionChallengeResponse{
+		Challenge: challenge,
+	}
+
+	err = dataChannel.sendEncryptionChallengeResponse(log, encChallengeResp)
+
+	return err
+}
+
+// sendEncryptionChallengeResponse sends EncryptionChallengeResponse.
+func (dataChannel *DataChannel) sendEncryptionChallengeResponse(log *slog.Logger, response message.EncryptionChallengeResponse) error {
+	resultBytes, err := json.Marshal(response)
+	if err != nil {
+		return fmt.Errorf("could not serialize EncChallengeResponse message: %v, err: %w", response, err)
+	}
+
+	log.Debug("Sending EncChallengeResponse message")
+
+	if err := dataChannel.SendInputDataMessage(log, message.EncChallengeResponse, resultBytes); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// sendHandshakeResponse sends HandshakeResponse.
+func (dataChannel *DataChannel) sendHandshakeResponse(log *slog.Logger, response message.HandshakeResponsePayload) error {
+	resultBytes, err := json.Marshal(response)
+	if err != nil {
+		log.Error("Could not serialize HandshakeResponse message", "response", response, "error", err)
+	}
+
+	log.Debug("Sending HandshakeResponse message")
+
+	if err := dataChannel.SendInputDataMessage(log, message.HandshakeResponsePayloadType, resultBytes); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (dataChannel *DataChannel) processOutputMessageWithHandlers(log *slog.Logger, message message.ClientMessage) (bool, error) {
+	// Return false if sessionType is known but session specific handler is not set
+	if dataChannel.sessionType != "" && !dataChannel.isSessionSpecificHandlerSet {
+		return false, nil
+	}
+
+	var isHandlerReady bool
+
+	var err error
+
+	for _, handler := range dataChannel.outputStreamHandlers {
+		isHandlerReady, err = handler(log, message)
+		// Break the processing of message and return if session specific handler is not ready
+		if err != nil || !isHandlerReady {
+			break
+		}
+	}
+
+	return isHandlerReady, err
+}
+
+// handleHandshakeRequestOutputMessage handles output messages of type HandshakeRequestPayloadType.
+func (dataChannel *DataChannel) handleHandshakeRequestOutputMessage(
+	ctx context.Context,
+	log *slog.Logger,
+	outputMessage message.ClientMessage,
+) error {
+	if err := SendAcknowledgeMessageCall(log, dataChannel, outputMessage); err != nil {
+		return err
+	}
+
+	// PayloadType is HandshakeRequest so we call our own handler instead of the provided handler
+	log.Debug("Processing HandshakeRequest message", "message", outputMessage)
+
+	if err := dataChannel.handleHandshakeRequest(ctx, log, outputMessage); err != nil {
+		log.Error("processing stream data message", "error", err.Error())
+
+		return err
+	}
+
+	return nil
+}
+
+// handleHandshakeCompleteOutputMessage handles output messages of type HandshakeCompletePayloadType.
+func (dataChannel *DataChannel) handleHandshakeCompleteOutputMessage(
+	log *slog.Logger,
+	outputMessage message.ClientMessage,
+) error {
+	if err := SendAcknowledgeMessageCall(log, dataChannel, outputMessage); err != nil {
+		return err
+	}
+
+	if err := dataChannel.handleHandshakeComplete(log, outputMessage); err != nil {
+		log.Error("processing stream data message", "error", err.Error())
+
+		return err
+	}
+
+	return nil
+}
+
+// handleEncryptionChallengeRequestOutputMessage handles output messages of type EncChallengeRequest.
+func (dataChannel *DataChannel) handleEncryptionChallengeRequestOutputMessage(
+	log *slog.Logger,
+	outputMessage message.ClientMessage,
+) error {
+	if err := SendAcknowledgeMessageCall(log, dataChannel, outputMessage); err != nil {
+		return err
+	}
+
+	if err := dataChannel.handleEncryptionChallengeRequest(log, outputMessage); err != nil {
+		log.Error("processing stream data message", "error", err.Error())
+
+		return err
+	}
+
+	return nil
+}
+
+// handleDefaultOutputMessage handles output messages of any other type.
+func (dataChannel *DataChannel) handleDefaultOutputMessage(
+	log *slog.Logger,
+	outputMessage message.ClientMessage,
+) error {
+	log.Debug("Process new incoming stream data message", "sequenceNumber", outputMessage.SequenceNumber)
+
+	// Decrypt if encryption is enabled and payload type is output
+	if dataChannel.encryptionEnabled &&
+		(outputMessage.PayloadType == uint32(message.Output) ||
+			outputMessage.PayloadType == uint32(message.StdErr) ||
+			outputMessage.PayloadType == uint32(message.ExitCode)) {
+		var err error
+
+		outputMessage.Payload, err = dataChannel.encryption.Decrypt(log, outputMessage.Payload)
+		if err != nil {
+			log.Error("Unable to decrypt incoming data payload", "messageType", outputMessage.MessageType, "payloadType", outputMessage.PayloadType, "error", err)
+
+			return fmt.Errorf("decrypting incoming data payload: %w", err)
+		}
+	}
+
+	isHandlerReady, err := dataChannel.processOutputMessageWithHandlers(log, outputMessage)
+	if err != nil {
+		log.Error("processing stream data message", "error", err.Error())
+
+		return fmt.Errorf("processing stream data message: %w", err)
+	}
+
+	if !isHandlerReady {
+		log.Warn("Stream data message not processed", "sequenceNumber", outputMessage.SequenceNumber, "reason", "session handler not ready")
+
+		return nil
+	}
+
+	// Acknowledge outputMessage only if session specific handler is ready
+	if err := SendAcknowledgeMessageCall(log, dataChannel, outputMessage); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// handleUnexpectedSequenceMessage handles messages with unexpected sequence numbers.
+func (dataChannel *DataChannel) handleUnexpectedSequenceMessage(
+	log *slog.Logger,
+	outputMessage message.ClientMessage,
+	rawMessage []byte,
+) error {
+	log.Debug("Unexpected sequence message received", "receivedSequence", outputMessage.SequenceNumber, "expectedSequence", dataChannel.ExpectedSequenceNumber)
+
+	// If incoming message sequence number is greater then expected sequence number and IncomingMessageBuffer has capacity,
+	// add message to IncomingMessageBuffer and send acknowledgement
+	if outputMessage.SequenceNumber > dataChannel.ExpectedSequenceNumber {
+		log.Debug("Received sequence number is higher than expected", "receivedSequence", outputMessage.SequenceNumber, "expectedSequence", dataChannel.ExpectedSequenceNumber)
+
+		if len(dataChannel.IncomingMessageBuffer.Messages) < dataChannel.IncomingMessageBuffer.Capacity {
+			if err := SendAcknowledgeMessageCall(log, dataChannel, outputMessage); err != nil {
+				return err
+			}
+
+			streamingMessage := StreamingMessage{
+				rawMessage,
+				outputMessage.SequenceNumber,
+				time.Now(),
+				new(int),
+			}
+
+			// Add message to buffer for future processing
+			dataChannel.AddDataToIncomingMessageBuffer(streamingMessage)
+		}
+	}
+
+	return nil
+}
+
+// processBufferedMessage processes a single buffered message and updates the expected sequence number.
+func (dataChannel *DataChannel) processBufferedMessage(
+	log *slog.Logger,
+	outputMessage message.ClientMessage,
+	bufferedStreamMessage StreamingMessage,
+) error {
+	log.Debug("Process stream data message from IncomingMessageBuffer", "sequenceNumber", bufferedStreamMessage.SequenceNumber)
+
+	if err := outputMessage.DeserializeClientMessage(log, bufferedStreamMessage.Content); err != nil {
+		log.Error("Cannot deserialize raw message", "error", err)
+
+		return fmt.Errorf("deserializing raw message: %w", err)
+	}
+
+	// Decrypt if encryption is enabled and payload type is output
+	if dataChannel.encryptionEnabled &&
+		(outputMessage.PayloadType == uint32(message.Output) ||
+			outputMessage.PayloadType == uint32(message.StdErr) ||
+			outputMessage.PayloadType == uint32(message.ExitCode)) {
+		var err error
+
+		outputMessage.Payload, err = dataChannel.encryption.Decrypt(log, outputMessage.Payload)
+		if err != nil {
+			log.Error("Unable to decrypt buffered message data payload", "messageType", outputMessage.MessageType, "payloadType", outputMessage.PayloadType, "error", err)
+
+			return fmt.Errorf("decrypting buffered message data payload: %w", err)
+		}
+	}
+
+	_, err := dataChannel.processOutputMessageWithHandlers(log, outputMessage)
+	if err != nil {
+		return fmt.Errorf("processing output message with handlers: %w", err)
+	}
+
+	dataChannel.ExpectedSequenceNumber++
+	dataChannel.RemoveDataFromIncomingMessageBuffer(bufferedStreamMessage.SequenceNumber)
+
+	return nil
 }
