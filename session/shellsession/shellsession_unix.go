@@ -144,7 +144,7 @@ func (s *ShellSession) handleKeyboardInput(ctx context.Context, log log.T) error
 	<-ctx.Done()
 
 	if err := ctx.Err(); err != nil {
-		return fmt.Errorf("sending input data message: %w", err)
+		return nil // not an error
 	}
 
 	return nil

@@ -5,6 +5,7 @@ import (
 	"container/list"
 	"context"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -240,7 +241,7 @@ func (dataChannel *DataChannel) SendInputDataMessage(
 		return fmt.Errorf("serializing client message: %w", err)
 	}
 
-	log.Debug("Sending message", "sequenceNumber", dataChannel.StreamDataSequenceNumber)
+	log.Trace("Sending message", "sequenceNumber", dataChannel.StreamDataSequenceNumber)
 
 	if err = SendMessageCall(dataChannel, msg, websocket.BinaryMessage); err != nil {
 		log.Error("Error sending stream data message", "error", err)
@@ -373,7 +374,7 @@ func (dataChannel *DataChannel) OutputMessageHandler(ctx context.Context, log lo
 		return fmt.Errorf("validating output message: %w", err)
 	}
 
-	log.Debug("Processing stream data message", "type", outputMessage.MessageType)
+	log.Trace("Processing stream data message", "type", outputMessage.MessageType)
 
 	switch outputMessage.MessageType {
 	case message.OutputStreamMessage:
@@ -501,8 +502,6 @@ func (dataChannel *DataChannel) HandleChannelClosedMessage(log log.T, stopHandle
 	if channelClosedMessage, err = outputMessage.DeserializeChannelClosedMessage(log); err != nil {
 		log.Error("Cannot deserialize payload to ChannelClosedMessage", "error", err)
 	}
-
-	log.Debug("Exiting session", "sessionID", sessionID)
 
 	log.Debug("Session message", "sessionID", sessionID, "output", channelClosedMessage.Output)
 
@@ -743,11 +742,7 @@ func (dataChannel *DataChannel) handleHandshakeRequest(ctx context.Context, log 
 // handleHandshakeComplete is the handler for when the payload type is HandshakeComplete. This will trigger
 // the plugin to start.
 func (dataChannel *DataChannel) handleHandshakeComplete(log log.T, clientMessage message.ClientMessage) error {
-	var err error
-
-	var handshakeComplete message.HandshakeCompletePayload
-
-	handshakeComplete, err = clientMessage.DeserializeHandshakeComplete(log)
+	handshakeComplete, err := clientMessage.DeserializeHandshakeComplete(log)
 	if err != nil {
 		return fmt.Errorf("handling handshake complete: %w", err)
 	}
@@ -762,11 +757,10 @@ func (dataChannel *DataChannel) handleHandshakeComplete(log log.T, clientMessage
 	log.Debug("Handshake Complete", "timeToComplete", handshakeComplete.HandshakeTimeToComplete.Seconds())
 
 	if handshakeComplete.CustomerMessage != "" {
-		log.Debug("Exiting session", "sessionID", dataChannel.SessionID)
 		log.Debug("Session message", "sessionID", dataChannel.SessionID, "message", handshakeComplete.CustomerMessage)
 	}
 
-	return fmt.Errorf("handling handshake complete: %w", err)
+	return nil
 }
 
 // handleEncryptionChallengeRequest receives EncryptionChallenge and responds.
@@ -808,7 +802,7 @@ func (dataChannel *DataChannel) sendEncryptionChallengeResponse(log log.T, respo
 		return fmt.Errorf("could not serialize EncChallengeResponse message: %v, err: %w", response, err)
 	}
 
-	log.Debug("Sending EncChallengeResponse message")
+	log.Trace("Sending EncChallengeResponse message")
 
 	if err := dataChannel.SendInputDataMessage(log, message.EncChallengeResponse, resultBytes); err != nil {
 		return err
@@ -824,7 +818,7 @@ func (dataChannel *DataChannel) sendHandshakeResponse(log log.T, response messag
 		log.Error("Could not serialize HandshakeResponse message", "response", response, "error", err)
 	}
 
-	log.Debug("Sending HandshakeResponse message")
+	log.Trace("Sending HandshakeResponse message")
 
 	if err := dataChannel.SendInputDataMessage(log, message.HandshakeResponsePayloadType, resultBytes); err != nil {
 		return err
@@ -864,8 +858,15 @@ func (dataChannel *DataChannel) handleHandshakeRequestOutputMessage(
 		return err
 	}
 
-	// PayloadType is HandshakeRequest so we call our own handler instead of the provided handler
-	log.Debug("Processing HandshakeRequest message", "message", outputMessage)
+	log.Trace("Processing HandshakeRequest message",
+		"type", outputMessage.MessageType,
+		"sequenceNumber", outputMessage.SequenceNumber,
+		"createdDate", outputMessage.CreatedDate,
+		"id", outputMessage.MessageID,
+		"flags", outputMessage.Flags,
+		"payloadType", outputMessage.PayloadType,
+		"payloadDigest", hex.EncodeToString(outputMessage.PayloadDigest),
+		"payload", hex.EncodeToString(outputMessage.Payload))
 
 	if err := dataChannel.handleHandshakeRequest(ctx, log, outputMessage); err != nil {
 		log.Error("processing stream data message", "error", err.Error())
@@ -917,7 +918,7 @@ func (dataChannel *DataChannel) handleDefaultOutputMessage(
 	log log.T,
 	outputMessage message.ClientMessage,
 ) error {
-	log.Debug("Process new incoming stream data message", "sequenceNumber", outputMessage.SequenceNumber)
+	log.Trace("Processing incoming stream data message", "sequenceNumber", outputMessage.SequenceNumber)
 
 	// Decrypt if encryption is enabled and payload type is output
 	if dataChannel.encryptionEnabled &&
@@ -994,7 +995,7 @@ func (dataChannel *DataChannel) processBufferedMessage(
 	outputMessage message.ClientMessage,
 	bufferedStreamMessage StreamingMessage,
 ) error {
-	log.Debug("Process stream data message from IncomingMessageBuffer", "sequenceNumber", bufferedStreamMessage.SequenceNumber)
+	log.Trace("Processing stream data message from IncomingMessageBuffer", "sequenceNumber", bufferedStreamMessage.SequenceNumber)
 
 	if err := outputMessage.DeserializeClientMessage(log, bufferedStreamMessage.Content); err != nil {
 		log.Error("Cannot deserialize raw message", "error", err)

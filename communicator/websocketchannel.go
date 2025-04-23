@@ -131,7 +131,7 @@ func (webSocketChannel *WebSocketChannel) SendMessage(input []byte, inputType in
 
 // Close closes the corresponding connection.
 func (webSocketChannel *WebSocketChannel) Close(log log.T) error {
-	log.Debug("Closing websocket channel connection to: " + webSocketChannel.URL)
+	log.Debug("Closing websocket channel connection", "url", webSocketChannel.URL)
 
 	if webSocketChannel.IsOpen {
 		// Send signal to stop receiving message
@@ -144,7 +144,7 @@ func (webSocketChannel *WebSocketChannel) Close(log log.T) error {
 		return nil
 	}
 
-	log.Warn("Websocket channel connection to: " + webSocketChannel.URL + " is already Closed!")
+	log.Warn("Websocket channel connection is already Closed!", "url", webSocketChannel.URL)
 
 	return nil
 }

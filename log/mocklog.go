@@ -1,10 +1,5 @@
 package log
 
-import (
-	"context"
-	"log/slog"
-)
-
 // MockLog is a mock implementation of the T interface for testing purposes.
 // It implements all the methods of the T interface but does not perform any actual logging.
 type MockLog struct{}
@@ -16,8 +11,8 @@ func NewMockLog() *MockLog {
 	return &MockLog{}
 }
 
-// Log does nothing.
-func (m MockLog) Log(_ context.Context, _ slog.Level, _ string, _ ...any) {
+// Trace does nothing.
+func (m MockLog) Trace(_ string, _ ...any) {
 }
 
 // Debug does nothing.

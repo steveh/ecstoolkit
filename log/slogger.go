@@ -20,9 +20,9 @@ func NewSlogger(logger *slog.Logger) Slogger {
 	}
 }
 
-// Log logs a message at the specified level with the given message and args.
-func (s Slogger) Log(ctx context.Context, level slog.Level, msg string, args ...any) {
-	s.logger.Log(ctx, level, msg, args...)
+// Trace logs a message at Trace level.
+func (s Slogger) Trace(msg string, args ...any) {
+	s.logger.Log(context.Background(), LevelTrace, msg, args...)
 }
 
 // Debug logs a message at Debug level.

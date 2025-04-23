@@ -2,14 +2,16 @@
 package log
 
 import (
-	"context"
 	"log/slog"
 )
 
+// LevelTrace represents the Trace log level.
+const LevelTrace = slog.Level(-8)
+
 // T represents structs capable of logging messages.
 type T interface {
-	// Log logs a message at the specified level with the given message and args.
-	Log(ctx context.Context, level slog.Level, msg string, args ...any)
+	// Trace logs a message at Trace level.
+	Trace(msg string, args ...any)
 
 	// Debug logs a message at Debug level.
 	Debug(msg string, args ...any)

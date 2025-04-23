@@ -81,7 +81,7 @@ func (p *StandardStreamForwarding) ReadStream(_ context.Context, log log.T) erro
 			return p.handleReadError(log, err)
 		}
 
-		log.Debug("Received message from stdin", "size", numBytes)
+		log.Trace("Received message from stdin", "size", numBytes)
 
 		if err = p.session.DataChannel.SendInputDataMessage(log, message.Output, msg[:numBytes]); err != nil {
 			log.Error("sending packet", "error", err)

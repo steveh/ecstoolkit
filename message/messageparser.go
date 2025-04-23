@@ -719,12 +719,8 @@ func (clientMessage *ClientMessage) DeserializeHandshakeRequest(log log.T) (Hand
 
 // DeserializeHandshakeComplete deserializes the handshake complete payload from the client message.
 func (clientMessage *ClientMessage) DeserializeHandshakeComplete(log log.T) (HandshakeCompletePayload, error) {
-	var handshakeComplete HandshakeCompletePayload
-
-	var err error
-
 	if clientMessage.PayloadType != uint32(HandshakeCompletePayloadType) {
-		err = fmt.Errorf("ClientMessage PayloadType is not of type HandshakeCompletePayloadType. Found payload type: %d",
+		err := fmt.Errorf("ClientMessage PayloadType is not of type HandshakeCompletePayloadType. Found payload type: %d",
 			clientMessage.PayloadType)
 
 		log.Error(err.Error())
@@ -732,8 +728,8 @@ func (clientMessage *ClientMessage) DeserializeHandshakeComplete(log log.T) (Han
 		return HandshakeCompletePayload{}, err
 	}
 
-	err = json.Unmarshal(clientMessage.Payload, &handshakeComplete)
-	if err != nil {
+	var handshakeComplete HandshakeCompletePayload
+	if err := json.Unmarshal(clientMessage.Payload, &handshakeComplete); err != nil {
 		log.Error("Could not deserialize raw message", "error", err)
 
 		return HandshakeCompletePayload{}, fmt.Errorf("unmarshaling handshake complete: %w", err)

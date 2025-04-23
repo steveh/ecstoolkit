@@ -148,7 +148,7 @@ func (s *PortSession) ProcessStreamMessagePayload(log log.T, outputMessage messa
 		return false, nil
 	}
 
-	log.Debug("Received payload from datachannel", "size", outputMessage.PayloadLength)
+	log.Trace("Received payload from datachannel", "size", outputMessage.PayloadLength)
 
 	if err := s.portSessionType.WriteStream(outputMessage); err != nil {
 		return true, fmt.Errorf("writing stream: %w", err)

@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"strconv"
 	"strings"
 	"time"
@@ -19,6 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/steveh/ecstoolkit/executor"
+	"github.com/steveh/ecstoolkit/log"
 )
 
 var (
@@ -51,22 +51,24 @@ type Cluster struct {
 	clusterName string
 	userID      string
 	executor    *executor.Executor
+	logger      log.T
 }
 
 // NewCluster creates a new Cluster instance with the provided AWS configuration and cluster name.
-func NewCluster(awsCfg aws.Config, clusterName string) *Cluster {
+func NewCluster(awsCfg aws.Config, clusterName string, logger log.T) *Cluster {
 	ecsClient := ecs.NewFromConfig(awsCfg)
 	kmsClient := kms.NewFromConfig(awsCfg)
 	ssmClient := ssm.NewFromConfig(awsCfg)
 	stsClient := sts.NewFromConfig(awsCfg)
 
-	exec := executor.NewExecutor(ecsClient, kmsClient, ssmClient, slog.Default())
+	exec := executor.NewExecutor(ecsClient, kmsClient, ssmClient, logger)
 
 	return &Cluster{
 		ecsClient:   ecsClient,
 		stsClient:   stsClient,
 		clusterName: clusterName,
 		executor:    exec,
+		logger:      logger,
 	}
 }
 
@@ -177,7 +179,7 @@ func (c *Cluster) RunConsole(ctx context.Context, serviceName string, containerN
 		return arn.ARN{}, fmt.Errorf("parsing running task arn: %w", err)
 	}
 
-	slog.Info("Waiting for task to start", "maxWaitTime", maxWaitTime)
+	c.logger.Info("Waiting for task to start", "maxWaitTime", maxWaitTime)
 
 	waiter := ecs.NewTasksRunningWaiter(c.ecsClient, func(o *ecs.TasksRunningWaiterOptions) {
 		o.LogWaitAttempts = true
