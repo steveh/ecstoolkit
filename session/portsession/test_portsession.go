@@ -29,7 +29,7 @@ var (
 	outputMessage        = message.ClientMessage{
 		PayloadType:   uint32(message.Output),
 		Payload:       []byte("testing123"),
-		PayloadLength: 10,
+		PayloadLength: 10, //nolint:mnd
 	}
 	properties = map[string]interface{}{
 		"PortNumber": "22",

@@ -129,7 +129,7 @@ func (encrypter *Encrypter) generateEncryptionKey(ctx context.Context, log *slog
 		return err
 	}
 
-	keySize := len(plainTextKey) / 2
+	keySize := len(plainTextKey) / 2 //nolint:mnd
 	encrypter.decryptionKey = plainTextKey[:keySize]
 	encrypter.encryptionKey = plainTextKey[keySize:]
 	encrypter.cipherTextKey = cipherTextKey

@@ -658,7 +658,7 @@ func (dataChannel *DataChannel) CalculateRetransmissionTimeout(streamingMessage 
 		(config.RTTConstant * newRoundTripTime)
 
 	dataChannel.RetransmissionTimeout = time.Duration(dataChannel.RoundTripTime +
-		math.Max(float64(config.ClockGranularity), float64(4*dataChannel.RoundTripTimeVariation)))
+		math.Max(float64(config.ClockGranularity), float64(4*dataChannel.RoundTripTimeVariation))) //nolint:mnd
 
 	// Ensure RetransmissionTimeout do not exceed maximum timeout defined
 	if dataChannel.RetransmissionTimeout > config.MaxTransmissionTimeout {

@@ -162,7 +162,7 @@ func bytesToInteger(log *slog.Logger, input []byte) (int32, error) {
 	var res int32
 
 	inputLength := len(input)
-	if inputLength != 4 {
+	if inputLength != 4 { //nolint:mnd
 		log.Error("bytesToInteger failed: input array size is not equal to 4.")
 
 		return 0, ErrOffsetOutside
@@ -207,7 +207,7 @@ func bytesToLong(log *slog.Logger, input []byte) (int64, error) {
 	var res int64
 
 	inputLength := len(input)
-	if inputLength != 8 {
+	if inputLength != 8 { //nolint:mnd
 		log.Error("bytesToLong failed: input array size is not equal to 8.")
 
 		return 0, ErrOffsetOutside
@@ -244,7 +244,7 @@ func getUUID(log *slog.Logger, byteArray []byte, offset int) (uuid.UUID, error) 
 		return uuid.Nil, ErrOffsetOutside
 	}
 
-	mostSignificantLong, err := getLong(log, byteArray, offset+8)
+	mostSignificantLong, err := getLong(log, byteArray, offset+8) //nolint:mnd
 	if err != nil {
 		log.Error("getUUID failed: getting uuid MSBs Long value")
 
@@ -275,10 +275,10 @@ func longToBytes(log *slog.Logger, input int64) ([]byte, error) {
 		return nil, fmt.Errorf("writing long to bytes: %w", err)
 	}
 
-	if buf.Len() != 8 {
+	if buf.Len() != 8 { //nolint:mnd
 		log.Error("longToBytes failed: buffer output length is not equal to 8.")
 
-		return make([]byte, 8), ErrOffsetOutside
+		return make([]byte, 8), ErrOffsetOutside //nolint:mnd
 	}
 
 	return buf.Bytes(), nil
@@ -475,10 +475,10 @@ func integerToBytes(log *slog.Logger, input int32) ([]byte, error) {
 		return nil, fmt.Errorf("writing integer to bytes: %w", err)
 	}
 
-	if buf.Len() != 4 {
+	if buf.Len() != 4 { //nolint:mnd
 		log.Error("integerToBytes failed: buffer output length is not equal to 4.")
 
-		return make([]byte, 4), ErrOffsetOutside
+		return make([]byte, 4), ErrOffsetOutside //nolint:mnd
 	}
 
 	return buf.Bytes(), nil
@@ -572,7 +572,7 @@ func putUUID(log *slog.Logger, byteArray []byte, offset int, input uuid.UUID) er
 		return ErrOffsetOutside
 	}
 
-	err = putLong(log, byteArray, offset+8, mostSignificantLong)
+	err = putLong(log, byteArray, offset+8, mostSignificantLong) //nolint:mnd
 	if err != nil {
 		log.Error("putUUID failed: putting mostSignificantLong Long value")
 
@@ -640,7 +640,7 @@ func SerializeClientMessageWithAcknowledgeContent(log *slog.Logger, acknowledgeC
 		SchemaVersion:  1,
 		CreatedDate:    uint64(time.Now().UnixMilli()), //nolint:gosec
 		SequenceNumber: 0,
-		Flags:          3,
+		Flags:          3, //nolint:mnd
 		MessageID:      messageID,
 		Payload:        acknowledgeContentBytes,
 	}

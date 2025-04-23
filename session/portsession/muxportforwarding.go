@@ -415,9 +415,9 @@ func (p *MuxPortForwarding) handleClientConnections(ctx context.Context, log *sl
 func handleDataTransfer(dst io.ReadWriteCloser, src io.ReadWriteCloser) {
 	var wait sync.WaitGroup
 
-	errChan := make(chan error, 2)
+	errChan := make(chan error, 2) //nolint:mnd
 
-	wait.Add(2)
+	wait.Add(2) //nolint:mnd
 
 	go func() {
 		defer wait.Done()

@@ -92,7 +92,7 @@ func (e *Executor) parseARN(taskARN string) (string, string, error) {
 
 	// if we could guarantee the task ARN was in the newer long format we could extract the cluster name from there
 	taskResourceParts := strings.Split(parsedARN.Resource, "/")
-	if len(taskResourceParts) < 3 {
+	if len(taskResourceParts) < 3 { //nolint:mnd
 		return "", "", fmt.Errorf("invalid resource ID: %s", parsedARN.Resource)
 	}
 
