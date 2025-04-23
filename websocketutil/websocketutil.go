@@ -57,7 +57,6 @@ func NewWebsocketUtil(logger *slog.Logger, dialerInput *websocket.Dialer) *Webso
 func (u *WebsocketUtil) OpenConnection(url string) (*websocket.Conn, error) {
 	u.log.Debug("Opening websocket connection", "url", url)
 
-	//nolint:bodyclose // Gorilla websocket Dial() doesn't return a response body
 	conn, _, err := u.dialer.Dial(url, nil)
 	if err != nil {
 		u.log.Error("dialing websocket", "error", err.Error())
