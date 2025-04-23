@@ -30,7 +30,7 @@ type ioU struct{}
 
 // ioU implements io/ioutil.
 func (ioU) ReadFile(filename string) ([]byte, error) {
-	data, err := os.ReadFile(filename)
+	data, err := os.ReadFile(filename) //nolint:gosec
 	if err != nil {
 		return nil, fmt.Errorf("reading file %s: %w", filename, err)
 	}

@@ -31,7 +31,7 @@ func TestRepeatableExponentialRetryerRetriesForGivenNumberOfMaxRetries(t *testin
 	retryer := RepeatableExponentialRetryer{
 		callableFunc,
 		config.RetryBase,
-		rand.Intn(config.DataChannelRetryInitialDelayMillis) + config.DataChannelRetryInitialDelayMillis,
+		rand.Intn(config.DataChannelRetryInitialDelayMillis) + config.DataChannelRetryInitialDelayMillis, //nolint:gosec
 		config.DataChannelRetryMaxIntervalMillis,
 		config.DataChannelNumMaxRetries,
 	}

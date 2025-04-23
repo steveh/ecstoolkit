@@ -135,7 +135,13 @@ func (p *MuxPortForwarding) Stop(_ *slog.Logger) error {
 // InitializeStreams initializes i/o streams.
 func (p *MuxPortForwarding) InitializeStreams(_ context.Context, log *slog.Logger, agentVersion string) error {
 	p.handleControlSignals(log)
-	p.socketFile = getUnixSocketPath(p.sessionID, os.TempDir(), "session_manager_plugin_mux.sock")
+
+	socketFile, err := getUnixSocketPath(p.sessionID, os.TempDir(), "session_manager_plugin_mux.sock")
+	if err != nil {
+		return fmt.Errorf("getting unix socket path: %w", err)
+	}
+
+	p.socketFile = socketFile
 
 	if err := p.initialize(log, agentVersion); err != nil {
 		if cleanErr := p.cleanUp(); cleanErr != nil {
@@ -446,9 +452,12 @@ func handleDataTransfer(dst io.ReadWriteCloser, src io.ReadWriteCloser) {
 }
 
 // getUnixSocketPath generates the unix socket file name based on sessionID and returns the path.
-func getUnixSocketPath(sessionID string, dir string, suffix string) string {
+func getUnixSocketPath(sessionID string, dir string, suffix string) (string, error) {
 	hash := fnv.New32a()
-	hash.Write([]byte(sessionID))
 
-	return filepath.Join(dir, fmt.Sprintf("%d_%s", hash.Sum32(), suffix))
+	if _, err := hash.Write([]byte(sessionID)); err != nil {
+		return "", fmt.Errorf("hashing sessionID: %w", err)
+	}
+
+	return filepath.Join(dir, fmt.Sprintf("%d_%s", hash.Sum32(), suffix)), nil
 }

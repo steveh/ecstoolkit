@@ -326,7 +326,7 @@ func (dataChannel *DataChannel) SendInputDataMessage(
 	clientMessage := message.ClientMessage{
 		MessageType:    message.InputStreamMessage,
 		SchemaVersion:  1,
-		CreatedDate:    uint64(time.Now().UnixNano() / 1000000),
+		CreatedDate:    uint64(time.Now().UnixMilli()), //nolint:gosec
 		Flags:          flag,
 		MessageID:      messageUUID,
 		PayloadType:    uint32(payloadType),

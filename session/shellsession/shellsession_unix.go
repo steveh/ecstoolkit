@@ -45,7 +45,7 @@ func getState(state *bytes.Buffer) error {
 
 // setState sets the new settings to terminal.
 func setState(state *bytes.Buffer) error {
-	cmd := exec.Command("stty", state.String())
+	cmd := exec.Command("stty", state.String()) //nolint:gosec
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 

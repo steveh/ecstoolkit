@@ -27,6 +27,7 @@ import (
 	"github.com/steveh/ecstoolkit/message"
 	"github.com/steveh/ecstoolkit/session"
 	"github.com/steveh/ecstoolkit/session/sessionutil"
+	"github.com/steveh/ecstoolkit/util"
 	"golang.org/x/term"
 )
 
@@ -107,30 +108,19 @@ func (s *ShellSession) handleControlSignals(log *slog.Logger) {
 
 // handleTerminalResize checks size of terminal every 500ms and sends size data.
 func (s *ShellSession) handleTerminalResize(log *slog.Logger) {
-	var (
-		width         int
-		height        int
-		inputSizeData []byte
-		err           error
-	)
-
 	go func() {
 		for {
-			// If running from IDE GetTerminalSizeCall will not work. Supply a fixed width and height value.
-			if width, height, err = GetTerminalSizeCall(int(os.Stdout.Fd())); err != nil {
-				width = 300
-				height = 100
-				log.Error("Could not get size of terminal", "error", err, "width", width, "height", height)
-			}
+			width, height := terminalSize(log)
 
-			if s.SizeData.Rows != uint32(height) || s.SizeData.Cols != uint32(width) {
+			if s.SizeData.Rows != height || s.SizeData.Cols != width {
 				sizeData := message.SizeData{
-					Cols: uint32(width),
-					Rows: uint32(height),
+					Cols: width,
+					Rows: height,
 				}
 				s.SizeData = sizeData
 
-				if inputSizeData, err = json.Marshal(sizeData); err != nil {
+				inputSizeData, err := json.Marshal(sizeData)
+				if err != nil {
 					log.Error("Cannot marshal size data", "error", err)
 				}
 
@@ -144,4 +134,41 @@ func (s *ShellSession) handleTerminalResize(log *slog.Logger) {
 			time.Sleep(ResizeSleepInterval)
 		}
 	}()
+}
+
+// If running from IDE GetTerminalSizeCall will not work. Supply a fixed width and height value.
+func terminalSize(log *slog.Logger) (uint32, uint32) {
+	const (
+		defaultWidth  = 300
+		defaultHeight = 100
+	)
+
+	width, height, err := GetTerminalSizeCall(int(os.Stdin.Fd()))
+	if err != nil {
+		log.Error("Could not get size of terminal", "error", err, "width", width, "height", height)
+
+		return defaultWidth, defaultHeight
+	}
+
+	safeWidth, err := util.SafeUint32(width)
+	if err != nil {
+		log.Error("Could not convert width to uint32", "error", err, "width", width)
+
+		return defaultWidth, defaultHeight
+	}
+
+	safeHeight, err := util.SafeUint32(height)
+	if err != nil {
+		log.Error("Could not convert height to uint32", "error", err, "height", height)
+
+		return defaultWidth, defaultHeight
+	}
+
+	if safeWidth == 0 || safeHeight == 0 {
+		log.Error("Terminal size is zero", "width", safeWidth, "height", safeHeight)
+
+		return defaultWidth, defaultHeight
+	}
+
+	return safeWidth, safeHeight
 }

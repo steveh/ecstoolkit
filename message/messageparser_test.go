@@ -460,7 +460,8 @@ func TestPutInteger(t *testing.T) {
 				mockLogger,
 				tc.byteArray,
 				tc.offsetStart,
-				int32(intInput))
+				int32(intInput), //nolint:gosec
+			)
 
 			switch tc.expectation {
 			case SUCCESS:

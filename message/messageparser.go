@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/steveh/ecstoolkit/util"
 )
 
 // Error messages.
@@ -133,6 +134,13 @@ func getString(log *slog.Logger, byteArray []byte, offset int, stringLength int)
 // getUInteger gets an unsigned integer.
 func getUInteger(log *slog.Logger, byteArray []byte, offset int) (uint32, error) {
 	temp, err := getInteger(log, byteArray, offset)
+	if err != nil {
+		return 0, err
+	}
+
+	if temp < 0 {
+		return 0, fmt.Errorf("cannot convert negative value %d to uint32", temp)
+	}
 
 	return uint32(temp), err
 }
@@ -171,6 +179,13 @@ func bytesToInteger(log *slog.Logger, input []byte) (int32, error) {
 // getULong gets an unsigned long integer.
 func getULong(log *slog.Logger, byteArray []byte, offset int) (uint64, error) {
 	temp, err := getLong(log, byteArray, offset)
+	if err != nil {
+		return 0, err
+	}
+
+	if temp < 0 {
+		return 0, fmt.Errorf("cannot convert negative value %d to uint64", temp)
+	}
 
 	return uint64(temp), err
 }
@@ -318,16 +333,20 @@ func (clientMessage *ClientMessage) Validate() error {
 // * |         MessageID                     |           Digest              |PayType| PayLen|
 // * |         Payload      			|.
 func (clientMessage *ClientMessage) SerializeClientMessage(log *slog.Logger) ([]byte, error) {
-	payloadLength := uint32(len(clientMessage.Payload))
+	payloadLength, err := util.SafeUint32(len(clientMessage.Payload))
+	if err != nil {
+		return nil, fmt.Errorf("converting payload length to uint32: %w", err)
+	}
+
 	headerLength := uint32(ClientMessagePayloadLengthOffset)
+
 	// Set payload length
 	clientMessage.PayloadLength = payloadLength
 
 	totalMessageLength := headerLength + ClientMessagePayloadLengthLength + payloadLength
 	result := make([]byte, totalMessageLength)
 
-	err := putUInteger(log, result, ClientMessageHLOffset, headerLength)
-	if err != nil {
+	if err := putUInteger(log, result, ClientMessageHLOffset, headerLength); err != nil {
 		log.Error("Could not serialize HeaderLength", "error", err)
 
 		return make([]byte, 1), fmt.Errorf("serializing header length: %w", err)
@@ -418,12 +437,17 @@ func (clientMessage *ClientMessage) SerializeClientMessage(log *slog.Logger) ([]
 	return result, nil
 }
 
-// putUInteger puts an unsigned integer.
+// putUInteger puts a uint32 into a byte array starting from the specified offset.
 func putUInteger(log *slog.Logger, byteArray []byte, offset int, value uint32) error {
-	return putInteger(log, byteArray, offset, int32(value))
+	safe, err := util.SafeInt32(value)
+	if err != nil {
+		return fmt.Errorf("getting int32: %w", err)
+	}
+
+	return putInteger(log, byteArray, offset, safe)
 }
 
-// putInteger puts an integer value to a byte array starting from the specified offset.
+// putInteger puts an int32 into a byte array starting from the specified offset.
 func putInteger(log *slog.Logger, byteArray []byte, offset int, value int32) error {
 	byteArrayLength := len(byteArray)
 	if offset > byteArrayLength-1 || offset+4 > byteArrayLength || offset < 0 {
@@ -581,7 +605,12 @@ func putLong(log *slog.Logger, byteArray []byte, offset int, value int64) error 
 
 // putULong puts an unsigned long integer.
 func putULong(log *slog.Logger, byteArray []byte, offset int, value uint64) error {
-	return putLong(log, byteArray, offset, int64(value))
+	safe, err := util.SafeInt64(value)
+	if err != nil {
+		return fmt.Errorf("getting int64: %w", err)
+	}
+
+	return putLong(log, byteArray, offset, safe)
 }
 
 // SerializeClientMessagePayload marshals payloads for all session specific messages into bytes.
@@ -609,7 +638,7 @@ func SerializeClientMessageWithAcknowledgeContent(log *slog.Logger, acknowledgeC
 	clientMessage := ClientMessage{
 		MessageType:    AcknowledgeMessage,
 		SchemaVersion:  1,
-		CreatedDate:    uint64(time.Now().UnixNano() / 1000000),
+		CreatedDate:    uint64(time.Now().UnixMilli()), //nolint:gosec
 		SequenceNumber: 0,
 		Flags:          3,
 		MessageID:      messageID,

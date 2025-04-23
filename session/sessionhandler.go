@@ -32,7 +32,7 @@ import (
 func (s *Session) OpenDataChannel(ctx context.Context, log *slog.Logger) error {
 	s.retryParams = retry.RepeatableExponentialRetryer{
 		GeometricRatio:      config.RetryBase,
-		InitialDelayInMilli: rand.Intn(config.DataChannelRetryInitialDelayMillis) + config.DataChannelRetryInitialDelayMillis,
+		InitialDelayInMilli: rand.Intn(config.DataChannelRetryInitialDelayMillis) + config.DataChannelRetryInitialDelayMillis, //nolint:gosec
 		MaxDelayInMilli:     config.DataChannelRetryMaxIntervalMillis,
 		MaxAttempts:         config.DataChannelNumMaxRetries,
 	}
