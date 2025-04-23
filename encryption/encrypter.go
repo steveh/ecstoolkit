@@ -53,7 +53,7 @@ type Encrypter struct {
 }
 
 // NewEncrypter creates a new Encrypter instance with the given KMS key and encryption context.
-var NewEncrypter = func(ctx context.Context, log *slog.Logger, kmsKeyID string, encryptionContext map[string]string, KMSService *kms.Client) (*Encrypter, error) {
+func NewEncrypter(ctx context.Context, log *slog.Logger, kmsKeyID string, encryptionContext map[string]string, KMSService *kms.Client) (*Encrypter, error) {
 	encrypter := Encrypter{kmsKeyID: kmsKeyID, KMSService: KMSService}
 	err := encrypter.generateEncryptionKey(ctx, log, kmsKeyID, encryptionContext)
 
