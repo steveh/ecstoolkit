@@ -12,7 +12,7 @@
 // permissions and limitations under the License.
 
 // Package websocketutil contains methods for interacting with websocket connections.
-package websocketutil
+package websocketutil_test
 
 import (
 	"fmt"
@@ -23,6 +23,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/steveh/ecstoolkit/log"
+	"github.com/steveh/ecstoolkit/websocketutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -55,7 +56,7 @@ func TestWebsocketUtilOpenCloseConnection(t *testing.T) {
 
 	log := log.NewMockLog()
 
-	ws := NewWebsocketUtil(log, nil)
+	ws := websocketutil.NewWebsocketUtil(log, nil)
 	conn, _ := ws.OpenConnection(u.String())
 	assert.NotNil(t, conn, "Open connection failed.")
 
@@ -70,7 +71,7 @@ func TestWebsocketUtilOpenConnectionInvalidUrl(t *testing.T) {
 
 	log := log.NewMockLog()
 
-	ws := NewWebsocketUtil(log, nil)
+	ws := websocketutil.NewWebsocketUtil(log, nil)
 	conn, _ := ws.OpenConnection("InvalidUrl")
 	assert.Nil(t, conn, "Open connection failed.")
 
@@ -85,7 +86,7 @@ func TestSendMessage(t *testing.T) {
 
 	log := log.NewMockLog()
 
-	ws := NewWebsocketUtil(log, nil)
+	ws := websocketutil.NewWebsocketUtil(log, nil)
 	conn, _ := ws.OpenConnection(u.String())
 	assert.NotNil(t, conn, "Open connection failed.")
 

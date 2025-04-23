@@ -12,7 +12,7 @@
 // permissions and limitations under the License.
 
 // this package implement base communicator for network connections.
-package communicator
+package communicator_test
 
 import (
 	"errors"
@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/gorilla/websocket"
+	"github.com/steveh/ecstoolkit/communicator"
 	"github.com/steveh/ecstoolkit/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -93,7 +94,7 @@ func handlerToBeTested(w http.ResponseWriter, req *http.Request) {
 func TestWebSocketChannel_GetChannelToken(t *testing.T) {
 	t.Log("Starting test: webSocketChannel.GetChannelToken")
 
-	channel := &WebSocketChannel{
+	channel := &communicator.WebSocketChannel{
 		ChannelToken: defaultChannelToken,
 	}
 
@@ -104,7 +105,7 @@ func TestWebSocketChannel_GetChannelToken(t *testing.T) {
 func TestWebSocketChannel_SetChannelToken(t *testing.T) {
 	t.Log("Starting test: webSocketChannel.SetChannelToken")
 
-	channel := &WebSocketChannel{}
+	channel := &communicator.WebSocketChannel{}
 
 	channel.SetChannelToken(defaultChannelToken)
 	assert.Equal(t, defaultChannelToken, channel.ChannelToken)
@@ -113,7 +114,7 @@ func TestWebSocketChannel_SetChannelToken(t *testing.T) {
 func TestWebSocketChannel_GetStreamURL(t *testing.T) {
 	t.Log("Starting test: webSocketChannel.GetStreamURL")
 
-	channel := &WebSocketChannel{
+	channel := &communicator.WebSocketChannel{
 		URL: defaultStreamURL,
 	}
 
@@ -124,7 +125,7 @@ func TestWebSocketChannel_GetStreamURL(t *testing.T) {
 func TestWebSocketChannel_SetOnError(t *testing.T) {
 	t.Log("Starting test: webSocketChannel.SetOnError")
 
-	channel := &WebSocketChannel{}
+	channel := &communicator.WebSocketChannel{}
 	errorCallbackWrapper := &ErrorCallbackWrapper{}
 	errorCallbackWrapper.On("defaultErrorHandler", errDefault).Return()
 
@@ -138,7 +139,7 @@ func TestWebSocketChannel_SetOnError(t *testing.T) {
 func TestWebsocketChannel_SetOnMessage(t *testing.T) {
 	t.Log("Starting test: webSocketChannel.SetOnMessage")
 
-	channel := &WebSocketChannel{}
+	channel := &communicator.WebSocketChannel{}
 	messageCallbackWrapper := &MessageCallbackWrapper{}
 	messageCallbackWrapper.On("defaultMessageHandler", defaultMessage).Return()
 
@@ -152,7 +153,7 @@ func TestWebsocketChannel_SetOnMessage(t *testing.T) {
 func TestWebsocketchannel_Initialize(t *testing.T) {
 	t.Log("Starting test: webSocketChannel.Initialize")
 
-	channel := &WebSocketChannel{}
+	channel := &communicator.WebSocketChannel{}
 	channel.Initialize(mockLogger, defaultStreamURL, defaultChannelToken)
 
 	assert.Equal(t, defaultStreamURL, channel.URL)
@@ -168,7 +169,7 @@ func TestOpenCloseWebSocketChannel(t *testing.T) {
 
 	log := log.NewMockLog()
 
-	websocketchannel := WebSocketChannel{
+	websocketchannel := communicator.WebSocketChannel{
 		URL: u.String(),
 	}
 
@@ -203,7 +204,7 @@ func TestReadWriteTextToWebSocketChannel(t *testing.T) {
 		assert.Equal(t, "echo channelreadwrite", string(input))
 	}
 
-	websocketchannel := WebSocketChannel{
+	websocketchannel := communicator.WebSocketChannel{
 		URL:       u.String(),
 		OnMessage: onMessage,
 	}
@@ -245,7 +246,7 @@ func TestReadWriteBinaryToWebSocketChannel(t *testing.T) {
 		assert.Equal(t, "echo channelreadwrite", string(input))
 	}
 
-	websocketchannel := WebSocketChannel{
+	websocketchannel := communicator.WebSocketChannel{
 		URL:       u.String(),
 		OnMessage: onMessage,
 	}
@@ -291,7 +292,7 @@ func TestMultipleReadWriteWebSocketChannel(t *testing.T) {
 		}
 	}
 
-	websocketchannel := WebSocketChannel{
+	websocketchannel := communicator.WebSocketChannel{
 		URL:       u.String(),
 		OnMessage: onMessage,
 	}
