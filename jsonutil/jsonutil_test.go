@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func ExampleMarshal() {
@@ -170,17 +171,17 @@ func TestUnmarshalFile(t *testing.T) {
 	// missing file
 	ioUtil = ioUtilStub{err: errors.New("some error")}
 	err1 := UnmarshalFile(filename, &contents)
-	assert.Error(t, err1, "expected readfile error")
+	require.Error(t, err1, "expected readfile error")
 
 	// non json content
 	ioUtil = ioUtilStub{b: []byte("Sample text")}
 	err2 := UnmarshalFile(filename, &contents)
-	assert.Error(t, err2, "expected json parsing error")
+	require.Error(t, err2, "expected json parsing error")
 
 	// valid json content
 	ioUtil = ioUtilStub{b: []byte("{\"ID\":1,\"Name\":\"Reds\",\"Colors\":[\"Crimson\",\"Red\",\"Ruby\",\"Maroon\"]}")}
 	err3 := UnmarshalFile(filename, &contents)
-	assert.NoError(t, err3, "message should parse successfully")
+	require.NoError(t, err3, "message should parse successfully")
 }
 
 func TestRemarshal(t *testing.T) {
@@ -198,9 +199,9 @@ func TestRemarshal(t *testing.T) {
 	var newProp2 Property
 
 	err := Remarshal(prop, &newProp)
-	assert.NoError(t, err, "message should remarshal successfully")
+	require.NoError(t, err, "message should remarshal successfully")
 	err = Remarshal(prop2, &newProp2)
-	assert.NoError(t, err, "key mismatch should not report error")
+	require.NoError(t, err, "key mismatch should not report error")
 	assert.Equal(t, Property{}, newProp2, "mismatched remarshal should return an empty object")
 }
 
@@ -217,7 +218,7 @@ func TestRemarshalInvalidInput(t *testing.T) {
 	// Save an copy of output to compare to after Remarshal has been called to confirm no changes were made
 	originalOutput := output
 	err := Remarshal(badInput, &output)
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	if !assert.ObjectsAreEqual(originalOutput, output) {
 		t.Fatalf("Object was modified by call to Remarshal")
@@ -233,7 +234,7 @@ func TestUnmarshal(t *testing.T) {
 
 	output := TestStruct{}
 	err := Unmarshal(content, &output)
-	assert.NoError(t, err, "Message should parse correctly")
+	require.NoError(t, err, "Message should parse correctly")
 	assert.Equal(t, "1", output.Parameter)
 }
 
@@ -246,7 +247,7 @@ func TestUnmarshalExtraInput(t *testing.T) {
 
 	output := TestStruct{}
 	err := Unmarshal(content, &output)
-	assert.NoError(t, err, "Message should parse correctly")
+	require.NoError(t, err, "Message should parse correctly")
 	assert.Equal(t, "1", output.Parameter)
 }
 
@@ -255,7 +256,7 @@ func TestUnmarshalInvalidInput(t *testing.T) {
 
 	var dest interface{}
 	err := Unmarshal(content, &dest)
-	assert.Error(t, err, "This is not json format. Error expected")
+	require.Error(t, err, "This is not json format. Error expected")
 }
 
 func TestMarshalIndent(t *testing.T) {
@@ -288,7 +289,7 @@ func TestMarshalIndentErrorsOnInvalidInput(t *testing.T) {
 	// Using channel as invalid input
 	// Breaks the same for any json-invalid types
 	_, err := MarshalIndent(make(chan int))
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 // ioutil stub.

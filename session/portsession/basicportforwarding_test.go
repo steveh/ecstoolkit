@@ -26,6 +26,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 // This test passes ctrl+c signal which blocks running of all other tests.
@@ -128,7 +129,7 @@ func TestStartSessionTCPAcceptFailed(t *testing.T) {
 			portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding"},
 		},
 	}
-	assert.ErrorIs(t, portSession.SetSessionHandlers(context.TODO(), mockLog), connErr)
+	require.ErrorIs(t, portSession.SetSessionHandlers(context.TODO(), mockLog), connErr)
 }
 
 func TestStartSessionTCPConnectFailed(t *testing.T) {
@@ -144,5 +145,5 @@ func TestStartSessionTCPConnectFailed(t *testing.T) {
 			portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding"},
 		},
 	}
-	assert.ErrorIs(t, portSession.SetSessionHandlers(context.TODO(), mockLog), listenerError)
+	require.ErrorIs(t, portSession.SetSessionHandlers(context.TODO(), mockLog), listenerError)
 }

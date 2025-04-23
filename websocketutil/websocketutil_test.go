@@ -24,6 +24,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/steveh/ecstoolkit/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var upgrader = websocket.Upgrader{
@@ -59,7 +60,7 @@ func TestWebsocketUtilOpenCloseConnection(t *testing.T) {
 	assert.NotNil(t, conn, "Open connection failed.")
 
 	err := ws.CloseConnection(conn)
-	assert.NoError(t, err, "Error closing the websocket connection.")
+	require.NoError(t, err, "Error closing the websocket connection.")
 }
 
 func TestWebsocketUtilOpenConnectionInvalidUrl(t *testing.T) {
@@ -74,7 +75,7 @@ func TestWebsocketUtilOpenConnectionInvalidUrl(t *testing.T) {
 	assert.Nil(t, conn, "Open connection failed.")
 
 	err := ws.CloseConnection(conn)
-	assert.Error(t, err, "Error closing the websocket connection.")
+	require.Error(t, err, "Error closing the websocket connection.")
 }
 
 func TestSendMessage(t *testing.T) {
@@ -93,5 +94,5 @@ func TestSendMessage(t *testing.T) {
 	}
 
 	err := ws.CloseConnection(conn)
-	assert.NoError(t, err, "Error closing the websocket connection.")
+	require.NoError(t, err, "Error closing the websocket connection.")
 }

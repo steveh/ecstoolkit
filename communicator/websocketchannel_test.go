@@ -27,6 +27,7 @@ import (
 	"github.com/steveh/ecstoolkit/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -172,12 +173,12 @@ func TestOpenCloseWebSocketChannel(t *testing.T) {
 	}
 
 	err := websocketchannel.Open(log)
-	assert.NoError(t, err, "Error opening the websocket connection.")
+	require.NoError(t, err, "Error opening the websocket connection.")
 	assert.NotNil(t, websocketchannel.Connection, "Open connection failed.")
 	assert.True(t, websocketchannel.IsOpen, "IsOpen is not set to true.")
 
 	err = websocketchannel.Close(log)
-	assert.NoError(t, err, "Error closing the websocket connection.")
+	require.NoError(t, err, "Error closing the websocket connection.")
 	assert.False(t, websocketchannel.IsOpen, "IsOpen is not set to false.")
 	t.Log("Ending test: TestOpenCloseWebSocketChannel")
 }
@@ -209,7 +210,7 @@ func TestReadWriteTextToWebSocketChannel(t *testing.T) {
 
 	// Open the websocket connection
 	err := websocketchannel.Open(log)
-	assert.NoError(t, err, "Error opening the websocket connection.")
+	require.NoError(t, err, "Error opening the websocket connection.")
 	assert.NotNil(t, websocketchannel.Connection, "Open connection failed.")
 
 	if err := websocketchannel.SendMessage([]byte("channelreadwrite"), websocket.TextMessage); err != nil {
@@ -219,7 +220,7 @@ func TestReadWriteTextToWebSocketChannel(t *testing.T) {
 	wg.Wait()
 
 	err = websocketchannel.Close(log)
-	assert.NoError(t, err, "Error closing the websocket connection.")
+	require.NoError(t, err, "Error closing the websocket connection.")
 	assert.False(t, websocketchannel.IsOpen, "IsOpen is not set to false.")
 	t.Log("Ending test: TestReadWriteWebSocketChannel ")
 }
@@ -251,7 +252,7 @@ func TestReadWriteBinaryToWebSocketChannel(t *testing.T) {
 
 	// Open the websocket connection
 	err := websocketchannel.Open(log)
-	assert.NoError(t, err, "Error opening the websocket connection.")
+	require.NoError(t, err, "Error opening the websocket connection.")
 	assert.NotNil(t, websocketchannel.Connection, "Open connection failed.")
 
 	if err := websocketchannel.SendMessage([]byte("channelreadwrite"), websocket.BinaryMessage); err != nil {
@@ -261,7 +262,7 @@ func TestReadWriteBinaryToWebSocketChannel(t *testing.T) {
 	wg.Wait()
 
 	err = websocketchannel.Close(log)
-	assert.NoError(t, err, "Error closing the websocket connection.")
+	require.NoError(t, err, "Error closing the websocket connection.")
 	assert.False(t, websocketchannel.IsOpen, "IsOpen is not set to false.")
 	t.Log("Ending test: TestReadWriteWebSocketChannel ")
 }
@@ -297,19 +298,19 @@ func TestMultipleReadWriteWebSocketChannel(t *testing.T) {
 
 	// Open the websocket connection
 	err := websocketchannel.Open(log)
-	assert.NoError(t, err, "Error opening the websocket connection.")
+	require.NoError(t, err, "Error opening the websocket connection.")
 	assert.NotNil(t, websocketchannel.Connection, "Open connection failed.")
 
 	// Verify writes to websocket server
 	err = websocketchannel.SendMessage([]byte("channelreadwrite1"), websocket.TextMessage)
-	assert.NoError(t, err, "Error sending message 1")
+	require.NoError(t, err, "Error sending message 1")
 	err = websocketchannel.SendMessage([]byte("channelreadwrite2"), websocket.TextMessage)
-	assert.NoError(t, err, "Error sending message 2")
+	require.NoError(t, err, "Error sending message 2")
 	assert.True(t, <-read1, "Didn't read value 1 correctly")
 	assert.True(t, <-read2, "Didn't ready value 2 correctly")
 
 	err = websocketchannel.Close(log)
-	assert.NoError(t, err, "Error closing the websocket connection.")
+	require.NoError(t, err, "Error closing the websocket connection.")
 	assert.False(t, websocketchannel.IsOpen, "IsOpen is not set to false.")
 
 	t.Log("Ending test: TestMultipleReadWriteWebSocketChannel")

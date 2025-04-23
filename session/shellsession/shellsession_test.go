@@ -34,6 +34,7 @@ import (
 	"github.com/steveh/ecstoolkit/session/sessionutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -128,7 +129,7 @@ func TestSendInputDataMessageWithPayloadTypeSize(t *testing.T) {
 	}
 
 	err = dataChannel.SendInputDataMessage(logger, message.Size, sizeDataBytes)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expectedSequenceNumber, dataChannel.ExpectedSequenceNumber)
 	assert.Equal(t, 1, SendMessageCallCount)
 }
@@ -185,7 +186,7 @@ func TestProcessStreamMessagePayload(t *testing.T) {
 	}
 	isReady, err := shellSession.ProcessStreamMessagePayload(logger, msg)
 	assert.True(t, isReady)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func getDataChannel() *datachannel.DataChannel {

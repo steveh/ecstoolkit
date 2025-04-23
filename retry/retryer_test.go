@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/steveh/ecstoolkit/config"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var callableFunc = func() error {
@@ -36,5 +36,5 @@ func TestRepeatableExponentialRetryerRetriesForGivenNumberOfMaxRetries(t *testin
 		config.DataChannelNumMaxRetries,
 	}
 	err := retryer.Call()
-	assert.Error(t, err)
+	require.Error(t, err)
 }

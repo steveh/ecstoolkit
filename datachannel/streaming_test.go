@@ -37,6 +37,7 @@ import (
 	"github.com/steveh/ecstoolkit/version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -72,8 +73,8 @@ func TestInitialize(t *testing.T) {
 	assert.Equal(t, int64(0), datachannel.StreamDataSequenceNumber)
 	assert.NotNil(t, datachannel.OutgoingMessageBuffer)
 	assert.NotNil(t, datachannel.IncomingMessageBuffer)
-	assert.Equal(t, float64(config.DefaultRoundTripTime), datachannel.RoundTripTime)
-	assert.Equal(t, float64(config.DefaultRoundTripTimeVariation), datachannel.RoundTripTimeVariation)
+	assert.InDelta(t, float64(config.DefaultRoundTripTime), datachannel.RoundTripTime, 0.01)
+	assert.InDelta(t, float64(config.DefaultRoundTripTimeVariation), datachannel.RoundTripTimeVariation, 0.01)
 	assert.Equal(t, config.DefaultTransmissionTimeout, datachannel.RetransmissionTimeout)
 	assert.NotNil(t, datachannel.wsChannel)
 }
@@ -102,7 +103,7 @@ func TestReconnect(t *testing.T) {
 	// test reconnect
 	err := datachannel.Reconnect(mockLogger)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	mockWsChannel.AssertExpectations(t)
 }
 
@@ -113,7 +114,7 @@ func TestOpen(t *testing.T) {
 
 	err := datachannel.Open(mockLogger)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	mockWsChannel.AssertExpectations(t)
 }
 
@@ -125,7 +126,7 @@ func TestClose(t *testing.T) {
 	// test close
 	err := datachannel.Close(mockLogger)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	mockWsChannel.AssertExpectations(t)
 }
 
@@ -137,7 +138,7 @@ func TestFinalizeDataChannelHandshake(t *testing.T) {
 
 	err := datachannel.FinalizeDataChannelHandshake(mockLogger, channelToken)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, streamURL, datachannel.wsChannel.GetStreamURL())
 	mockWsChannel.AssertExpectations(t)
 }
@@ -149,7 +150,7 @@ func TestSendMessage(t *testing.T) {
 
 	err := datachannel.SendMessage([]byte{10}, websocket.BinaryMessage)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	mockWsChannel.AssertExpectations(t)
 }
 
@@ -159,7 +160,7 @@ func TestSendInputDataMessage(t *testing.T) {
 	mockWsChannel.On("SendMessage", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	err := dataChannel.SendInputDataMessage(mockLogger, message.Output, payload)
-	assert.NoError(t, err, "Error sending input data message")
+	require.NoError(t, err, "Error sending input data message")
 
 	assert.Equal(t, streamDataSequenceNumber+1, dataChannel.StreamDataSequenceNumber)
 	assert.Equal(t, 1, dataChannel.OutgoingMessageBuffer.Messages.Len())
@@ -177,7 +178,7 @@ func TestProcessAcknowledgedMessage(t *testing.T) {
 		IsSequentialMessage: true,
 	}
 	err := dataChannel.ProcessAcknowledgedMessage(mockLogger, dataStreamAcknowledgeContent)
-	assert.NoError(t, err, "Error processing acknowledged message")
+	require.NoError(t, err, "Error processing acknowledged message")
 	assert.Equal(t, 0, dataChannel.OutgoingMessageBuffer.Messages.Len())
 }
 
@@ -332,7 +333,7 @@ func TestDataChannelIncomingMessageHandlerForExpectedInputStreamDataMessage(t *t
 	// First scenario is to test when incoming message sequence number matches with expected sequence number
 	// and no message found in IncomingMessageBuffer
 	err := dataChannel.OutputMessageHandler(context.TODO(), logger, stopHandler, sessionID, serializedClientMessages[0])
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, int64(1), dataChannel.ExpectedSequenceNumber)
 	assert.Empty(t, dataChannel.IncomingMessageBuffer.Messages)
 	assert.Equal(t, 1, SendAcknowledgeMessageCallCount)
@@ -345,7 +346,7 @@ func TestDataChannelIncomingMessageHandlerForExpectedInputStreamDataMessage(t *t
 	dataChannel.AddDataToIncomingMessageBuffer(streamingMessages[3])
 
 	err = dataChannel.OutputMessageHandler(context.TODO(), logger, stopHandler, sessionID, serializedClientMessages[1])
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, int64(5), dataChannel.ExpectedSequenceNumber)
 	assert.Len(t, dataChannel.IncomingMessageBuffer.Messages, 1)
 
@@ -372,13 +373,13 @@ func TestDataChannelIncomingMessageHandlerForUnexpectedInputStreamDataMessage(t 
 	}
 
 	err := dataChannel.OutputMessageHandler(context.TODO(), logger, stopHandler, sessionID, serializedClientMessages[1])
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = dataChannel.OutputMessageHandler(context.TODO(), logger, stopHandler, sessionID, serializedClientMessages[2])
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = dataChannel.OutputMessageHandler(context.TODO(), logger, stopHandler, sessionID, serializedClientMessages[3])
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Since capacity of IncomingMessageBuffer is 2, stream data with sequence number 3 should be ignored without sending acknowledgement
 	assert.Equal(t, expectedSequenceNumber, dataChannel.ExpectedSequenceNumber)
@@ -466,7 +467,7 @@ func TestDataChannelIncomingMessageHandlerForPausePublicationessage(t *testing.T
 
 	dataChannel.RegisterOutputStreamHandler(handler, true)
 	err := dataChannel.OutputMessageHandler(context.TODO(), logger, stopHandler, sessionID, serializedClientMessages[0])
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestHandshakeRequestHandler(t *testing.T) {
@@ -555,7 +556,7 @@ func TestHandleOutputMessageForDefaultTypeWithError(t *testing.T) {
 	dataChannel.RegisterOutputStreamHandler(handler, true)
 
 	err := dataChannel.HandleOutputMessage(context.TODO(), mockLogger, clientMessage, rawMessage)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestHandleOutputMessageForExitCodePayloadTypeWithError(t *testing.T) {
@@ -573,7 +574,7 @@ func TestHandleOutputMessageForExitCodePayloadTypeWithError(t *testing.T) {
 	rawMessage := []byte("rawMessage")
 
 	err := dataChannel.HandleOutputMessage(context.TODO(), mockLogger, clientMessage, rawMessage)
-	assert.ErrorIs(t, err, mockErr)
+	require.ErrorIs(t, err, mockErr)
 }
 
 func TestHandleHandshakeRequestWithMessageDeserializeError(t *testing.T) {
@@ -588,7 +589,7 @@ func TestHandleHandshakeRequestWithMessageDeserializeError(t *testing.T) {
 		uint32(message.HandshakeCompletePayloadType), handshakeRequestBytes)
 
 	err = dataChannel.handleHandshakeRequest(context.TODO(), mockLogger, clientMessage)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "ClientMessage PayloadType is not of type HandshakeRequestPayloadType")
 }
 
@@ -612,7 +613,7 @@ func TestProcessOutputMessageWithHandlers(t *testing.T) {
 		uint32(message.HandshakeCompletePayloadType), handshakeRequestBytes)
 
 	isHandlerReady, err := dataChannel.processOutputMessageWithHandlers(mockLogger, clientMessage)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.True(t, isHandlerReady)
 }
 
@@ -623,7 +624,7 @@ func TestProcessSessionTypeHandshakeActionForInteractiveCommands(t *testing.T) {
 	err := dataChannel.ProcessSessionTypeHandshakeAction(actionParams)
 
 	// Test that InteractiveCommands is a valid session type
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// Test that InteractiveCommands is translated to Standard_Stream in data channel
 	assert.Equal(t, config.ShellPluginName, dataChannel.sessionType)
 }
@@ -635,7 +636,7 @@ func TestProcessSessionTypeHandshakeActionForNonInteractiveCommands(t *testing.T
 	err := dataChannel.ProcessSessionTypeHandshakeAction(actionParams)
 
 	// Test that NonInteractiveCommands is a valid session type
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// Test that NonInteractiveCommands is translated to Standard_Stream in data channel
 	assert.Equal(t, config.ShellPluginName, dataChannel.sessionType)
 }
@@ -652,14 +653,14 @@ func buildHandshakeRequest(t *testing.T) message.HandshakeRequestPayload {
 
 	var err error
 	requestedAction.ActionParameters, err = json.Marshal(message.KMSEncryptionRequest{KMSKeyID: kmsKeyID})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	handshakeRquest.RequestedClientActions = append(handshakeRquest.RequestedClientActions, requestedAction)
 
 	requestedAction = message.RequestedClientAction{}
 	requestedAction.ActionType = message.SessionType
 	requestedAction.ActionParameters, err = json.Marshal(message.SessionTypeRequest{SessionType: config.ShellPluginName})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	handshakeRquest.RequestedClientActions = append(handshakeRquest.RequestedClientActions, requestedAction)
 

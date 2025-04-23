@@ -27,6 +27,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/steveh/ecstoolkit/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type EXPECTATION int
@@ -181,13 +182,13 @@ func TestPutString(t *testing.T) {
 
 			switch tc.expectation {
 			case SUCCESS:
-				assert.NoError(t, err, "%s:%s threw an error when no error was expected.", t.Name(), tc.name)
+				require.NoError(t, err, "%s:%s threw an error when no error was expected.", t.Name(), tc.name)
 				assert.Contains(t, string(tc.byteArray), tc.expected)
 			case ERROR:
-				assert.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
+				require.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
 				expectedErr, ok := tc.expected.(error)
 				assert.True(t, ok, "%s:%s expected value is not an error", t.Name(), tc.name)
-				assert.ErrorIs(t, err, expectedErr, "%s:%s does not match the expected error", t.Name(), tc.name)
+				require.ErrorIs(t, err, expectedErr, "%s:%s does not match the expected error", t.Name(), tc.name)
 			default:
 				t.Fatal("Test expectation was not correctly set.")
 			}
@@ -252,13 +253,13 @@ func TestPutBytes(t *testing.T) {
 
 			switch tc.expectation {
 			case SUCCESS:
-				assert.NoError(t, err, "%s:%s threw an error when no error was expected.", t.Name(), tc.name)
+				require.NoError(t, err, "%s:%s threw an error when no error was expected.", t.Name(), tc.name)
 				assert.True(t, reflect.DeepEqual(tc.byteArray, tc.expected))
 			case ERROR:
-				assert.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
+				require.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
 				expectedErr, ok := tc.expected.(error)
 				assert.True(t, ok, "%s:%s expected value is not an error", t.Name(), tc.name)
-				assert.ErrorIs(t, err, expectedErr, "%s:%s does not match the expected error", t.Name(), tc.name)
+				require.ErrorIs(t, err, expectedErr, "%s:%s does not match the expected error", t.Name(), tc.name)
 			default:
 				t.Fatal("Test expectation was not correctly set.")
 			}
@@ -290,10 +291,10 @@ func TestLongToBytes(t *testing.T) {
 
 			switch tc.expectation {
 			case SUCCESS:
-				assert.NoError(t, err, "An error was thrown when none was expected.")
+				require.NoError(t, err, "An error was thrown when none was expected.")
 				assert.True(t, reflect.DeepEqual(bytes, tc.expected))
 			case ERROR:
-				assert.Error(t, err, "No error was thrown when one was expected.")
+				require.Error(t, err, "No error was thrown when one was expected.")
 				assert.Contains(t, err, tc.expected)
 			}
 		})
@@ -375,13 +376,13 @@ func TestPutLong(t *testing.T) {
 
 			switch tc.expectation {
 			case SUCCESS:
-				assert.NoError(t, err, "%s:%s threw an error when no error was expected.", t.Name(), tc.name)
+				require.NoError(t, err, "%s:%s threw an error when no error was expected.", t.Name(), tc.name)
 				assert.Equal(t, tc.expected, tc.byteArray)
 			case ERROR:
-				assert.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
+				require.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
 				expectedErr, ok := tc.expected.(error)
 				assert.True(t, ok, "%s:%s expected value is not an error", t.Name(), tc.name)
-				assert.ErrorIs(t, err, expectedErr, "%s:%s does not match the expected error", t.Name(), tc.name)
+				require.ErrorIs(t, err, expectedErr, "%s:%s does not match the expected error", t.Name(), tc.name)
 			default:
 				t.Fatal("Test expectation was not correctly set.")
 			}
@@ -465,13 +466,13 @@ func TestPutInteger(t *testing.T) {
 
 			switch tc.expectation {
 			case SUCCESS:
-				assert.NoError(t, err, "%s:%s threw an error when no error was expected.", t.Name(), tc.name)
+				require.NoError(t, err, "%s:%s threw an error when no error was expected.", t.Name(), tc.name)
 				assert.Equal(t, tc.expected, tc.byteArray)
 			case ERROR:
-				assert.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
+				require.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
 				expectedErr, ok := tc.expected.(error)
 				assert.True(t, ok, "%s:%s expected value is not an error", t.Name(), tc.name)
-				assert.ErrorIs(t, err, expectedErr, "%s:%s does not match the expected error", t.Name(), tc.name)
+				require.ErrorIs(t, err, expectedErr, "%s:%s does not match the expected error", t.Name(), tc.name)
 			default:
 				t.Fatal("Test expectation was not correctly set.")
 			}
@@ -533,13 +534,13 @@ func TestGetString(t *testing.T) {
 			case SUCCESS:
 				strExpected, ok := tc.expected.(string)
 				assert.True(t, ok, "%s:%s expected value is not a string", t.Name(), tc.name)
-				assert.NoError(t, err, "%s:%s threw an error when no error was expected.", t.Name(), tc.name)
+				require.NoError(t, err, "%s:%s threw an error when no error was expected.", t.Name(), tc.name)
 				assert.Equal(t, strExpected, strOut)
 			case ERROR:
-				assert.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
+				require.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
 				expectedErr, ok := tc.expected.(error)
 				assert.True(t, ok, "%s:%s expected value is not an error", t.Name(), tc.name)
-				assert.ErrorIs(t, err, expectedErr, "%s:%s does not match the expected error", t.Name(), tc.name)
+				require.ErrorIs(t, err, expectedErr, "%s:%s does not match the expected error", t.Name(), tc.name)
 			default:
 				t.Fatal("Test expectation was not correctly set.")
 			}
@@ -599,13 +600,13 @@ func TestGetBytes(t *testing.T) {
 
 			switch tc.expectation {
 			case SUCCESS:
-				assert.NoError(t, err, "%s:%s threw an error when no error was expected.", t.Name(), tc.name)
+				require.NoError(t, err, "%s:%s threw an error when no error was expected.", t.Name(), tc.name)
 				assert.Equal(t, tc.expected, byteOut)
 			case ERROR:
-				assert.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
+				require.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
 				expectedErr, ok := tc.expected.(error)
 				assert.True(t, ok, "%s:%s expected value is not an error", t.Name(), tc.name)
-				assert.ErrorIs(t, err, expectedErr, "%s:%s does not match the expected error", t.Name(), tc.name)
+				require.ErrorIs(t, err, expectedErr, "%s:%s does not match the expected error", t.Name(), tc.name)
 			default:
 				t.Fatal("Test expectation was not correctly set.")
 			}
@@ -688,13 +689,13 @@ func TestGetLong(t *testing.T) {
 
 				expectedLong := int64(expectedInt)
 
-				assert.NoError(t, err, "%s:%s threw an error when no error was expected.", t.Name(), tc.name)
+				require.NoError(t, err, "%s:%s threw an error when no error was expected.", t.Name(), tc.name)
 				assert.Equal(t, expectedLong, longOut)
 			case ERROR:
-				assert.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
+				require.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
 				expectedErr, ok := tc.expected.(error)
 				assert.True(t, ok, "%s:%s expected value is not an error", t.Name(), tc.name)
-				assert.ErrorIs(t, err, expectedErr, "%s:%s does not match the expected error", t.Name(), tc.name)
+				require.ErrorIs(t, err, expectedErr, "%s:%s does not match the expected error", t.Name(), tc.name)
 			default:
 				t.Fatal("Test expectation was not correctly set.")
 			}
@@ -704,7 +705,7 @@ func TestGetLong(t *testing.T) {
 
 func TestClientMessage_Validate(t *testing.T) {
 	u, err := uuid.Parse(messageID)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	clientMessage := ClientMessage{
 		SchemaVersion:  schemaVersion,
@@ -716,34 +717,34 @@ func TestClientMessage_Validate(t *testing.T) {
 	}
 
 	err = clientMessage.Validate()
-	assert.Error(t, err, "No error was thrown when one was expected.")
+	require.Error(t, err, "No error was thrown when one was expected.")
 	assert.Contains(t, err.Error(), "HeaderLength cannot be zero")
 
 	clientMessage.HeaderLength = 1
 	err = clientMessage.Validate()
-	assert.Error(t, err, "No error was thrown when one was expected.")
+	require.Error(t, err, "No error was thrown when one was expected.")
 	assert.Contains(t, err.Error(), "MessageType is missing")
 
 	clientMessage.MessageType = messageType
 	err = clientMessage.Validate()
-	assert.Error(t, err, "No error was thrown when one was expected.")
+	require.Error(t, err, "No error was thrown when one was expected.")
 	assert.Contains(t, err.Error(), "CreatedDate is missing")
 
 	clientMessage.CreatedDate = createdDate
 	err = clientMessage.Validate()
-	assert.Error(t, err, "No error was thrown when one was expected.")
+	require.Error(t, err, "No error was thrown when one was expected.")
 	assert.Contains(t, err.Error(), "payload Hash is not valid")
 
 	hasher := sha256.New()
 	hasher.Write(payload)
 	clientMessage.PayloadDigest = hasher.Sum(nil)
 	err = clientMessage.Validate()
-	assert.NoError(t, err, "An error was thrown when none was expected.")
+	require.NoError(t, err, "An error was thrown when none was expected.")
 }
 
 func TestClientMessage_ValidateStartPublicationMessage(t *testing.T) {
 	u, err := uuid.Parse(messageID)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	clientMessage := ClientMessage{
 		MessageType:    StartPublicationMessage,
@@ -757,7 +758,7 @@ func TestClientMessage_ValidateStartPublicationMessage(t *testing.T) {
 	}
 
 	err = clientMessage.Validate()
-	assert.NoError(t, err, "Validating StartPublicationMessage should not throw an error")
+	require.NoError(t, err, "Validating StartPublicationMessage should not throw an error")
 }
 
 func TestClientMessage_DeserializeDataStreamAcknowledgeContent(t *testing.T) {
@@ -769,18 +770,18 @@ func TestClientMessage_DeserializeDataStreamAcknowledgeContent(t *testing.T) {
 
 	ackMessage, err := testMessage.DeserializeDataStreamAcknowledgeContent(mockLogger)
 	assert.Equal(t, AcknowledgeContent{}, ackMessage)
-	assert.Error(t, err, "An error was not thrown when one was expected.")
+	require.Error(t, err, "An error was not thrown when one was expected.")
 
 	testMessage.MessageType = AcknowledgeMessage
 	ackMessage2, err := testMessage.DeserializeDataStreamAcknowledgeContent(mockLogger)
 	assert.Equal(t, AcknowledgeContent{}, ackMessage2)
-	assert.Error(t, err, "An error was not thrown when one was expected.")
+	require.Error(t, err, "An error was not thrown when one was expected.")
 
 	testMessage.Payload = ackMessagePayload
 	ackMessage3, err := testMessage.DeserializeDataStreamAcknowledgeContent(mockLogger)
 	assert.Equal(t, AcknowledgeMessage, ackMessage3.MessageType)
 	assert.Equal(t, messageID, ackMessage3.MessageID)
-	assert.NoError(t, err, "An error was thrown when one was not expected.")
+	require.NoError(t, err, "An error was thrown when one was not expected.")
 }
 
 func TestClientMessage_DeserializeChannelClosedMessage(t *testing.T) {
@@ -792,12 +793,12 @@ func TestClientMessage_DeserializeChannelClosedMessage(t *testing.T) {
 
 	closeMessage, err := testMessage.DeserializeChannelClosedMessage(mockLogger)
 	assert.Equal(t, ChannelClosed{}, closeMessage)
-	assert.Error(t, err, "An error was not thrown when one was expected.")
+	require.Error(t, err, "An error was not thrown when one was expected.")
 
 	testMessage.MessageType = ChannelClosedMessage
 	closeMessage2, err := testMessage.DeserializeChannelClosedMessage(mockLogger)
 	assert.Equal(t, ChannelClosed{}, closeMessage2)
-	assert.Error(t, err, "An error was not thrown when one was expected.")
+	require.Error(t, err, "An error was not thrown when one was expected.")
 
 	testMessage.Payload = channelClosedPayload
 	closeMessage3, err := testMessage.DeserializeChannelClosedMessage(mockLogger)
@@ -807,7 +808,7 @@ func TestClientMessage_DeserializeChannelClosedMessage(t *testing.T) {
 	assert.Equal(t, int(schemaVersion), closeMessage3.SchemaVersion)
 	assert.Equal(t, sessionID, closeMessage3.SessionID)
 	assert.Equal(t, string(payload), closeMessage3.Output)
-	assert.NoError(t, err, "An error was thrown when one was not expected.")
+	require.NoError(t, err, "An error was thrown when one was not expected.")
 }
 
 func TestClientMessage_DeserializeHandshakeRequest(t *testing.T) {
@@ -819,19 +820,19 @@ func TestClientMessage_DeserializeHandshakeRequest(t *testing.T) {
 
 	handshakeReq, err := testMessage.DeserializeHandshakeRequest(mockLogger)
 	assert.Equal(t, HandshakeRequestPayload{}, handshakeReq)
-	assert.Error(t, err, "An error was not thrown when one was expected.")
+	require.Error(t, err, "An error was not thrown when one was expected.")
 
 	testMessage.PayloadType = uint32(HandshakeRequestPayloadType)
 	handshakeReq2, err := testMessage.DeserializeHandshakeRequest(mockLogger)
 	assert.Equal(t, HandshakeRequestPayload{}, handshakeReq2)
-	assert.Error(t, err, "An error was not thrown when one was expected.")
+	require.Error(t, err, "An error was not thrown when one was expected.")
 
 	testMessage.Payload = handshakeReqPayload
 	handshakeReq3, err := testMessage.DeserializeHandshakeRequest(mockLogger)
 	assert.Equal(t, agentVersion, handshakeReq3.AgentVersion)
 	assert.Equal(t, ActionType(actionType), handshakeReq3.RequestedClientActions[0].ActionType)
 	assert.JSONEq(t, sampleParameters, string(handshakeReq3.RequestedClientActions[0].ActionParameters))
-	assert.NoError(t, err, "An error was thrown when one was not expected.")
+	require.NoError(t, err, "An error was thrown when one was not expected.")
 }
 
 func TestClientMessage_DeserializeHandshakeComplete(t *testing.T) {
@@ -843,18 +844,18 @@ func TestClientMessage_DeserializeHandshakeComplete(t *testing.T) {
 
 	handshakeComplete, err := testMessage.DeserializeHandshakeComplete(mockLogger)
 	assert.Equal(t, HandshakeCompletePayload{}, handshakeComplete)
-	assert.Error(t, err, "An error was not thrown when one was expected.")
+	require.Error(t, err, "An error was not thrown when one was expected.")
 
 	testMessage.PayloadType = uint32(HandshakeCompletePayloadType)
 	handshakeComplete2, err := testMessage.DeserializeHandshakeComplete(mockLogger)
 	assert.Equal(t, HandshakeCompletePayload{}, handshakeComplete2)
-	assert.Error(t, err, "An error was not thrown when one was expected.")
+	require.Error(t, err, "An error was not thrown when one was expected.")
 
 	testMessage.Payload = handshakeCompletePayload
 	handshakeComplete3, err := testMessage.DeserializeHandshakeComplete(mockLogger)
 	assert.Equal(t, time.Duration(timeToComplete), handshakeComplete3.HandshakeTimeToComplete)
 	assert.Equal(t, customerMessage, handshakeComplete3.CustomerMessage)
-	assert.NoError(t, err, "An error was thrown when one was not expected.")
+	require.NoError(t, err, "An error was thrown when one was not expected.")
 }
 
 func TestPutUuid(t *testing.T) {
@@ -880,7 +881,7 @@ func TestPutUuid(t *testing.T) {
 
 			// Get Uuid from string
 			uuidInput, err := uuid.Parse(strInput)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			err = putUUID(
 				mockLogger,
@@ -890,22 +891,22 @@ func TestPutUuid(t *testing.T) {
 
 			switch tc.expectation {
 			case SUCCESS:
-				assert.NoError(t, err, "%s:%s threw an error when no error was expected.", t.Name(), tc.name)
+				require.NoError(t, err, "%s:%s threw an error when no error was expected.", t.Name(), tc.name)
 				strExpected, ok := tc.expected.(string)
 				assert.True(t, ok, "%s:%s expected value is not a string", t.Name(), tc.name)
 
 				uuidOut, err := uuid.Parse(strExpected)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				expectedBuffer := get16ByteBuffer()
 				err = putUUID(mockLogger, expectedBuffer, 0, uuidOut)
-				assert.NoError(t, err, "Error putting UUID")
+				require.NoError(t, err, "Error putting UUID")
 				assert.Equal(t, expectedBuffer, tc.byteArray)
 			case ERROR:
-				assert.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
+				require.Error(t, err, "%s:%s did not throw an error when an error was expected.", t.Name(), tc.name)
 				expectedErr, ok := tc.expected.(error)
 				assert.True(t, ok, "%s:%s expected value is not an error", t.Name(), tc.name)
-				assert.ErrorIs(t, err, expectedErr, "%s:%s does not match the expected error", t.Name(), tc.name)
+				require.ErrorIs(t, err, expectedErr, "%s:%s does not match the expected error", t.Name(), tc.name)
 			default:
 				t.Fatal("Test expectation was not correctly set.")
 			}
@@ -916,39 +917,39 @@ func TestPutUuid(t *testing.T) {
 func TestPutGetString(t *testing.T) {
 	input := []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x01}
 	err1 := putString(log.NewMockLog(), input, 1, 8, "hello")
-	assert.NoError(t, err1)
+	require.NoError(t, err1)
 
 	result, err := getString(log.NewMockLog(), input, 1, 8)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "hello", result)
 }
 
 func TestPutGetInteger(t *testing.T) {
 	input := []byte{0x00, 0x00, 0x00, 0x00, 0xFF, 0x00}
 	err := putInteger(log.NewMockLog(), input, 1, 256)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, byte(0x00), input[1])
 	assert.Equal(t, byte(0x00), input[2])
 	assert.Equal(t, byte(0x01), input[3])
 	assert.Equal(t, byte(0x00), input[4])
 
 	result, err2 := getInteger(log.NewMockLog(), input, 1)
-	assert.NoError(t, err2)
+	require.NoError(t, err2)
 	assert.Equal(t, int32(256), result)
 
 	result2, err3 := getInteger(log.NewMockLog(), input, 2)
 	assert.Equal(t, int32(65536), result2)
-	assert.NoError(t, err3)
+	require.NoError(t, err3)
 
 	result3, err4 := getInteger(mockLogger, input, 3)
 	assert.Equal(t, int32(0), result3)
-	assert.Error(t, err4)
+	require.Error(t, err4)
 }
 
 func TestPutGetLong(t *testing.T) {
 	input := []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00}
 	err := putLong(log.NewMockLog(), input, 1, 4294967296) // 2 to the 32 + 1
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, byte(0x00), input[1])
 	assert.Equal(t, byte(0x00), input[2])
 	assert.Equal(t, byte(0x00), input[3])
@@ -959,14 +960,14 @@ func TestPutGetLong(t *testing.T) {
 	assert.Equal(t, byte(0x00), input[8])
 
 	testLong, err2 := getLong(log.NewMockLog(), input, 1)
-	assert.NoError(t, err2)
+	require.NoError(t, err2)
 	assert.Equal(t, int64(4294967296), testLong)
 }
 
 func TestGetBytesFromInteger(t *testing.T) {
 	input := int32(256)
 	result, err := integerToBytes(log.NewMockLog(), input)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, byte(0x00), result[0])
 	assert.Equal(t, byte(0x00), result[1])
 	assert.Equal(t, byte(0x01), result[2])
@@ -975,7 +976,7 @@ func TestGetBytesFromInteger(t *testing.T) {
 
 func TestSerializeAndDeserializeClientMessage(t *testing.T) {
 	u, err := uuid.Parse(messageID)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	clientMessage := ClientMessage{
 		MessageType:    messageType,
@@ -989,33 +990,33 @@ func TestSerializeAndDeserializeClientMessage(t *testing.T) {
 
 	// Test SerializeClientMessage
 	serializedBytes, err := clientMessage.SerializeClientMessage(log.NewMockLog())
-	assert.NoError(t, err, "Error serializing message")
+	require.NoError(t, err, "Error serializing message")
 
 	seralizedMessageType := strings.TrimRight(string(serializedBytes[ClientMessageMessageTypeOffset:ClientMessageMessageTypeOffset+ClientMessageMessageTypeLength-1]), " ")
 	assert.Equal(t, seralizedMessageType, messageType)
 
 	serializedVersion, err := getUInteger(log.NewMockLog(), serializedBytes, ClientMessageSchemaVersionOffset)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, serializedVersion, schemaVersion)
 
 	serializedCD, err := getULong(log.NewMockLog(), serializedBytes, ClientMessageCreatedDateOffset)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, serializedCD, createdDate)
 
 	serializedSequence, err := getLong(log.NewMockLog(), serializedBytes, ClientMessageSequenceNumberOffset)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, int64(1), serializedSequence)
 
 	serializedFlags, err := getULong(log.NewMockLog(), serializedBytes, ClientMessageFlagsOffset)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, uint64(2), serializedFlags)
 
 	seralizedMessageID, err := getUUID(log.NewMockLog(), serializedBytes, ClientMessageMessageIDOffset)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, seralizedMessageID.String(), messageID)
 
 	serializedDigest, err := getBytes(log.NewMockLog(), serializedBytes, ClientMessagePayloadDigestOffset, ClientMessagePayloadDigestLength)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	hasher := sha256.New()
 	hasher.Write(clientMessage.Payload)
@@ -1025,7 +1026,7 @@ func TestSerializeAndDeserializeClientMessage(t *testing.T) {
 	// Test DeserializeClientMessage
 	deserializedClientMessage := &ClientMessage{}
 	err = deserializedClientMessage.DeserializeClientMessage(log.NewMockLog(), serializedBytes)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, messageType, deserializedClientMessage.MessageType)
 	assert.Equal(t, schemaVersion, deserializedClientMessage.SchemaVersion)
 	assert.Equal(t, messageID, deserializedClientMessage.MessageID.String())
@@ -1038,7 +1039,7 @@ func TestSerializeAndDeserializeClientMessage(t *testing.T) {
 func TestSerializeMessagePayloadNegative(t *testing.T) {
 	functionEx := func() {}
 	_, err := SerializeClientMessagePayload(mockLogger, functionEx)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestSerializeAndDeserializeClientMessageWithAcknowledgeContent(t *testing.T) {
@@ -1052,10 +1053,10 @@ func TestSerializeAndDeserializeClientMessageWithAcknowledgeContent(t *testing.T
 	serializedClientMsg, _ := SerializeClientMessageWithAcknowledgeContent(log.NewMockLog(), acknowledgeContent)
 	deserializedClientMsg := &ClientMessage{}
 	err := deserializedClientMsg.DeserializeClientMessage(log.NewMockLog(), serializedClientMsg)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	deserializedAcknowledgeContent, err := deserializedClientMsg.DeserializeDataStreamAcknowledgeContent(log.NewMockLog())
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, messageType, deserializedAcknowledgeContent.MessageType)
 	assert.Equal(t, messageID, deserializedAcknowledgeContent.MessageID)
 	assert.Equal(t, sequenceNumber, deserializedAcknowledgeContent.SequenceNumber)
@@ -1073,7 +1074,7 @@ func TestDeserializeAgentMessageWithChannelClosed(t *testing.T) {
 	}
 
 	u, err := uuid.Parse(messageID)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	channelClosedJSON, err := json.Marshal(channelClosed)
 	if err != nil {
@@ -1092,7 +1093,7 @@ func TestDeserializeAgentMessageWithChannelClosed(t *testing.T) {
 
 	deserializedChannelClosed, err := agentMessage.DeserializeChannelClosedMessage(log.NewMockLog())
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, ChannelClosedMessage, deserializedChannelClosed.MessageType)
 	assert.Equal(t, messageID, deserializedChannelClosed.MessageID)
 	assert.Equal(t, sessionID, deserializedChannelClosed.SessionID)

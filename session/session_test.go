@@ -27,6 +27,7 @@ import (
 	"github.com/steveh/ecstoolkit/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -56,7 +57,7 @@ func TestExecute(t *testing.T) {
 	}
 
 	err := sessionMock.Execute(context.TODO(), logger)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "start session error for Standard_Stream")
 }
 
@@ -98,7 +99,7 @@ func TestExecuteAndStreamMessageResendTimesOut(t *testing.T) {
 		time.Sleep(200 * time.Millisecond)
 	}()
 	wg.Wait()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func SetupMockActions() {

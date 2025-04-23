@@ -28,6 +28,7 @@ import (
 	"github.com/steveh/ecstoolkit/message"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 // Test Initialize.
@@ -164,7 +165,7 @@ func TestStartSessionWithClosedWsConn(t *testing.T) {
 
 	deserializedMsg := &message.ClientMessage{}
 	err = deserializedMsg.DeserializeClientMessage(mockLog, actualPayload)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, outputMessage.Payload, deserializedMsg.Payload)
 }
 
