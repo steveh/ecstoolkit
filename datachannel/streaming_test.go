@@ -182,13 +182,18 @@ func TestProcessAcknowledgedMessage(t *testing.T) {
 	assert.Equal(t, 0, dataChannel.OutgoingMessageBuffer.Messages.Len())
 }
 
+type mockStreamingMessage struct{}
+
+func (s mockStreamingMessage) GetRoundTripTime() time.Duration {
+	return 140 * time.Millisecond
+}
+
 func TestCalculateRetransmissionTimeout(t *testing.T) {
 	dataChannel := getDataChannel()
-	GetRoundTripTime = func(_ StreamingMessage) time.Duration {
-		return 140 * time.Millisecond
-	}
 
-	dataChannel.CalculateRetransmissionTimeout(streamingMessages[0])
+	streamingMessage := mockStreamingMessage{}
+
+	dataChannel.CalculateRetransmissionTimeout(&streamingMessage)
 	assert.Equal(t, int64(105), int64(time.Duration(dataChannel.RoundTripTime)/time.Millisecond))
 	assert.Equal(t, int64(10), int64(time.Duration(dataChannel.RoundTripTimeVariation)/time.Millisecond))
 	assert.Equal(t, int64(145), int64(dataChannel.RetransmissionTimeout/time.Millisecond))

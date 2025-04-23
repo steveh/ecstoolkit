@@ -48,6 +48,11 @@ type StreamingMessage struct {
 	ResendAttempt  *int
 }
 
+// GetRoundTripTime is a function that calculates the round trip time for a streaming message.
+func (m StreamingMessage) GetRoundTripTime() time.Duration {
+	return time.Since(m.LastSentTime)
+}
+
 // OutputStreamDataMessageHandler is a function type that handles output stream data messages.
 type OutputStreamDataMessageHandler func(log *slog.Logger, streamDataMessage message.ClientMessage) (bool, error)
 
@@ -67,11 +72,6 @@ var ProcessAcknowledgedMessageCall = func(log *slog.Logger, dataChannel *DataCha
 // SendMessageCall is a function that sends a message through the data channel.
 var SendMessageCall = func(dataChannel *DataChannel, input []byte, inputType int) error {
 	return dataChannel.SendMessage(input, inputType)
-}
-
-// GetRoundTripTime is a function that calculates the round trip time for a streaming message.
-var GetRoundTripTime = func(streamingMessage StreamingMessage) time.Duration {
-	return time.Since(streamingMessage.LastSentTime)
 }
 
 var newEncrypter = func(ctx context.Context, log *slog.Logger, kmsKeyID string, encryptionConext map[string]string, kmsService *kms.Client) (encryption.IEncrypter, error) {

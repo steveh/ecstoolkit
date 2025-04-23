@@ -4,10 +4,15 @@ import (
 	"container/list"
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/steveh/ecstoolkit/communicator"
 	"github.com/steveh/ecstoolkit/message"
 )
+
+type RoundTripTiming interface {
+	GetRoundTripTime() time.Duration
+}
 
 // IDataChannel defines the interface for data channel operations.
 type IDataChannel interface {
@@ -27,7 +32,7 @@ type IDataChannel interface {
 	RemoveDataFromOutgoingMessageBuffer(streamMessageElement *list.Element)
 	AddDataToIncomingMessageBuffer(streamMessage StreamingMessage)
 	RemoveDataFromIncomingMessageBuffer(sequenceNumber int64)
-	CalculateRetransmissionTimeout(streamingMessage StreamingMessage)
+	CalculateRetransmissionTimeout(streamingMessage RoundTripTiming)
 	SendMessage(input []byte, inputType int) error
 	RegisterOutputStreamHandler(handler OutputStreamDataMessageHandler, isSessionSpecificHandler bool)
 	DeregisterOutputStreamHandler(handler OutputStreamDataMessageHandler)

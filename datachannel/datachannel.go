@@ -548,8 +548,8 @@ func (dataChannel *DataChannel) RemoveDataFromIncomingMessageBuffer(sequenceNumb
 }
 
 // CalculateRetransmissionTimeout calculates message retransmission timeout value based on round trip time on given message.
-func (dataChannel *DataChannel) CalculateRetransmissionTimeout(streamingMessage StreamingMessage) {
-	newRoundTripTime := float64(GetRoundTripTime(streamingMessage))
+func (dataChannel *DataChannel) CalculateRetransmissionTimeout(streamingMessage RoundTripTiming) {
+	newRoundTripTime := float64(streamingMessage.GetRoundTripTime())
 
 	dataChannel.RoundTripTimeVariation = ((1 - config.RTTVConstant) * dataChannel.RoundTripTimeVariation) +
 		(config.RTTVConstant * math.Abs(dataChannel.RoundTripTime-newRoundTripTime))

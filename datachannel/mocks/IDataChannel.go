@@ -98,7 +98,7 @@ func (_c *IDataChannel_AddDataToOutgoingMessageBuffer_Call) RunAndReturn(run fun
 }
 
 // CalculateRetransmissionTimeout provides a mock function with given fields: streamingMessage
-func (_m *IDataChannel) CalculateRetransmissionTimeout(streamingMessage datachannel.StreamingMessage) {
+func (_m *IDataChannel) CalculateRetransmissionTimeout(streamingMessage datachannel.RoundTripTiming) {
 	_m.Called(streamingMessage)
 }
 
@@ -108,14 +108,14 @@ type IDataChannel_CalculateRetransmissionTimeout_Call struct {
 }
 
 // CalculateRetransmissionTimeout is a helper method to define mock.On call
-//   - streamingMessage datachannel.StreamingMessage
+//   - streamingMessage datachannel.RoundTripTiming
 func (_e *IDataChannel_Expecter) CalculateRetransmissionTimeout(streamingMessage interface{}) *IDataChannel_CalculateRetransmissionTimeout_Call {
 	return &IDataChannel_CalculateRetransmissionTimeout_Call{Call: _e.mock.On("CalculateRetransmissionTimeout", streamingMessage)}
 }
 
-func (_c *IDataChannel_CalculateRetransmissionTimeout_Call) Run(run func(streamingMessage datachannel.StreamingMessage)) *IDataChannel_CalculateRetransmissionTimeout_Call {
+func (_c *IDataChannel_CalculateRetransmissionTimeout_Call) Run(run func(streamingMessage datachannel.RoundTripTiming)) *IDataChannel_CalculateRetransmissionTimeout_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(datachannel.StreamingMessage))
+		run(args[0].(datachannel.RoundTripTiming))
 	})
 	return _c
 }
@@ -125,7 +125,7 @@ func (_c *IDataChannel_CalculateRetransmissionTimeout_Call) Return() *IDataChann
 	return _c
 }
 
-func (_c *IDataChannel_CalculateRetransmissionTimeout_Call) RunAndReturn(run func(datachannel.StreamingMessage)) *IDataChannel_CalculateRetransmissionTimeout_Call {
+func (_c *IDataChannel_CalculateRetransmissionTimeout_Call) RunAndReturn(run func(datachannel.RoundTripTiming)) *IDataChannel_CalculateRetransmissionTimeout_Call {
 	_c.Run(run)
 	return _c
 }
