@@ -31,7 +31,6 @@ type IWebSocketChannel interface {
 	Open(log log.T) error
 	Close(log log.T) error
 	SendMessage(input []byte, inputType int) error
-	StartPings(log log.T, pingInterval time.Duration)
 	GetChannelToken() string
 	GetStreamURL() string
 	SetChannelToken(channelToken string)
@@ -42,31 +41,31 @@ type IWebSocketChannel interface {
 // WebSocketChannel parent class for DataChannel.
 type WebSocketChannel struct {
 	IWebSocketChannel
-	channelURL   string
 	OnMessage    func([]byte)
 	OnError      func(error)
-	IsOpen       bool
+	channelURL   string
+	isOpen       bool
 	writeLock    *sync.Mutex
-	Connection   *websocket.Conn
-	ChannelToken string
+	connection   *websocket.Conn
+	channelToken string
 }
 
 // NewWebSocketChannel creates a WebSocketChannel.
 func NewWebSocketChannel(channelURL string, channelToken string) (*WebSocketChannel, error) {
 	return &WebSocketChannel{
-		ChannelToken: channelToken,
+		channelToken: channelToken,
 		channelURL:   channelURL,
 	}, nil
 }
 
 // GetChannelToken gets the channel token.
 func (c *WebSocketChannel) GetChannelToken() string {
-	return c.ChannelToken
+	return c.channelToken
 }
 
 // SetChannelToken sets the channel token.
 func (c *WebSocketChannel) SetChannelToken(channelToken string) {
-	c.ChannelToken = channelToken
+	c.channelToken = channelToken
 }
 
 // GetStreamURL gets stream url.
@@ -84,34 +83,10 @@ func (c *WebSocketChannel) SetOnMessage(onMessageHandler func([]byte)) {
 	c.OnMessage = onMessageHandler
 }
 
-// StartPings starts the pinging process to keep the websocket channel alive.
-func (c *WebSocketChannel) StartPings(log log.T, pingInterval time.Duration) {
-	go func() {
-		for {
-			if !c.IsOpen {
-				return
-			}
-
-			log.Debug("WebsocketChannel: Send ping. Message.")
-			c.writeLock.Lock()
-			err := c.Connection.WriteMessage(websocket.PingMessage, []byte("keepalive"))
-			c.writeLock.Unlock()
-
-			if err != nil {
-				log.Error("Error sending websocket ping", "error", err)
-
-				return
-			}
-
-			time.Sleep(pingInterval)
-		}
-	}()
-}
-
 // SendMessage sends a byte message through the websocket connection.
 // Examples of message type are websocket.TextMessage or websocket.Binary.
 func (c *WebSocketChannel) SendMessage(input []byte, inputType int) error {
-	if !c.IsOpen {
+	if !c.isOpen {
 		return errors.New("connection is closed")
 	}
 
@@ -120,7 +95,7 @@ func (c *WebSocketChannel) SendMessage(input []byte, inputType int) error {
 	}
 
 	c.writeLock.Lock()
-	err := c.Connection.WriteMessage(inputType, input)
+	err := c.connection.WriteMessage(inputType, input)
 	c.writeLock.Unlock()
 
 	if err != nil {
@@ -134,11 +109,11 @@ func (c *WebSocketChannel) SendMessage(input []byte, inputType int) error {
 func (c *WebSocketChannel) Close(log log.T) error {
 	log.Debug("Closing websocket channel connection", "url", c.channelURL)
 
-	if c.IsOpen {
+	if c.isOpen {
 		// Send signal to stop receiving message
-		c.IsOpen = false
+		c.isOpen = false
 
-		if err := websocketutil.NewWebsocketUtil(log, nil).CloseConnection(c.Connection); err != nil {
+		if err := websocketutil.NewWebsocketUtil(log, nil).CloseConnection(c.connection); err != nil {
 			return fmt.Errorf("closing websocket connection: %w", err)
 		}
 
@@ -160,9 +135,9 @@ func (c *WebSocketChannel) Open(log log.T) error {
 		return fmt.Errorf("opening websocket connection: %w", err)
 	}
 
-	c.Connection = ws
-	c.IsOpen = true
-	c.StartPings(log, config.PingTimeInterval)
+	c.connection = ws
+	c.isOpen = true
+	c.startPings(log, config.PingTimeInterval)
 
 	// spin up a different routine to listen to the incoming traffic
 	go func() {
@@ -175,13 +150,13 @@ func (c *WebSocketChannel) Open(log log.T) error {
 		retryCount := 0
 
 		for {
-			if !c.IsOpen {
+			if !c.isOpen {
 				log.Debug("Ending the channel listening routine since the channel is closed", "url", c.channelURL)
 
 				break
 			}
 
-			messageType, rawMessage, err := c.Connection.ReadMessage()
+			messageType, rawMessage, err := c.connection.ReadMessage()
 
 			switch {
 			case err != nil:
@@ -206,4 +181,33 @@ func (c *WebSocketChannel) Open(log log.T) error {
 	}()
 
 	return nil
+}
+
+// IsOpen checks if the channel is open.
+func (c *WebSocketChannel) IsOpen() bool {
+	return c.isOpen
+}
+
+// startPings starts the pinging process to keep the websocket channel alive.
+func (c *WebSocketChannel) startPings(log log.T, pingInterval time.Duration) {
+	go func() {
+		for {
+			if !c.isOpen {
+				return
+			}
+
+			log.Debug("WebsocketChannel: Send ping. Message.")
+			c.writeLock.Lock()
+			err := c.connection.WriteMessage(websocket.PingMessage, []byte("keepalive"))
+			c.writeLock.Unlock()
+
+			if err != nil {
+				log.Error("Error sending websocket ping", "error", err)
+
+				return
+			}
+
+			time.Sleep(pingInterval)
+		}
+	}()
 }

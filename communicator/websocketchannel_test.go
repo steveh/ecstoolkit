@@ -93,9 +93,8 @@ func handlerToBeTested(w http.ResponseWriter, req *http.Request) {
 func TestWebSocketChannel_GetChannelToken(t *testing.T) {
 	t.Log("Starting test: webSocketChannel.GetChannelToken")
 
-	channel := &communicator.WebSocketChannel{
-		ChannelToken: defaultChannelToken,
-	}
+	channel, err := communicator.NewWebSocketChannel(defaultStreamURL, defaultChannelToken)
+	require.NoError(t, err)
 
 	token := channel.GetChannelToken()
 	assert.Equal(t, defaultChannelToken, token)
@@ -104,10 +103,11 @@ func TestWebSocketChannel_GetChannelToken(t *testing.T) {
 func TestWebSocketChannel_SetChannelToken(t *testing.T) {
 	t.Log("Starting test: webSocketChannel.SetChannelToken")
 
-	channel := &communicator.WebSocketChannel{}
+	channel, err := communicator.NewWebSocketChannel(defaultStreamURL, "other")
+	require.NoError(t, err)
 
 	channel.SetChannelToken(defaultChannelToken)
-	assert.Equal(t, defaultChannelToken, channel.ChannelToken)
+	assert.Equal(t, defaultChannelToken, channel.GetChannelToken())
 }
 
 func TestWebSocketChannel_GetStreamURL(t *testing.T) {
@@ -155,7 +155,7 @@ func TestNewWebSocketChannel(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, defaultStreamURL, channel.GetStreamURL())
-	assert.Equal(t, defaultChannelToken, channel.ChannelToken)
+	assert.Equal(t, defaultChannelToken, channel.GetChannelToken())
 }
 
 func TestOpenCloseWebSocketChannel(t *testing.T) {
@@ -172,12 +172,11 @@ func TestOpenCloseWebSocketChannel(t *testing.T) {
 
 	err = websocketchannel.Open(log)
 	require.NoError(t, err, "Error opening the websocket connection.")
-	assert.NotNil(t, websocketchannel.Connection, "Open connection failed.")
-	assert.True(t, websocketchannel.IsOpen, "IsOpen is not set to true.")
+	assert.True(t, websocketchannel.IsOpen(), "IsOpen is not set to true.")
 
 	err = websocketchannel.Close(log)
 	require.NoError(t, err, "Error closing the websocket connection.")
-	assert.False(t, websocketchannel.IsOpen, "IsOpen is not set to false.")
+	assert.False(t, websocketchannel.IsOpen(), "IsOpen is not set to false.")
 	t.Log("Ending test: TestOpenCloseWebSocketChannel")
 }
 
@@ -209,7 +208,6 @@ func TestReadWriteTextToWebSocketChannel(t *testing.T) {
 	// Open the websocket connection
 	err = websocketchannel.Open(log)
 	require.NoError(t, err, "Error opening the websocket connection.")
-	assert.NotNil(t, websocketchannel.Connection, "Open connection failed.")
 
 	if err := websocketchannel.SendMessage([]byte("channelreadwrite"), websocket.TextMessage); err != nil {
 		t.Errorf("Failed to send message: %v", err)
@@ -219,7 +217,7 @@ func TestReadWriteTextToWebSocketChannel(t *testing.T) {
 
 	err = websocketchannel.Close(log)
 	require.NoError(t, err, "Error closing the websocket connection.")
-	assert.False(t, websocketchannel.IsOpen, "IsOpen is not set to false.")
+	assert.False(t, websocketchannel.IsOpen(), "IsOpen is not set to false.")
 	t.Log("Ending test: TestReadWriteWebSocketChannel ")
 }
 
@@ -251,7 +249,6 @@ func TestReadWriteBinaryToWebSocketChannel(t *testing.T) {
 	// Open the websocket connection
 	err = websocketchannel.Open(log)
 	require.NoError(t, err, "Error opening the websocket connection.")
-	assert.NotNil(t, websocketchannel.Connection, "Open connection failed.")
 
 	if err := websocketchannel.SendMessage([]byte("channelreadwrite"), websocket.BinaryMessage); err != nil {
 		t.Errorf("Failed to send message: %v", err)
@@ -261,7 +258,7 @@ func TestReadWriteBinaryToWebSocketChannel(t *testing.T) {
 
 	err = websocketchannel.Close(log)
 	require.NoError(t, err, "Error closing the websocket connection.")
-	assert.False(t, websocketchannel.IsOpen, "IsOpen is not set to false.")
+	assert.False(t, websocketchannel.IsOpen(), "IsOpen is not set to false.")
 	t.Log("Ending test: TestReadWriteWebSocketChannel ")
 }
 
@@ -297,7 +294,6 @@ func TestMultipleReadWriteWebSocketChannel(t *testing.T) {
 	// Open the websocket connection
 	err = websocketchannel.Open(log)
 	require.NoError(t, err, "Error opening the websocket connection.")
-	assert.NotNil(t, websocketchannel.Connection, "Open connection failed.")
 
 	// Verify writes to websocket server
 	err = websocketchannel.SendMessage([]byte("channelreadwrite1"), websocket.TextMessage)
@@ -309,7 +305,7 @@ func TestMultipleReadWriteWebSocketChannel(t *testing.T) {
 
 	err = websocketchannel.Close(log)
 	require.NoError(t, err, "Error closing the websocket connection.")
-	assert.False(t, websocketchannel.IsOpen, "IsOpen is not set to false.")
+	assert.False(t, websocketchannel.IsOpen(), "IsOpen is not set to false.")
 
 	t.Log("Ending test: TestMultipleReadWriteWebSocketChannel")
 }
