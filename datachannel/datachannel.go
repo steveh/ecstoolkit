@@ -142,7 +142,7 @@ func (c *DataChannel) SendMessage(input []byte, inputType int) error {
 
 // Open opens websocket connects and does final handshake to acknowledge connection.
 func (c *DataChannel) Open(log log.T) error {
-	if err := c.wsChannel.Open(log); err != nil {
+	if err := c.wsChannel.Open(); err != nil {
 		return fmt.Errorf("opening data channel: %w", err)
 	}
 
@@ -157,7 +157,7 @@ func (c *DataChannel) Open(log log.T) error {
 func (c *DataChannel) Close(log log.T) error {
 	log.Debug("Closing datachannel", "url", c.wsChannel.GetStreamURL())
 
-	if err := c.wsChannel.Close(log); err != nil {
+	if err := c.wsChannel.Close(); err != nil {
 		return fmt.Errorf("closing data channel: %w", err)
 	}
 

@@ -86,7 +86,7 @@ func (s *Session) OpenDataChannel(ctx context.Context, log log.T) error {
 		MaxAttempts:         config.DataChannelNumMaxRetries,
 	}
 
-	wsChannel, err := communicator.NewWebSocketChannel(s.streamURL, s.tokenValue)
+	wsChannel, err := communicator.NewWebSocketChannel(s.streamURL, s.tokenValue, log)
 	if err != nil {
 		return fmt.Errorf("creating websocket channel: %w", err)
 	}
