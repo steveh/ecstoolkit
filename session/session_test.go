@@ -56,13 +56,15 @@ func TestOpenDataChannel(t *testing.T) {
 	mockDataChannel = &dataChannelMock.IDataChannel{}
 	mockWsChannel = &wsChannelMock.IWebSocketChannel{}
 
-	sessionMock := &Session{}
+	sessionMock := &Session{
+		logger: logger,
+	}
 	sessionMock.DataChannel = mockDataChannel
 
 	SetupMockActions()
 	mockDataChannel.On("Open", mock.Anything).Return(nil)
 
-	err := sessionMock.OpenDataChannel(context.TODO(), logger)
+	err := sessionMock.OpenDataChannel(context.TODO())
 	require.NoError(t, err)
 }
 
@@ -70,7 +72,9 @@ func TestOpenDataChannelWithError(t *testing.T) {
 	mockDataChannel = &dataChannelMock.IDataChannel{}
 	mockWsChannel = &wsChannelMock.IWebSocketChannel{}
 
-	sessionMock := &Session{}
+	sessionMock := &Session{
+		logger: logger,
+	}
 	sessionMock.DataChannel = mockDataChannel
 
 	SetupMockActions()
@@ -80,7 +84,7 @@ func TestOpenDataChannelWithError(t *testing.T) {
 	mockDataChannel.On("Reconnect", mock.Anything).Return(errors.New("error")).Once()
 	mockDataChannel.On("Reconnect", mock.Anything).Return(nil).Once()
 
-	err := sessionMock.OpenDataChannel(context.TODO(), logger)
+	err := sessionMock.OpenDataChannel(context.TODO())
 	require.NoError(t, err)
 }
 
@@ -100,7 +104,7 @@ func TestProcessFirstMessageOutputMessageFirst(t *testing.T) {
 		logger:      logger,
 	}
 
-	_, err = session.ProcessFirstMessage(outputMessage)
+	_, err = session.processFirstMessage(outputMessage)
 	if err != nil {
 		t.Errorf("Failed to process first message: %v", err)
 	}

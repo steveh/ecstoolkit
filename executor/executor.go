@@ -124,7 +124,7 @@ func (e *Executor) newSession(options *ExecuteSessionOptions, execute *ecs.Execu
 }
 
 func (e *Executor) initSession(ctx context.Context, sess *session.Session) error {
-	if err := sess.OpenDataChannel(ctx, e.logger); err != nil {
+	if err := sess.OpenDataChannel(ctx); err != nil {
 		return fmt.Errorf("open data channel: %w", err)
 	}
 
