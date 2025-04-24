@@ -633,27 +633,37 @@ func (c *DataChannel) SetSessionType(sessionType string) {
 	c.isSessionTypeSet <- true
 }
 
-// GetSessionType returns SessionType of the c.
+// GetSessionType returns SessionType of the DataChannel.
 func (c *DataChannel) GetSessionType() string {
 	return c.sessionType
 }
 
-// GetSessionProperties returns SessionProperties of the c.
+// GetSessionProperties returns SessionProperties of the DataChannel.
 func (c *DataChannel) GetSessionProperties() interface{} {
 	return c.sessionProperties
 }
 
-// GetWsChannel returns WsChannel of the c.
-func (c *DataChannel) GetWsChannel() communicator.IWebSocketChannel { //nolint:ireturn
-	return c.wsChannel
-}
-
-// SetWsChannel set WsChannel of the c.
+// SetWsChannel set WsChannel of the DataChannel.
 func (c *DataChannel) SetWsChannel(wsChannel communicator.IWebSocketChannel) {
 	c.wsChannel = wsChannel
 }
 
-// GetStreamDataSequenceNumber returns StreamDataSequenceNumber of the c.
+// SetChannelToken set channel token of the DataChannel.
+func (c *DataChannel) SetChannelToken(channelToken string) {
+	c.wsChannel.SetChannelToken(channelToken)
+}
+
+// SetOnError sets the error handler for the DataChannel.
+func (c *DataChannel) SetOnError(onErrorHandler func(error)) {
+	c.wsChannel.SetOnError(onErrorHandler)
+}
+
+// SetOnMessage sets the message handler for the DataChannel.
+func (c *DataChannel) SetOnMessage(onMessageHandler func([]byte)) {
+	c.wsChannel.SetOnMessage(onMessageHandler)
+}
+
+// GetStreamDataSequenceNumber returns StreamDataSequenceNumber of the DataChannel.
 func (c *DataChannel) GetStreamDataSequenceNumber() int64 {
 	return c.StreamDataSequenceNumber
 }

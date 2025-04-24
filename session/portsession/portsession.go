@@ -92,7 +92,8 @@ func (s *PortSession) Initialize(ctx context.Context, log log.T, sessionVar *ses
 	}
 
 	s.DataChannel.RegisterOutputStreamHandler(s.ProcessStreamMessagePayload, true)
-	s.DataChannel.GetWsChannel().SetOnMessage(func(input []byte) {
+
+	s.DataChannel.SetOnMessage(func(input []byte) {
 		if s.portSessionType.IsStreamNotSet() {
 			outputMessage := &message.ClientMessage{}
 			if err := outputMessage.DeserializeClientMessage(log, input); err != nil {
@@ -114,6 +115,7 @@ func (s *PortSession) Initialize(ctx context.Context, log log.T, sessionVar *ses
 			log.Error("Failed to handle output message", "error", err)
 		}
 	})
+
 	log.Debug("Connected to instance", "targetId", sessionVar.TargetID, "port", s.portParameters.PortNumber)
 }
 

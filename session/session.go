@@ -80,7 +80,7 @@ func (s *Session) OpenDataChannel(ctx context.Context, log log.T) error {
 
 	s.DataChannel.SetWsChannel(wsChannel)
 
-	s.DataChannel.GetWsChannel().SetOnMessage(
+	s.DataChannel.SetOnMessage(
 		func(input []byte) {
 			if err := s.DataChannel.OutputMessageHandler(ctx, log, s.Stop, s.SessionID, input); err != nil {
 				log.Error("Failed to handle output message", "error", err)
@@ -98,7 +98,7 @@ func (s *Session) OpenDataChannel(ctx context.Context, log log.T) error {
 		}
 	}
 
-	s.DataChannel.GetWsChannel().SetOnError(
+	s.DataChannel.SetOnError(
 		func(wsErr error) {
 			log.Error("Trying to reconnect session", "url", s.StreamURL, "sequenceNumber", s.DataChannel.GetStreamDataSequenceNumber(), "error", wsErr)
 
@@ -177,7 +177,7 @@ func (s *Session) ResumeSessionHandler(ctx context.Context, log log.T) error {
 		return errors.New("session timed out")
 	}
 
-	s.DataChannel.GetWsChannel().SetChannelToken(s.TokenValue)
+	s.DataChannel.SetChannelToken(s.TokenValue)
 
 	err = s.DataChannel.Reconnect(log)
 	if err != nil {

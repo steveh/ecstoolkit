@@ -62,7 +62,7 @@ func (s *ShellSession) Name() string {
 func (s *ShellSession) Initialize(ctx context.Context, log log.T, sessionVar *session.Session) {
 	s.Session = *sessionVar
 	s.DataChannel.RegisterOutputStreamHandler(s.ProcessStreamMessagePayload, true)
-	s.DataChannel.GetWsChannel().SetOnMessage(
+	s.DataChannel.SetOnMessage(
 		func(input []byte) {
 			if err := s.DataChannel.OutputMessageHandler(ctx, log, s.Stop, s.SessionID, input); err != nil {
 				log.Error("Failed to handle output message", "error", err)

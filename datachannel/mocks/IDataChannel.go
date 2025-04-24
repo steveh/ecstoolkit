@@ -438,53 +438,6 @@ func (_c *IDataChannel_GetStreamDataSequenceNumber_Call) RunAndReturn(run func()
 	return _c
 }
 
-// GetWsChannel provides a mock function with no fields
-func (_m *IDataChannel) GetWsChannel() communicator.IWebSocketChannel {
-	ret := _m.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetWsChannel")
-	}
-
-	var r0 communicator.IWebSocketChannel
-	if rf, ok := ret.Get(0).(func() communicator.IWebSocketChannel); ok {
-		r0 = rf()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(communicator.IWebSocketChannel)
-		}
-	}
-
-	return r0
-}
-
-// IDataChannel_GetWsChannel_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetWsChannel'
-type IDataChannel_GetWsChannel_Call struct {
-	*mock.Call
-}
-
-// GetWsChannel is a helper method to define mock.On call
-func (_e *IDataChannel_Expecter) GetWsChannel() *IDataChannel_GetWsChannel_Call {
-	return &IDataChannel_GetWsChannel_Call{Call: _e.mock.On("GetWsChannel")}
-}
-
-func (_c *IDataChannel_GetWsChannel_Call) Run(run func()) *IDataChannel_GetWsChannel_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *IDataChannel_GetWsChannel_Call) Return(_a0 communicator.IWebSocketChannel) *IDataChannel_GetWsChannel_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *IDataChannel_GetWsChannel_Call) RunAndReturn(run func() communicator.IWebSocketChannel) *IDataChannel_GetWsChannel_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // IsSessionTypeSet provides a mock function with no fields
 func (_m *IDataChannel) IsSessionTypeSet() chan bool {
 	ret := _m.Called()
@@ -1132,6 +1085,105 @@ func (_c *IDataChannel_SetAgentVersion_Call) Return() *IDataChannel_SetAgentVers
 }
 
 func (_c *IDataChannel_SetAgentVersion_Call) RunAndReturn(run func(string)) *IDataChannel_SetAgentVersion_Call {
+	_c.Run(run)
+	return _c
+}
+
+// SetChannelToken provides a mock function with given fields: channelToken
+func (_m *IDataChannel) SetChannelToken(channelToken string) {
+	_m.Called(channelToken)
+}
+
+// IDataChannel_SetChannelToken_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetChannelToken'
+type IDataChannel_SetChannelToken_Call struct {
+	*mock.Call
+}
+
+// SetChannelToken is a helper method to define mock.On call
+//   - channelToken string
+func (_e *IDataChannel_Expecter) SetChannelToken(channelToken interface{}) *IDataChannel_SetChannelToken_Call {
+	return &IDataChannel_SetChannelToken_Call{Call: _e.mock.On("SetChannelToken", channelToken)}
+}
+
+func (_c *IDataChannel_SetChannelToken_Call) Run(run func(channelToken string)) *IDataChannel_SetChannelToken_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string))
+	})
+	return _c
+}
+
+func (_c *IDataChannel_SetChannelToken_Call) Return() *IDataChannel_SetChannelToken_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *IDataChannel_SetChannelToken_Call) RunAndReturn(run func(string)) *IDataChannel_SetChannelToken_Call {
+	_c.Run(run)
+	return _c
+}
+
+// SetOnError provides a mock function with given fields: onErrorHandler
+func (_m *IDataChannel) SetOnError(onErrorHandler func(error)) {
+	_m.Called(onErrorHandler)
+}
+
+// IDataChannel_SetOnError_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetOnError'
+type IDataChannel_SetOnError_Call struct {
+	*mock.Call
+}
+
+// SetOnError is a helper method to define mock.On call
+//   - onErrorHandler func(error)
+func (_e *IDataChannel_Expecter) SetOnError(onErrorHandler interface{}) *IDataChannel_SetOnError_Call {
+	return &IDataChannel_SetOnError_Call{Call: _e.mock.On("SetOnError", onErrorHandler)}
+}
+
+func (_c *IDataChannel_SetOnError_Call) Run(run func(onErrorHandler func(error))) *IDataChannel_SetOnError_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(func(error)))
+	})
+	return _c
+}
+
+func (_c *IDataChannel_SetOnError_Call) Return() *IDataChannel_SetOnError_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *IDataChannel_SetOnError_Call) RunAndReturn(run func(func(error))) *IDataChannel_SetOnError_Call {
+	_c.Run(run)
+	return _c
+}
+
+// SetOnMessage provides a mock function with given fields: onMessageHandler
+func (_m *IDataChannel) SetOnMessage(onMessageHandler func([]byte)) {
+	_m.Called(onMessageHandler)
+}
+
+// IDataChannel_SetOnMessage_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetOnMessage'
+type IDataChannel_SetOnMessage_Call struct {
+	*mock.Call
+}
+
+// SetOnMessage is a helper method to define mock.On call
+//   - onMessageHandler func([]byte)
+func (_e *IDataChannel_Expecter) SetOnMessage(onMessageHandler interface{}) *IDataChannel_SetOnMessage_Call {
+	return &IDataChannel_SetOnMessage_Call{Call: _e.mock.On("SetOnMessage", onMessageHandler)}
+}
+
+func (_c *IDataChannel_SetOnMessage_Call) Run(run func(onMessageHandler func([]byte))) *IDataChannel_SetOnMessage_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(func([]byte)))
+	})
+	return _c
+}
+
+func (_c *IDataChannel_SetOnMessage_Call) Return() *IDataChannel_SetOnMessage_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *IDataChannel_SetOnMessage_Call) RunAndReturn(run func(func([]byte))) *IDataChannel_SetOnMessage_Call {
 	_c.Run(run)
 	return _c
 }

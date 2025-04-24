@@ -40,8 +40,10 @@ type IDataChannel interface {
 	GetSessionType() string
 	SetSessionType(sessionType string)
 	GetSessionProperties() interface{}
-	GetWsChannel() communicator.IWebSocketChannel
 	SetWsChannel(wsChannel communicator.IWebSocketChannel)
+	SetChannelToken(channelToken string)
+	SetOnError(onErrorHandler func(error))
+	SetOnMessage(onMessageHandler func([]byte))
 	GetStreamDataSequenceNumber() int64
 	GetAgentVersion() string
 	SetAgentVersion(agentVersion string)

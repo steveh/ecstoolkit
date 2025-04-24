@@ -46,12 +46,10 @@ var (
 func SetupMockActions() {
 	mockDataChannel.On("Initialize", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return()
 	mockDataChannel.On("SetWsChannel", mock.Anything)
-	mockDataChannel.On("GetWsChannel").Return(mockWsChannel)
+	mockDataChannel.On("SetOnMessage", mock.Anything)
+	mockDataChannel.On("SetOnError", mock.Anything)
 	mockDataChannel.On("RegisterOutputStreamHandler", mock.Anything, mock.Anything)
 	mockDataChannel.On("ResendStreamDataMessageScheduler", mock.Anything).Return(nil)
-
-	mockWsChannel.On("SetOnMessage", mock.Anything)
-	mockWsChannel.On("SetOnError", mock.Anything)
 }
 
 func TestOpenDataChannel(t *testing.T) {
