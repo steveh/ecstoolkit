@@ -383,7 +383,7 @@ func (c *DataChannel) HandleChannelClosedMessage(stopHandler Stop, sessionID str
 
 	c.logger.Debug("Session message", "sessionID", sessionID, "output", channelClosedMessage.Output)
 
-	if err := stopHandler(c.logger); err != nil {
+	if err := stopHandler(); err != nil {
 		c.logger.Error("Failed to stop handler", "error", err)
 	}
 }

@@ -46,7 +46,7 @@ type IPortSession interface {
 	InitializeStreams(ctx context.Context, log log.T, agentVersion string) (err error)
 	ReadStream(ctx context.Context, log log.T) (err error)
 	WriteStream(outputMessage message.ClientMessage) (err error)
-	Stop(log log.T) error
+	Stop() error
 }
 
 // PortParameters contains the configuration parameters for port forwarding.
@@ -118,8 +118,8 @@ func (s *PortSession) Initialize(ctx context.Context, log log.T, sessionVar *ses
 }
 
 // Stop terminates the port session and cleans up resources.
-func (s *PortSession) Stop(log log.T) error {
-	if err := s.portSessionType.Stop(log); err != nil {
+func (s *PortSession) Stop() error {
+	if err := s.portSessionType.Stop(); err != nil {
 		return fmt.Errorf("stopping port session: %w", err)
 	}
 

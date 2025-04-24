@@ -157,7 +157,7 @@ func (s *Session) ProcessFirstMessage(log log.T, outputMessage message.ClientMes
 }
 
 // Stop will end the session.
-func (s *Session) Stop(_ log.T) error {
+func (s *Session) Stop() error {
 	return nil
 }
 

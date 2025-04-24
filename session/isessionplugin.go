@@ -12,6 +12,6 @@ type ISessionPlugin interface {
 	SetSessionHandlers(ctx context.Context, log log.T) error
 	ProcessStreamMessagePayload(log log.T, streamDataMessage message.ClientMessage) (isHandlerReady bool, err error)
 	Initialize(ctx context.Context, log log.T, sessionVar *Session)
-	Stop(log log.T) error
+	Stop() error
 	Name() string
 }

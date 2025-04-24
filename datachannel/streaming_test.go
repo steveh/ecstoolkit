@@ -329,7 +329,7 @@ func TestDataChannelIncomingMessageHandlerForExpectedInputStreamDataMessage(t *t
 		return true, nil
 	}
 
-	var stopHandler Stop = func(_ log.T) error {
+	var stopHandler Stop = func() error {
 		return nil
 	}
 
@@ -372,7 +372,7 @@ func TestDataChannelIncomingMessageHandlerForUnexpectedInputStreamDataMessage(t 
 		return nil
 	}
 
-	var stopHandler Stop = func(_ log.T) error {
+	var stopHandler Stop = func() error {
 		return nil
 	}
 
@@ -403,7 +403,7 @@ func TestDataChannelIncomingMessageHandlerForAcknowledgeMessage(t *testing.T) {
 	mockChannel := &communicatorMocks.IWebSocketChannel{}
 	dataChannel.wsChannel = mockChannel
 
-	var stopHandler Stop = func(_ log.T) error {
+	var stopHandler Stop = func() error {
 		return nil
 	}
 
@@ -465,7 +465,7 @@ func TestDataChannelIncomingMessageHandlerForPausePublicationessage(t *testing.T
 		return true, nil
 	}
 
-	var stopHandler Stop = func(_ log.T) error {
+	var stopHandler Stop = func() error {
 		return nil
 	}
 
@@ -538,7 +538,7 @@ func TestHandshakeRequestHandler(t *testing.T) {
 	}
 	mockChannel.On("SendMessage", mock.Anything, mock.MatchedBy(handshakeResponseMatcher), mock.Anything).Return(nil)
 
-	if err := dataChannel.outputMessageHandler(context.TODO(), func(_ log.T) error { return nil }, handshakeRequestMessageBytes); err != nil {
+	if err := dataChannel.outputMessageHandler(context.TODO(), func() error { return nil }, handshakeRequestMessageBytes); err != nil {
 		t.Errorf("Failed to handle output message: %v", err)
 	}
 

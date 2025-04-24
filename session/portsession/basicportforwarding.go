@@ -59,7 +59,7 @@ func (p *BasicPortForwarding) IsStreamNotSet() bool {
 }
 
 // Stop closes the stream.
-func (p *BasicPortForwarding) Stop(_ log.T) error {
+func (p *BasicPortForwarding) Stop() error {
 	if p.stream != nil {
 		if err := (*p.stream).Close(); err != nil {
 			return fmt.Errorf("closing stream: %w", err)
@@ -208,7 +208,7 @@ func (p *BasicPortForwarding) handleControlSignals(ctx context.Context, log log.
 
 			log.Debug("Exiting session", "sessionID", p.sessionID)
 
-			if err := p.Stop(log); err != nil {
+			if err := p.Stop(); err != nil {
 				log.Error("stopping session", "error", err)
 			}
 		} else {

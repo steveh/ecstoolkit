@@ -57,7 +57,7 @@ func setState(state *bytes.Buffer) error {
 }
 
 // Stop restores the terminal settings and exits.
-func (s *ShellSession) Stop(_ log.T) error {
+func (s *ShellSession) Stop() error {
 	// Must be closed to avoid errors.
 	if err := s.DataChannel.Close(); err != nil {
 		return fmt.Errorf("closing DataChannel: %w", err)
