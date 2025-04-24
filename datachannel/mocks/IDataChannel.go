@@ -9,8 +9,6 @@ import (
 
 	datachannel "github.com/steveh/ecstoolkit/datachannel"
 
-	list "container/list"
-
 	log "github.com/steveh/ecstoolkit/log"
 
 	message "github.com/steveh/ecstoolkit/message"
@@ -29,105 +27,6 @@ type IDataChannel_Expecter struct {
 
 func (_m *IDataChannel) EXPECT() *IDataChannel_Expecter {
 	return &IDataChannel_Expecter{mock: &_m.Mock}
-}
-
-// AddDataToIncomingMessageBuffer provides a mock function with given fields: streamMessage
-func (_m *IDataChannel) AddDataToIncomingMessageBuffer(streamMessage datachannel.StreamingMessage) {
-	_m.Called(streamMessage)
-}
-
-// IDataChannel_AddDataToIncomingMessageBuffer_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AddDataToIncomingMessageBuffer'
-type IDataChannel_AddDataToIncomingMessageBuffer_Call struct {
-	*mock.Call
-}
-
-// AddDataToIncomingMessageBuffer is a helper method to define mock.On call
-//   - streamMessage datachannel.StreamingMessage
-func (_e *IDataChannel_Expecter) AddDataToIncomingMessageBuffer(streamMessage interface{}) *IDataChannel_AddDataToIncomingMessageBuffer_Call {
-	return &IDataChannel_AddDataToIncomingMessageBuffer_Call{Call: _e.mock.On("AddDataToIncomingMessageBuffer", streamMessage)}
-}
-
-func (_c *IDataChannel_AddDataToIncomingMessageBuffer_Call) Run(run func(streamMessage datachannel.StreamingMessage)) *IDataChannel_AddDataToIncomingMessageBuffer_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(datachannel.StreamingMessage))
-	})
-	return _c
-}
-
-func (_c *IDataChannel_AddDataToIncomingMessageBuffer_Call) Return() *IDataChannel_AddDataToIncomingMessageBuffer_Call {
-	_c.Call.Return()
-	return _c
-}
-
-func (_c *IDataChannel_AddDataToIncomingMessageBuffer_Call) RunAndReturn(run func(datachannel.StreamingMessage)) *IDataChannel_AddDataToIncomingMessageBuffer_Call {
-	_c.Run(run)
-	return _c
-}
-
-// AddDataToOutgoingMessageBuffer provides a mock function with given fields: streamMessage
-func (_m *IDataChannel) AddDataToOutgoingMessageBuffer(streamMessage datachannel.StreamingMessage) {
-	_m.Called(streamMessage)
-}
-
-// IDataChannel_AddDataToOutgoingMessageBuffer_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AddDataToOutgoingMessageBuffer'
-type IDataChannel_AddDataToOutgoingMessageBuffer_Call struct {
-	*mock.Call
-}
-
-// AddDataToOutgoingMessageBuffer is a helper method to define mock.On call
-//   - streamMessage datachannel.StreamingMessage
-func (_e *IDataChannel_Expecter) AddDataToOutgoingMessageBuffer(streamMessage interface{}) *IDataChannel_AddDataToOutgoingMessageBuffer_Call {
-	return &IDataChannel_AddDataToOutgoingMessageBuffer_Call{Call: _e.mock.On("AddDataToOutgoingMessageBuffer", streamMessage)}
-}
-
-func (_c *IDataChannel_AddDataToOutgoingMessageBuffer_Call) Run(run func(streamMessage datachannel.StreamingMessage)) *IDataChannel_AddDataToOutgoingMessageBuffer_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(datachannel.StreamingMessage))
-	})
-	return _c
-}
-
-func (_c *IDataChannel_AddDataToOutgoingMessageBuffer_Call) Return() *IDataChannel_AddDataToOutgoingMessageBuffer_Call {
-	_c.Call.Return()
-	return _c
-}
-
-func (_c *IDataChannel_AddDataToOutgoingMessageBuffer_Call) RunAndReturn(run func(datachannel.StreamingMessage)) *IDataChannel_AddDataToOutgoingMessageBuffer_Call {
-	_c.Run(run)
-	return _c
-}
-
-// CalculateRetransmissionTimeout provides a mock function with given fields: streamingMessage
-func (_m *IDataChannel) CalculateRetransmissionTimeout(streamingMessage datachannel.RoundTripTiming) {
-	_m.Called(streamingMessage)
-}
-
-// IDataChannel_CalculateRetransmissionTimeout_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CalculateRetransmissionTimeout'
-type IDataChannel_CalculateRetransmissionTimeout_Call struct {
-	*mock.Call
-}
-
-// CalculateRetransmissionTimeout is a helper method to define mock.On call
-//   - streamingMessage datachannel.RoundTripTiming
-func (_e *IDataChannel_Expecter) CalculateRetransmissionTimeout(streamingMessage interface{}) *IDataChannel_CalculateRetransmissionTimeout_Call {
-	return &IDataChannel_CalculateRetransmissionTimeout_Call{Call: _e.mock.On("CalculateRetransmissionTimeout", streamingMessage)}
-}
-
-func (_c *IDataChannel_CalculateRetransmissionTimeout_Call) Run(run func(streamingMessage datachannel.RoundTripTiming)) *IDataChannel_CalculateRetransmissionTimeout_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(datachannel.RoundTripTiming))
-	})
-	return _c
-}
-
-func (_c *IDataChannel_CalculateRetransmissionTimeout_Call) Return() *IDataChannel_CalculateRetransmissionTimeout_Call {
-	_c.Call.Return()
-	return _c
-}
-
-func (_c *IDataChannel_CalculateRetransmissionTimeout_Call) RunAndReturn(run func(datachannel.RoundTripTiming)) *IDataChannel_CalculateRetransmissionTimeout_Call {
-	_c.Run(run)
-	return _c
 }
 
 // Close provides a mock function with given fields: _a0
@@ -209,53 +108,6 @@ func (_c *IDataChannel_DeregisterOutputStreamHandler_Call) RunAndReturn(run func
 	return _c
 }
 
-// FinalizeDataChannelHandshake provides a mock function with given fields: _a0, tokenValue
-func (_m *IDataChannel) FinalizeDataChannelHandshake(_a0 log.T, tokenValue string) error {
-	ret := _m.Called(_a0, tokenValue)
-
-	if len(ret) == 0 {
-		panic("no return value specified for FinalizeDataChannelHandshake")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(log.T, string) error); ok {
-		r0 = rf(_a0, tokenValue)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// IDataChannel_FinalizeDataChannelHandshake_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FinalizeDataChannelHandshake'
-type IDataChannel_FinalizeDataChannelHandshake_Call struct {
-	*mock.Call
-}
-
-// FinalizeDataChannelHandshake is a helper method to define mock.On call
-//   - _a0 log.T
-//   - tokenValue string
-func (_e *IDataChannel_Expecter) FinalizeDataChannelHandshake(_a0 interface{}, tokenValue interface{}) *IDataChannel_FinalizeDataChannelHandshake_Call {
-	return &IDataChannel_FinalizeDataChannelHandshake_Call{Call: _e.mock.On("FinalizeDataChannelHandshake", _a0, tokenValue)}
-}
-
-func (_c *IDataChannel_FinalizeDataChannelHandshake_Call) Run(run func(_a0 log.T, tokenValue string)) *IDataChannel_FinalizeDataChannelHandshake_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(log.T), args[1].(string))
-	})
-	return _c
-}
-
-func (_c *IDataChannel_FinalizeDataChannelHandshake_Call) Return(_a0 error) *IDataChannel_FinalizeDataChannelHandshake_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *IDataChannel_FinalizeDataChannelHandshake_Call) RunAndReturn(run func(log.T, string) error) *IDataChannel_FinalizeDataChannelHandshake_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // GetAgentVersion provides a mock function with no fields
 func (_m *IDataChannel) GetAgentVersion() string {
 	ret := _m.Called()
@@ -297,51 +149,6 @@ func (_c *IDataChannel_GetAgentVersion_Call) Return(_a0 string) *IDataChannel_Ge
 }
 
 func (_c *IDataChannel_GetAgentVersion_Call) RunAndReturn(run func() string) *IDataChannel_GetAgentVersion_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetExpectedSequenceNumber provides a mock function with no fields
-func (_m *IDataChannel) GetExpectedSequenceNumber() int64 {
-	ret := _m.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetExpectedSequenceNumber")
-	}
-
-	var r0 int64
-	if rf, ok := ret.Get(0).(func() int64); ok {
-		r0 = rf()
-	} else {
-		r0 = ret.Get(0).(int64)
-	}
-
-	return r0
-}
-
-// IDataChannel_GetExpectedSequenceNumber_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetExpectedSequenceNumber'
-type IDataChannel_GetExpectedSequenceNumber_Call struct {
-	*mock.Call
-}
-
-// GetExpectedSequenceNumber is a helper method to define mock.On call
-func (_e *IDataChannel_Expecter) GetExpectedSequenceNumber() *IDataChannel_GetExpectedSequenceNumber_Call {
-	return &IDataChannel_GetExpectedSequenceNumber_Call{Call: _e.mock.On("GetExpectedSequenceNumber")}
-}
-
-func (_c *IDataChannel_GetExpectedSequenceNumber_Call) Run(run func()) *IDataChannel_GetExpectedSequenceNumber_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *IDataChannel_GetExpectedSequenceNumber_Call) Return(_a0 int64) *IDataChannel_GetExpectedSequenceNumber_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *IDataChannel_GetExpectedSequenceNumber_Call) RunAndReturn(run func() int64) *IDataChannel_GetExpectedSequenceNumber_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -623,53 +430,6 @@ func (_c *IDataChannel_Open_Call) RunAndReturn(run func(log.T) error) *IDataChan
 	return _c
 }
 
-// ProcessAcknowledgedMessage provides a mock function with given fields: _a0, acknowledgeMessageContent
-func (_m *IDataChannel) ProcessAcknowledgedMessage(_a0 log.T, acknowledgeMessageContent message.AcknowledgeContent) error {
-	ret := _m.Called(_a0, acknowledgeMessageContent)
-
-	if len(ret) == 0 {
-		panic("no return value specified for ProcessAcknowledgedMessage")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(log.T, message.AcknowledgeContent) error); ok {
-		r0 = rf(_a0, acknowledgeMessageContent)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// IDataChannel_ProcessAcknowledgedMessage_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ProcessAcknowledgedMessage'
-type IDataChannel_ProcessAcknowledgedMessage_Call struct {
-	*mock.Call
-}
-
-// ProcessAcknowledgedMessage is a helper method to define mock.On call
-//   - _a0 log.T
-//   - acknowledgeMessageContent message.AcknowledgeContent
-func (_e *IDataChannel_Expecter) ProcessAcknowledgedMessage(_a0 interface{}, acknowledgeMessageContent interface{}) *IDataChannel_ProcessAcknowledgedMessage_Call {
-	return &IDataChannel_ProcessAcknowledgedMessage_Call{Call: _e.mock.On("ProcessAcknowledgedMessage", _a0, acknowledgeMessageContent)}
-}
-
-func (_c *IDataChannel_ProcessAcknowledgedMessage_Call) Run(run func(_a0 log.T, acknowledgeMessageContent message.AcknowledgeContent)) *IDataChannel_ProcessAcknowledgedMessage_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(log.T), args[1].(message.AcknowledgeContent))
-	})
-	return _c
-}
-
-func (_c *IDataChannel_ProcessAcknowledgedMessage_Call) Return(_a0 error) *IDataChannel_ProcessAcknowledgedMessage_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *IDataChannel_ProcessAcknowledgedMessage_Call) RunAndReturn(run func(log.T, message.AcknowledgeContent) error) *IDataChannel_ProcessAcknowledgedMessage_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // Reconnect provides a mock function with given fields: _a0
 func (_m *IDataChannel) Reconnect(_a0 log.T) error {
 	ret := _m.Called(_a0)
@@ -786,72 +546,6 @@ func (_c *IDataChannel_RegisterOutputStreamHandler_Call) RunAndReturn(run func(d
 	return _c
 }
 
-// RemoveDataFromIncomingMessageBuffer provides a mock function with given fields: sequenceNumber
-func (_m *IDataChannel) RemoveDataFromIncomingMessageBuffer(sequenceNumber int64) {
-	_m.Called(sequenceNumber)
-}
-
-// IDataChannel_RemoveDataFromIncomingMessageBuffer_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RemoveDataFromIncomingMessageBuffer'
-type IDataChannel_RemoveDataFromIncomingMessageBuffer_Call struct {
-	*mock.Call
-}
-
-// RemoveDataFromIncomingMessageBuffer is a helper method to define mock.On call
-//   - sequenceNumber int64
-func (_e *IDataChannel_Expecter) RemoveDataFromIncomingMessageBuffer(sequenceNumber interface{}) *IDataChannel_RemoveDataFromIncomingMessageBuffer_Call {
-	return &IDataChannel_RemoveDataFromIncomingMessageBuffer_Call{Call: _e.mock.On("RemoveDataFromIncomingMessageBuffer", sequenceNumber)}
-}
-
-func (_c *IDataChannel_RemoveDataFromIncomingMessageBuffer_Call) Run(run func(sequenceNumber int64)) *IDataChannel_RemoveDataFromIncomingMessageBuffer_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(int64))
-	})
-	return _c
-}
-
-func (_c *IDataChannel_RemoveDataFromIncomingMessageBuffer_Call) Return() *IDataChannel_RemoveDataFromIncomingMessageBuffer_Call {
-	_c.Call.Return()
-	return _c
-}
-
-func (_c *IDataChannel_RemoveDataFromIncomingMessageBuffer_Call) RunAndReturn(run func(int64)) *IDataChannel_RemoveDataFromIncomingMessageBuffer_Call {
-	_c.Run(run)
-	return _c
-}
-
-// RemoveDataFromOutgoingMessageBuffer provides a mock function with given fields: streamMessageElement
-func (_m *IDataChannel) RemoveDataFromOutgoingMessageBuffer(streamMessageElement *list.Element) {
-	_m.Called(streamMessageElement)
-}
-
-// IDataChannel_RemoveDataFromOutgoingMessageBuffer_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RemoveDataFromOutgoingMessageBuffer'
-type IDataChannel_RemoveDataFromOutgoingMessageBuffer_Call struct {
-	*mock.Call
-}
-
-// RemoveDataFromOutgoingMessageBuffer is a helper method to define mock.On call
-//   - streamMessageElement *list.Element
-func (_e *IDataChannel_Expecter) RemoveDataFromOutgoingMessageBuffer(streamMessageElement interface{}) *IDataChannel_RemoveDataFromOutgoingMessageBuffer_Call {
-	return &IDataChannel_RemoveDataFromOutgoingMessageBuffer_Call{Call: _e.mock.On("RemoveDataFromOutgoingMessageBuffer", streamMessageElement)}
-}
-
-func (_c *IDataChannel_RemoveDataFromOutgoingMessageBuffer_Call) Run(run func(streamMessageElement *list.Element)) *IDataChannel_RemoveDataFromOutgoingMessageBuffer_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*list.Element))
-	})
-	return _c
-}
-
-func (_c *IDataChannel_RemoveDataFromOutgoingMessageBuffer_Call) Return() *IDataChannel_RemoveDataFromOutgoingMessageBuffer_Call {
-	_c.Call.Return()
-	return _c
-}
-
-func (_c *IDataChannel_RemoveDataFromOutgoingMessageBuffer_Call) RunAndReturn(run func(*list.Element)) *IDataChannel_RemoveDataFromOutgoingMessageBuffer_Call {
-	_c.Run(run)
-	return _c
-}
-
 // ResendStreamDataMessageScheduler provides a mock function with given fields: _a0
 func (_m *IDataChannel) ResendStreamDataMessageScheduler(_a0 log.T) error {
 	ret := _m.Called(_a0)
@@ -894,53 +588,6 @@ func (_c *IDataChannel_ResendStreamDataMessageScheduler_Call) Return(_a0 error) 
 }
 
 func (_c *IDataChannel_ResendStreamDataMessageScheduler_Call) RunAndReturn(run func(log.T) error) *IDataChannel_ResendStreamDataMessageScheduler_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// SendAcknowledgeMessage provides a mock function with given fields: _a0, clientMessage
-func (_m *IDataChannel) SendAcknowledgeMessage(_a0 log.T, clientMessage message.ClientMessage) error {
-	ret := _m.Called(_a0, clientMessage)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SendAcknowledgeMessage")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(log.T, message.ClientMessage) error); ok {
-		r0 = rf(_a0, clientMessage)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// IDataChannel_SendAcknowledgeMessage_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SendAcknowledgeMessage'
-type IDataChannel_SendAcknowledgeMessage_Call struct {
-	*mock.Call
-}
-
-// SendAcknowledgeMessage is a helper method to define mock.On call
-//   - _a0 log.T
-//   - clientMessage message.ClientMessage
-func (_e *IDataChannel_Expecter) SendAcknowledgeMessage(_a0 interface{}, clientMessage interface{}) *IDataChannel_SendAcknowledgeMessage_Call {
-	return &IDataChannel_SendAcknowledgeMessage_Call{Call: _e.mock.On("SendAcknowledgeMessage", _a0, clientMessage)}
-}
-
-func (_c *IDataChannel_SendAcknowledgeMessage_Call) Run(run func(_a0 log.T, clientMessage message.ClientMessage)) *IDataChannel_SendAcknowledgeMessage_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(log.T), args[1].(message.ClientMessage))
-	})
-	return _c
-}
-
-func (_c *IDataChannel_SendAcknowledgeMessage_Call) Return(_a0 error) *IDataChannel_SendAcknowledgeMessage_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *IDataChannel_SendAcknowledgeMessage_Call) RunAndReturn(run func(log.T, message.ClientMessage) error) *IDataChannel_SendAcknowledgeMessage_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1084,39 +731,6 @@ func (_c *IDataChannel_SendMessage_Call) Return(_a0 error) *IDataChannel_SendMes
 
 func (_c *IDataChannel_SendMessage_Call) RunAndReturn(run func([]byte, int) error) *IDataChannel_SendMessage_Call {
 	_c.Call.Return(run)
-	return _c
-}
-
-// SetAgentVersion provides a mock function with given fields: agentVersion
-func (_m *IDataChannel) SetAgentVersion(agentVersion string) {
-	_m.Called(agentVersion)
-}
-
-// IDataChannel_SetAgentVersion_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetAgentVersion'
-type IDataChannel_SetAgentVersion_Call struct {
-	*mock.Call
-}
-
-// SetAgentVersion is a helper method to define mock.On call
-//   - agentVersion string
-func (_e *IDataChannel_Expecter) SetAgentVersion(agentVersion interface{}) *IDataChannel_SetAgentVersion_Call {
-	return &IDataChannel_SetAgentVersion_Call{Call: _e.mock.On("SetAgentVersion", agentVersion)}
-}
-
-func (_c *IDataChannel_SetAgentVersion_Call) Run(run func(agentVersion string)) *IDataChannel_SetAgentVersion_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
-	})
-	return _c
-}
-
-func (_c *IDataChannel_SetAgentVersion_Call) Return() *IDataChannel_SetAgentVersion_Call {
-	_c.Call.Return()
-	return _c
-}
-
-func (_c *IDataChannel_SetAgentVersion_Call) RunAndReturn(run func(string)) *IDataChannel_SetAgentVersion_Call {
-	_c.Run(run)
 	return _c
 }
 

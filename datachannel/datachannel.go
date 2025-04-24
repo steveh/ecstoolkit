@@ -107,29 +107,6 @@ func NewDataChannel(kmsClient *kms.Client, clientID string, sessionID string, ta
 	return c, nil
 }
 
-// FinalizeDataChannelHandshake sends the token for service to acknowledge the connection.
-func (c *DataChannel) FinalizeDataChannelHandshake(log log.T, tokenValue string) error {
-	uid := uuid.New().String()
-
-	log.Debug("Sending token through data channel to acknowledge connection", "url", c.wsChannel.GetStreamURL())
-	openDataChannelInput := service.OpenDataChannelInput{
-		MessageSchemaVersion: aws.String(config.MessageSchemaVersion),
-		RequestID:            aws.String(uid),
-		TokenValue:           aws.String(tokenValue),
-		ClientID:             aws.String(c.clientID),
-		ClientVersion:        aws.String(version.Version),
-	}
-
-	openDataChannelInputBytes, err := json.Marshal(openDataChannelInput)
-	if err != nil {
-		log.Error("Error serializing openDataChannelInput", "error", err)
-
-		return fmt.Errorf("serializing open data channel input: %w", err)
-	}
-
-	return c.SendMessage(openDataChannelInputBytes, websocket.TextMessage)
-}
-
 // SendMessage sends a message to the service through datachannel.
 func (c *DataChannel) SendMessage(input []byte, inputType int) error {
 	err := c.wsChannel.SendMessage(input, inputType)
@@ -146,7 +123,7 @@ func (c *DataChannel) Open(log log.T) error {
 		return fmt.Errorf("opening data channel: %w", err)
 	}
 
-	if err := c.FinalizeDataChannelHandshake(log, c.wsChannel.GetChannelToken()); err != nil {
+	if err := c.finalizeDataChannelHandshake(log, c.wsChannel.GetChannelToken()); err != nil {
 		return fmt.Errorf("error sending token for handshake: %w", err)
 	}
 
@@ -251,7 +228,7 @@ func (c *DataChannel) SendInputDataMessage(
 		time.Now(),
 		new(int),
 	}
-	c.AddDataToOutgoingMessageBuffer(streamingMessage)
+	c.addDataToOutgoingMessageBuffer(streamingMessage)
 
 	c.streamDataSequenceNumber++
 
@@ -296,59 +273,6 @@ func (c *DataChannel) ResendStreamDataMessageScheduler(log log.T) error {
 			}
 		}
 	}()
-
-	return nil
-}
-
-// ProcessAcknowledgedMessage processes acknowledge messages by deleting them from outgoingMessageBuffer.
-func (c *DataChannel) ProcessAcknowledgedMessage(log log.T, acknowledgeMessageContent message.AcknowledgeContent) error {
-	acknowledgeSequenceNumber := acknowledgeMessageContent.SequenceNumber
-
-	for streamMessageElement := c.outgoingMessageBuffer.Messages.Front(); streamMessageElement != nil; streamMessageElement = streamMessageElement.Next() {
-		streamMessage, ok := streamMessageElement.Value.(StreamingMessage)
-		if !ok {
-			log.Error("Failed to type assert streamMessageElement.Value to StreamingMessage")
-
-			continue
-		}
-
-		if streamMessage.SequenceNumber == acknowledgeSequenceNumber {
-			// Calculate retransmission timeout based on latest round trip time of message
-			c.CalculateRetransmissionTimeout(streamMessage)
-
-			c.RemoveDataFromOutgoingMessageBuffer(streamMessageElement)
-
-			break
-		}
-	}
-
-	return nil
-}
-
-// SendAcknowledgeMessage sends acknowledge message for stream data over data channel.
-func (c *DataChannel) SendAcknowledgeMessage(log log.T, streamDataMessage message.ClientMessage) error {
-	dataStreamAcknowledgeContent := message.AcknowledgeContent{
-		MessageType:         streamDataMessage.MessageType,
-		MessageID:           streamDataMessage.MessageID.String(),
-		SequenceNumber:      streamDataMessage.SequenceNumber,
-		IsSequentialMessage: true,
-	}
-
-	var msg []byte
-
-	var err error
-
-	if msg, err = message.SerializeClientMessageWithAcknowledgeContent(log, dataStreamAcknowledgeContent); err != nil {
-		log.Error("Cannot serialize Acknowledge message", "error", err)
-
-		return fmt.Errorf("serializing acknowledge message: %w", err)
-	}
-
-	if err = SendMessageCall(c, msg, websocket.BinaryMessage); err != nil {
-		log.Error("Error sending acknowledge message", "error", err)
-
-		return fmt.Errorf("sending acknowledge message: %w", err)
-	}
 
 	return nil
 }
@@ -445,7 +369,7 @@ func (c *DataChannel) HandleAcknowledgeMessage(
 		return fmt.Errorf("deserializing data stream acknowledge content: %w", err)
 	}
 
-	err = ProcessAcknowledgedMessageCall(log, c, acknowledgeMessage)
+	err = processAcknowledgedMessageCall(log, c, acknowledgeMessage)
 	if err != nil {
 		return fmt.Errorf("processing acknowledged message: %w", err)
 	}
@@ -468,61 +392,6 @@ func (c *DataChannel) HandleChannelClosedMessage(log log.T, stopHandler Stop, se
 
 	if err := stopHandler(log); err != nil {
 		log.Error("Failed to stop handler", "error", err)
-	}
-}
-
-// AddDataToOutgoingMessageBuffer removes first message from outgoingMessageBuffer if capacity is full and adds given message at the end.
-func (c *DataChannel) AddDataToOutgoingMessageBuffer(streamMessage StreamingMessage) {
-	if c.outgoingMessageBuffer.Messages.Len() == c.outgoingMessageBuffer.Capacity {
-		c.RemoveDataFromOutgoingMessageBuffer(c.outgoingMessageBuffer.Messages.Front())
-	}
-
-	c.outgoingMessageBuffer.Mutex.Lock()
-	c.outgoingMessageBuffer.Messages.PushBack(streamMessage)
-	c.outgoingMessageBuffer.Mutex.Unlock()
-}
-
-// RemoveDataFromOutgoingMessageBuffer removes given element from outgoingMessageBuffer.
-func (c *DataChannel) RemoveDataFromOutgoingMessageBuffer(streamMessageElement *list.Element) {
-	c.outgoingMessageBuffer.Mutex.Lock()
-	c.outgoingMessageBuffer.Messages.Remove(streamMessageElement)
-	c.outgoingMessageBuffer.Mutex.Unlock()
-}
-
-// AddDataToIncomingMessageBuffer adds given message to incomingMessageBuffer if it has capacity.
-func (c *DataChannel) AddDataToIncomingMessageBuffer(streamMessage StreamingMessage) {
-	if len(c.incomingMessageBuffer.Messages) == c.incomingMessageBuffer.Capacity {
-		return
-	}
-
-	c.incomingMessageBuffer.Mutex.Lock()
-	c.incomingMessageBuffer.Messages[streamMessage.SequenceNumber] = streamMessage
-	c.incomingMessageBuffer.Mutex.Unlock()
-}
-
-// RemoveDataFromIncomingMessageBuffer removes given sequence number message from incomingMessageBuffer.
-func (c *DataChannel) RemoveDataFromIncomingMessageBuffer(sequenceNumber int64) {
-	c.incomingMessageBuffer.Mutex.Lock()
-	delete(c.incomingMessageBuffer.Messages, sequenceNumber)
-	c.incomingMessageBuffer.Mutex.Unlock()
-}
-
-// CalculateRetransmissionTimeout calculates message retransmission timeout value based on round trip time on given message.
-func (c *DataChannel) CalculateRetransmissionTimeout(streamingMessage RoundTripTiming) {
-	newRoundTripTime := float64(streamingMessage.GetRoundTripTime())
-
-	c.roundTripTimeVariation = ((1 - config.RTTVConstant) * c.roundTripTimeVariation) +
-		(config.RTTVConstant * math.Abs(c.roundTripTime-newRoundTripTime))
-
-	c.roundTripTime = ((1 - config.RTTConstant) * c.roundTripTime) +
-		(config.RTTConstant * newRoundTripTime)
-
-	c.retransmissionTimeout = time.Duration(c.roundTripTime +
-		math.Max(float64(config.ClockGranularity), float64(4*c.roundTripTimeVariation))) //nolint:mnd
-
-	// Ensure retransmissionTimeout do not exceed maximum timeout defined
-	if c.retransmissionTimeout > config.MaxTransmissionTimeout {
-		c.retransmissionTimeout = config.MaxTransmissionTimeout
 	}
 }
 
@@ -648,6 +517,137 @@ func (c *DataChannel) SetAgentVersion(agentVersion string) {
 // GetExpectedSequenceNumber returns expected sequence number of the DataChannel.
 func (c *DataChannel) GetExpectedSequenceNumber() int64 {
 	return c.expectedSequenceNumber
+}
+
+// finalizeDataChannelHandshake sends the token for service to acknowledge the connection.
+func (c *DataChannel) finalizeDataChannelHandshake(log log.T, tokenValue string) error {
+	uid := uuid.New().String()
+
+	log.Debug("Sending token through data channel to acknowledge connection", "url", c.wsChannel.GetStreamURL())
+	openDataChannelInput := service.OpenDataChannelInput{
+		MessageSchemaVersion: aws.String(config.MessageSchemaVersion),
+		RequestID:            aws.String(uid),
+		TokenValue:           aws.String(tokenValue),
+		ClientID:             aws.String(c.clientID),
+		ClientVersion:        aws.String(version.Version),
+	}
+
+	openDataChannelInputBytes, err := json.Marshal(openDataChannelInput)
+	if err != nil {
+		log.Error("Error serializing openDataChannelInput", "error", err)
+
+		return fmt.Errorf("serializing open data channel input: %w", err)
+	}
+
+	return c.SendMessage(openDataChannelInputBytes, websocket.TextMessage)
+}
+
+// processAcknowledgedMessage processes acknowledge messages by deleting them from outgoingMessageBuffer.
+func (c *DataChannel) processAcknowledgedMessage(log log.T, acknowledgeMessageContent message.AcknowledgeContent) error {
+	acknowledgeSequenceNumber := acknowledgeMessageContent.SequenceNumber
+
+	for streamMessageElement := c.outgoingMessageBuffer.Messages.Front(); streamMessageElement != nil; streamMessageElement = streamMessageElement.Next() {
+		streamMessage, ok := streamMessageElement.Value.(StreamingMessage)
+		if !ok {
+			log.Error("Failed to type assert streamMessageElement.Value to StreamingMessage")
+
+			continue
+		}
+
+		if streamMessage.SequenceNumber == acknowledgeSequenceNumber {
+			// Calculate retransmission timeout based on latest round trip time of message
+			c.calculateRetransmissionTimeout(streamMessage)
+
+			c.removeDataFromOutgoingMessageBuffer(streamMessageElement)
+
+			break
+		}
+	}
+
+	return nil
+}
+
+// sendAcknowledgeMessage sends acknowledge message for stream data over data channel.
+func (c *DataChannel) sendAcknowledgeMessage(log log.T, streamDataMessage message.ClientMessage) error {
+	dataStreamAcknowledgeContent := message.AcknowledgeContent{
+		MessageType:         streamDataMessage.MessageType,
+		MessageID:           streamDataMessage.MessageID.String(),
+		SequenceNumber:      streamDataMessage.SequenceNumber,
+		IsSequentialMessage: true,
+	}
+
+	var msg []byte
+
+	var err error
+
+	if msg, err = message.SerializeClientMessageWithAcknowledgeContent(log, dataStreamAcknowledgeContent); err != nil {
+		log.Error("Cannot serialize Acknowledge message", "error", err)
+
+		return fmt.Errorf("serializing acknowledge message: %w", err)
+	}
+
+	if err = SendMessageCall(c, msg, websocket.BinaryMessage); err != nil {
+		log.Error("Error sending acknowledge message", "error", err)
+
+		return fmt.Errorf("sending acknowledge message: %w", err)
+	}
+
+	return nil
+}
+
+// addDataToOutgoingMessageBuffer removes first message from outgoingMessageBuffer if capacity is full and adds given message at the end.
+func (c *DataChannel) addDataToOutgoingMessageBuffer(streamMessage StreamingMessage) {
+	if c.outgoingMessageBuffer.Messages.Len() == c.outgoingMessageBuffer.Capacity {
+		c.removeDataFromOutgoingMessageBuffer(c.outgoingMessageBuffer.Messages.Front())
+	}
+
+	c.outgoingMessageBuffer.Mutex.Lock()
+	c.outgoingMessageBuffer.Messages.PushBack(streamMessage)
+	c.outgoingMessageBuffer.Mutex.Unlock()
+}
+
+// removeDataFromOutgoingMessageBuffer removes given element from outgoingMessageBuffer.
+func (c *DataChannel) removeDataFromOutgoingMessageBuffer(streamMessageElement *list.Element) {
+	c.outgoingMessageBuffer.Mutex.Lock()
+	c.outgoingMessageBuffer.Messages.Remove(streamMessageElement)
+	c.outgoingMessageBuffer.Mutex.Unlock()
+}
+
+// addDataToIncomingMessageBuffer adds given message to incomingMessageBuffer if it has capacity.
+func (c *DataChannel) addDataToIncomingMessageBuffer(streamMessage StreamingMessage) {
+	if len(c.incomingMessageBuffer.Messages) == c.incomingMessageBuffer.Capacity {
+		return
+	}
+
+	c.incomingMessageBuffer.Mutex.Lock()
+	c.incomingMessageBuffer.Messages[streamMessage.SequenceNumber] = streamMessage
+	c.incomingMessageBuffer.Mutex.Unlock()
+}
+
+// removeDataFromIncomingMessageBuffer removes given sequence number message from incomingMessageBuffer.
+func (c *DataChannel) removeDataFromIncomingMessageBuffer(sequenceNumber int64) {
+	c.incomingMessageBuffer.Mutex.Lock()
+	delete(c.incomingMessageBuffer.Messages, sequenceNumber)
+	c.incomingMessageBuffer.Mutex.Unlock()
+}
+
+// calculateRetransmissionTimeout calculates message retransmission timeout value based on round trip time on given message.
+func (c *DataChannel) calculateRetransmissionTimeout(streamingMessage RoundTripTiming) {
+	newRoundTripTime := float64(streamingMessage.GetRoundTripTime())
+
+	c.roundTripTimeVariation = ((1 - config.RTTVConstant) * c.roundTripTimeVariation) +
+		(config.RTTVConstant * math.Abs(c.roundTripTime-newRoundTripTime))
+
+	c.roundTripTime = ((1 - config.RTTConstant) * c.roundTripTime) +
+		(config.RTTConstant * newRoundTripTime)
+
+	c.retransmissionTimeout = time.Duration(c.roundTripTime +
+		math.Max(float64(config.ClockGranularity), float64(4*c.roundTripTimeVariation))) //nolint:mnd
+
+	// Ensure retransmissionTimeout do not exceed maximum timeout defined
+	if c.retransmissionTimeout > config.MaxTransmissionTimeout {
+		c.retransmissionTimeout = config.MaxTransmissionTimeout
+	}
 }
 
 // outputMessageHandler gets output on the data channel.
@@ -871,7 +871,7 @@ func (c *DataChannel) handleHandshakeRequestOutputMessage(
 	log log.T,
 	outputMessage message.ClientMessage,
 ) error {
-	if err := SendAcknowledgeMessageCall(log, c, outputMessage); err != nil {
+	if err := sendAcknowledgeMessageCall(log, c, outputMessage); err != nil {
 		return err
 	}
 
@@ -899,7 +899,7 @@ func (c *DataChannel) handleHandshakeCompleteOutputMessage(
 	log log.T,
 	outputMessage message.ClientMessage,
 ) error {
-	if err := SendAcknowledgeMessageCall(log, c, outputMessage); err != nil {
+	if err := sendAcknowledgeMessageCall(log, c, outputMessage); err != nil {
 		return err
 	}
 
@@ -917,7 +917,7 @@ func (c *DataChannel) handleEncryptionChallengeRequestOutputMessage(
 	log log.T,
 	outputMessage message.ClientMessage,
 ) error {
-	if err := SendAcknowledgeMessageCall(log, c, outputMessage); err != nil {
+	if err := sendAcknowledgeMessageCall(log, c, outputMessage); err != nil {
 		return err
 	}
 
@@ -966,7 +966,7 @@ func (c *DataChannel) handleDefaultOutputMessage(
 	}
 
 	// Acknowledge outputMessage only if session specific handler is ready
-	if err := SendAcknowledgeMessageCall(log, c, outputMessage); err != nil {
+	if err := sendAcknowledgeMessageCall(log, c, outputMessage); err != nil {
 		return err
 	}
 
@@ -987,7 +987,7 @@ func (c *DataChannel) handleUnexpectedSequenceMessage(
 		log.Debug("Received sequence number is higher than expected", "receivedSequence", outputMessage.SequenceNumber, "expectedSequence", c.expectedSequenceNumber)
 
 		if len(c.incomingMessageBuffer.Messages) < c.incomingMessageBuffer.Capacity {
-			if err := SendAcknowledgeMessageCall(log, c, outputMessage); err != nil {
+			if err := sendAcknowledgeMessageCall(log, c, outputMessage); err != nil {
 				return err
 			}
 
@@ -999,7 +999,7 @@ func (c *DataChannel) handleUnexpectedSequenceMessage(
 			}
 
 			// Add message to buffer for future processing
-			c.AddDataToIncomingMessageBuffer(streamingMessage)
+			c.addDataToIncomingMessageBuffer(streamingMessage)
 		}
 	}
 
@@ -1041,7 +1041,7 @@ func (c *DataChannel) processBufferedMessage(
 	}
 
 	c.expectedSequenceNumber++
-	c.RemoveDataFromIncomingMessageBuffer(bufferedStreamMessage.SequenceNumber)
+	c.removeDataFromIncomingMessageBuffer(bufferedStreamMessage.SequenceNumber)
 
 	return nil
 }

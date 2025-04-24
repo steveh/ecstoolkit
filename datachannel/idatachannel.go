@@ -1,7 +1,6 @@
 package datachannel
 
 import (
-	"container/list"
 	"context"
 	"time"
 
@@ -21,16 +20,8 @@ type IDataChannel interface {
 	SendFlag(log log.T, flagType message.PayloadTypeFlag) error
 	Open(log log.T) error
 	Close(log log.T) error
-	FinalizeDataChannelHandshake(log log.T, tokenValue string) error
 	SendInputDataMessage(log log.T, payloadType message.PayloadType, inputData []byte) error
 	ResendStreamDataMessageScheduler(log log.T) error
-	ProcessAcknowledgedMessage(log log.T, acknowledgeMessageContent message.AcknowledgeContent) error
-	SendAcknowledgeMessage(log log.T, clientMessage message.ClientMessage) error
-	AddDataToOutgoingMessageBuffer(streamMessage StreamingMessage)
-	RemoveDataFromOutgoingMessageBuffer(streamMessageElement *list.Element)
-	AddDataToIncomingMessageBuffer(streamMessage StreamingMessage)
-	RemoveDataFromIncomingMessageBuffer(sequenceNumber int64)
-	CalculateRetransmissionTimeout(streamingMessage RoundTripTiming)
 	SendMessage(input []byte, inputType int) error
 	RegisterOutputStreamHandler(handler OutputStreamDataMessageHandler, isSessionSpecificHandler bool)
 	DeregisterOutputStreamHandler(handler OutputStreamDataMessageHandler)
@@ -45,6 +36,4 @@ type IDataChannel interface {
 	RegisterOutputMessageHandler(ctx context.Context, log log.T, stopHandler Stop, onMessageHandler func(input []byte))
 	GetStreamDataSequenceNumber() int64
 	GetAgentVersion() string
-	SetAgentVersion(agentVersion string)
-	GetExpectedSequenceNumber() int64
 }

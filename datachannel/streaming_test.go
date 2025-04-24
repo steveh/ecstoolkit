@@ -135,7 +135,7 @@ func TestFinalizeDataChannelHandshake(t *testing.T) {
 	mockWsChannel.On("SendMessage", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	mockWsChannel.On("GetStreamURL").Return(streamURL)
 
-	err := datachannel.FinalizeDataChannelHandshake(mockLogger, channelToken)
+	err := datachannel.finalizeDataChannelHandshake(mockLogger, channelToken)
 
 	require.NoError(t, err)
 	assert.Equal(t, streamURL, datachannel.wsChannel.GetStreamURL())
@@ -168,7 +168,7 @@ func TestSendInputDataMessage(t *testing.T) {
 
 func TestProcessAcknowledgedMessage(t *testing.T) {
 	dataChannel := getDataChannel(t)
-	dataChannel.AddDataToOutgoingMessageBuffer(streamingMessages[0])
+	dataChannel.addDataToOutgoingMessageBuffer(streamingMessages[0])
 
 	dataStreamAcknowledgeContent := message.AcknowledgeContent{
 		MessageType:         messageType,
@@ -176,7 +176,7 @@ func TestProcessAcknowledgedMessage(t *testing.T) {
 		SequenceNumber:      0,
 		IsSequentialMessage: true,
 	}
-	err := dataChannel.ProcessAcknowledgedMessage(mockLogger, dataStreamAcknowledgeContent)
+	err := dataChannel.processAcknowledgedMessage(mockLogger, dataStreamAcknowledgeContent)
 	require.NoError(t, err, "Error processing acknowledged message")
 	assert.Equal(t, 0, dataChannel.outgoingMessageBuffer.Messages.Len())
 }
@@ -192,7 +192,7 @@ func TestCalculateRetransmissionTimeout(t *testing.T) {
 
 	streamingMessage := mockStreamingMessage{}
 
-	dataChannel.CalculateRetransmissionTimeout(&streamingMessage)
+	dataChannel.calculateRetransmissionTimeout(&streamingMessage)
 	assert.Equal(t, int64(105), int64(time.Duration(dataChannel.roundTripTime)/time.Millisecond))
 	assert.Equal(t, int64(10), int64(time.Duration(dataChannel.roundTripTimeVariation)/time.Millisecond))
 	assert.Equal(t, int64(145), int64(dataChannel.retransmissionTimeout/time.Millisecond))
@@ -202,13 +202,13 @@ func TestAddDataToOutgoingMessageBuffer(t *testing.T) {
 	dataChannel := getDataChannel(t)
 	dataChannel.outgoingMessageBuffer.Capacity = 2
 
-	dataChannel.AddDataToOutgoingMessageBuffer(streamingMessages[0])
+	dataChannel.addDataToOutgoingMessageBuffer(streamingMessages[0])
 	assert.Equal(t, 1, dataChannel.outgoingMessageBuffer.Messages.Len())
 	bufferedStreamMessage, ok := dataChannel.outgoingMessageBuffer.Messages.Front().Value.(StreamingMessage)
 	assert.True(t, ok, "Failed to type assert to StreamingMessage")
 	assert.Equal(t, int64(0), bufferedStreamMessage.SequenceNumber)
 
-	dataChannel.AddDataToOutgoingMessageBuffer(streamingMessages[1])
+	dataChannel.addDataToOutgoingMessageBuffer(streamingMessages[1])
 	assert.Equal(t, 2, dataChannel.outgoingMessageBuffer.Messages.Len())
 	value := dataChannel.outgoingMessageBuffer.Messages.Front().Value
 	bufferedStreamMessage, ok = value.(StreamingMessage)
@@ -220,7 +220,7 @@ func TestAddDataToOutgoingMessageBuffer(t *testing.T) {
 	assert.True(t, ok, "Failed to type assert to StreamingMessage")
 	assert.Equal(t, int64(1), bufferedStreamMessage.SequenceNumber)
 
-	dataChannel.AddDataToOutgoingMessageBuffer(streamingMessages[2])
+	dataChannel.addDataToOutgoingMessageBuffer(streamingMessages[2])
 	assert.Equal(t, 2, dataChannel.outgoingMessageBuffer.Messages.Len())
 	value = dataChannel.outgoingMessageBuffer.Messages.Front().Value
 	bufferedStreamMessage, ok = value.(StreamingMessage)
@@ -237,19 +237,19 @@ func TestAddDataToIncomingMessageBuffer(t *testing.T) {
 	dataChannel := getDataChannel(t)
 	dataChannel.incomingMessageBuffer.Capacity = 2
 
-	dataChannel.AddDataToIncomingMessageBuffer(streamingMessages[0])
+	dataChannel.addDataToIncomingMessageBuffer(streamingMessages[0])
 	assert.Len(t, dataChannel.incomingMessageBuffer.Messages, 1)
 	bufferedStreamMessage := dataChannel.incomingMessageBuffer.Messages[0]
 	assert.Equal(t, int64(0), bufferedStreamMessage.SequenceNumber)
 
-	dataChannel.AddDataToIncomingMessageBuffer(streamingMessages[1])
+	dataChannel.addDataToIncomingMessageBuffer(streamingMessages[1])
 	assert.Len(t, dataChannel.incomingMessageBuffer.Messages, 2)
 	bufferedStreamMessage = dataChannel.incomingMessageBuffer.Messages[0]
 	assert.Equal(t, int64(0), bufferedStreamMessage.SequenceNumber)
 	bufferedStreamMessage = dataChannel.incomingMessageBuffer.Messages[1]
 	assert.Equal(t, int64(1), bufferedStreamMessage.SequenceNumber)
 
-	dataChannel.AddDataToIncomingMessageBuffer(streamingMessages[2])
+	dataChannel.addDataToIncomingMessageBuffer(streamingMessages[2])
 	assert.Len(t, dataChannel.incomingMessageBuffer.Messages, 2)
 	bufferedStreamMessage = dataChannel.incomingMessageBuffer.Messages[0]
 	assert.Equal(t, int64(0), bufferedStreamMessage.SequenceNumber)
@@ -262,20 +262,20 @@ func TestAddDataToIncomingMessageBuffer(t *testing.T) {
 func TestRemoveDataFromOutgoingMessageBuffer(t *testing.T) {
 	dataChannel := getDataChannel(t)
 	for i := range 3 {
-		dataChannel.AddDataToOutgoingMessageBuffer(streamingMessages[i])
+		dataChannel.addDataToOutgoingMessageBuffer(streamingMessages[i])
 	}
 
-	dataChannel.RemoveDataFromOutgoingMessageBuffer(dataChannel.outgoingMessageBuffer.Messages.Front())
+	dataChannel.removeDataFromOutgoingMessageBuffer(dataChannel.outgoingMessageBuffer.Messages.Front())
 	assert.Equal(t, 2, dataChannel.outgoingMessageBuffer.Messages.Len())
 }
 
 func TestRemoveDataFromIncomingMessageBuffer(t *testing.T) {
 	dataChannel := getDataChannel(t)
 	for i := range 3 {
-		dataChannel.AddDataToIncomingMessageBuffer(streamingMessages[i])
+		dataChannel.addDataToIncomingMessageBuffer(streamingMessages[i])
 	}
 
-	dataChannel.RemoveDataFromIncomingMessageBuffer(0)
+	dataChannel.removeDataFromIncomingMessageBuffer(0)
 	assert.Len(t, dataChannel.incomingMessageBuffer.Messages, 2)
 }
 
@@ -285,7 +285,7 @@ func TestResendStreamDataMessageScheduler(t *testing.T) {
 
 	dataChannel.wsChannel = mockChannel
 	for i := range 3 {
-		dataChannel.AddDataToOutgoingMessageBuffer(streamingMessages[i])
+		dataChannel.addDataToOutgoingMessageBuffer(streamingMessages[i])
 	}
 
 	var wg sync.WaitGroup
@@ -319,7 +319,7 @@ func TestDataChannelIncomingMessageHandlerForExpectedInputStreamDataMessage(t *t
 	dataChannel.wsChannel = mockChannel
 
 	SendAcknowledgeMessageCallCount := 0
-	SendAcknowledgeMessageCall = func(_ log.T, _ *DataChannel, _ message.ClientMessage) error {
+	sendAcknowledgeMessageCall = func(_ log.T, _ *DataChannel, _ message.ClientMessage) error {
 		SendAcknowledgeMessageCallCount++
 
 		return nil
@@ -344,10 +344,10 @@ func TestDataChannelIncomingMessageHandlerForExpectedInputStreamDataMessage(t *t
 
 	// Second scenario is to test when incoming message sequence number matches with expected sequence number
 	// and there are more messages found in incomingMessageBuffer to be processed
-	dataChannel.AddDataToIncomingMessageBuffer(streamingMessages[2])
-	dataChannel.AddDataToIncomingMessageBuffer(streamingMessages[6])
-	dataChannel.AddDataToIncomingMessageBuffer(streamingMessages[4])
-	dataChannel.AddDataToIncomingMessageBuffer(streamingMessages[3])
+	dataChannel.addDataToIncomingMessageBuffer(streamingMessages[2])
+	dataChannel.addDataToIncomingMessageBuffer(streamingMessages[6])
+	dataChannel.addDataToIncomingMessageBuffer(streamingMessages[4])
+	dataChannel.addDataToIncomingMessageBuffer(streamingMessages[3])
 
 	err = dataChannel.outputMessageHandler(context.TODO(), logger, stopHandler, serializedClientMessages[1])
 	require.NoError(t, err)
@@ -366,7 +366,7 @@ func TestDataChannelIncomingMessageHandlerForUnexpectedInputStreamDataMessage(t 
 	dataChannel.incomingMessageBuffer.Capacity = 2
 
 	SendAcknowledgeMessageCallCount := 0
-	SendAcknowledgeMessageCall = func(_ log.T, _ *DataChannel, _ message.ClientMessage) error {
+	sendAcknowledgeMessageCall = func(_ log.T, _ *DataChannel, _ message.ClientMessage) error {
 		SendAcknowledgeMessageCallCount++
 
 		return nil
@@ -408,11 +408,11 @@ func TestDataChannelIncomingMessageHandlerForAcknowledgeMessage(t *testing.T) {
 	}
 
 	for i := range 3 {
-		dataChannel.AddDataToOutgoingMessageBuffer(streamingMessages[i])
+		dataChannel.addDataToOutgoingMessageBuffer(streamingMessages[i])
 	}
 
 	ProcessAcknowledgedMessageCallCount := 0
-	ProcessAcknowledgedMessageCall = func(_ log.T, _ *DataChannel, _ message.AcknowledgeContent) error {
+	processAcknowledgedMessageCall = func(_ log.T, _ *DataChannel, _ message.AcknowledgeContent) error {
 		ProcessAcknowledgedMessageCallCount++
 
 		return nil

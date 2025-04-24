@@ -59,14 +59,14 @@ type OutputStreamDataMessageHandler func(log log.T, streamDataMessage message.Cl
 // Stop is a function type that handles stopping the data channel.
 type Stop func(log log.T) error
 
-// SendAcknowledgeMessageCall is a function that sends an acknowledgment message for a stream data message.
-var SendAcknowledgeMessageCall = func(log log.T, dataChannel *DataChannel, streamDataMessage message.ClientMessage) error {
-	return dataChannel.SendAcknowledgeMessage(log, streamDataMessage)
+// sendAcknowledgeMessageCall is a function that sends an acknowledgment message for a stream data message.
+var sendAcknowledgeMessageCall = func(log log.T, dataChannel *DataChannel, streamDataMessage message.ClientMessage) error {
+	return dataChannel.sendAcknowledgeMessage(log, streamDataMessage)
 }
 
-// ProcessAcknowledgedMessageCall is a function that processes an acknowledged message.
-var ProcessAcknowledgedMessageCall = func(log log.T, dataChannel *DataChannel, acknowledgeMessage message.AcknowledgeContent) error {
-	return dataChannel.ProcessAcknowledgedMessage(log, acknowledgeMessage)
+// processAcknowledgedMessageCall is a function that processes an acknowledged message.
+var processAcknowledgedMessageCall = func(log log.T, dataChannel *DataChannel, acknowledgeMessage message.AcknowledgeContent) error {
+	return dataChannel.processAcknowledgedMessage(log, acknowledgeMessage)
 }
 
 // SendMessageCall is a function that sends a message through the data channel.
