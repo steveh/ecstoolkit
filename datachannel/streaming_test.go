@@ -75,17 +75,15 @@ func TestInitialize(t *testing.T) {
 	assert.InDelta(t, float64(config.DefaultRoundTripTime), datachannel.RoundTripTime, 0.01)
 	assert.InDelta(t, float64(config.DefaultRoundTripTimeVariation), datachannel.RoundTripTimeVariation, 0.01)
 	assert.Equal(t, config.DefaultTransmissionTimeout, datachannel.RetransmissionTimeout)
-	assert.NotNil(t, datachannel.wsChannel)
 }
 
-func TestSetWebsocket(t *testing.T) {
+func TestSetWebSocketChannel(t *testing.T) {
 	datachannel := getDataChannel()
 
 	mockWsChannel.On("GetStreamURL").Return(streamURL)
 	mockWsChannel.On("GetChannelToken").Return(channelToken)
-	mockWsChannel.On("Initialize", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	datachannel.SetWebsocket(mockLogger, streamURL, channelToken)
+	datachannel.SetWebSocketChannel(mockWsChannel)
 
 	assert.Equal(t, streamURL, datachannel.wsChannel.GetStreamURL())
 	assert.Equal(t, channelToken, datachannel.wsChannel.GetChannelToken())

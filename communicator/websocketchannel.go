@@ -28,7 +28,6 @@ import (
 
 // IWebSocketChannel is the interface for DataChannel.
 type IWebSocketChannel interface {
-	Initialize(log log.T, channelURL string, channelToken string)
 	Open(log log.T) error
 	Close(log log.T) error
 	SendMessage(input []byte, inputType int) error
@@ -50,6 +49,14 @@ type WebSocketChannel struct {
 	writeLock    *sync.Mutex
 	Connection   *websocket.Conn
 	ChannelToken string
+}
+
+// NewWebSocketChannel creates a WebSocketChannel.
+func NewWebSocketChannel(channelURL string, channelToken string) (*WebSocketChannel, error) {
+	return &WebSocketChannel{
+		ChannelToken: channelToken,
+		URL:          channelURL,
+	}, nil
 }
 
 // GetChannelToken gets the channel token.
@@ -75,12 +82,6 @@ func (c *WebSocketChannel) SetOnError(onErrorHandler func(error)) {
 // SetOnMessage sets OnMessage field of websocket channel.
 func (c *WebSocketChannel) SetOnMessage(onMessageHandler func([]byte)) {
 	c.OnMessage = onMessageHandler
-}
-
-// Initialize initializes websocket channel fields.
-func (c *WebSocketChannel) Initialize(_ log.T, channelURL string, channelToken string) {
-	c.ChannelToken = channelToken
-	c.URL = channelURL
 }
 
 // StartPings starts the pinging process to keep the websocket channel alive.

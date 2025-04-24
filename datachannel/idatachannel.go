@@ -18,7 +18,7 @@ type RoundTripTiming interface {
 // IDataChannel defines the interface for data channel operations.
 type IDataChannel interface {
 	Initialize(log log.T, clientID string, sessionID string, targetID string, isAwsCliUpgradeNeeded bool)
-	SetWebsocket(log log.T, streamURL string, tokenValue string)
+	SetWebSocketChannel(webSocketChannel communicator.IWebSocketChannel)
 	Reconnect(log log.T) error
 	SendFlag(log log.T, flagType message.PayloadTypeFlag) error
 	Open(log log.T) error

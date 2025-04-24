@@ -158,41 +158,6 @@ func (_c *IWebSocketChannel_GetStreamURL_Call) RunAndReturn(run func() string) *
 	return _c
 }
 
-// Initialize provides a mock function with given fields: _a0, channelURL, channelToken
-func (_m *IWebSocketChannel) Initialize(_a0 log.T, channelURL string, channelToken string) {
-	_m.Called(_a0, channelURL, channelToken)
-}
-
-// IWebSocketChannel_Initialize_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Initialize'
-type IWebSocketChannel_Initialize_Call struct {
-	*mock.Call
-}
-
-// Initialize is a helper method to define mock.On call
-//   - _a0 log.T
-//   - channelURL string
-//   - channelToken string
-func (_e *IWebSocketChannel_Expecter) Initialize(_a0 interface{}, channelURL interface{}, channelToken interface{}) *IWebSocketChannel_Initialize_Call {
-	return &IWebSocketChannel_Initialize_Call{Call: _e.mock.On("Initialize", _a0, channelURL, channelToken)}
-}
-
-func (_c *IWebSocketChannel_Initialize_Call) Run(run func(_a0 log.T, channelURL string, channelToken string)) *IWebSocketChannel_Initialize_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(log.T), args[1].(string), args[2].(string))
-	})
-	return _c
-}
-
-func (_c *IWebSocketChannel_Initialize_Call) Return() *IWebSocketChannel_Initialize_Call {
-	_c.Call.Return()
-	return _c
-}
-
-func (_c *IWebSocketChannel_Initialize_Call) RunAndReturn(run func(log.T, string, string)) *IWebSocketChannel_Initialize_Call {
-	_c.Run(run)
-	return _c
-}
-
 // Open provides a mock function with given fields: _a0
 func (_m *IWebSocketChannel) Open(_a0 log.T) error {
 	ret := _m.Called(_a0)

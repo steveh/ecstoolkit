@@ -32,7 +32,6 @@ import (
 )
 
 var (
-	mockLogger          = log.NewMockLog()
 	defaultChannelToken = "channelToken"
 	defaultStreamURL    = "streamUrl"
 	errDefault          = errors.New("default error")
@@ -150,11 +149,11 @@ func TestWebsocketChannel_SetOnMessage(t *testing.T) {
 	assert.Equal(t, defaultMessage, messageCallbackWrapper.message)
 }
 
-func TestWebsocketchannel_Initialize(t *testing.T) {
-	t.Log("Starting test: webSocketChannel.Initialize")
+func TestNewWebSocketChannel(t *testing.T) {
+	t.Log("Starting test: TestNewWebSocketChannel")
 
-	channel := &communicator.WebSocketChannel{}
-	channel.Initialize(mockLogger, defaultStreamURL, defaultChannelToken)
+	channel, err := communicator.NewWebSocketChannel(defaultStreamURL, defaultChannelToken)
+	require.NoError(t, err)
 
 	assert.Equal(t, defaultStreamURL, channel.URL)
 	assert.Equal(t, defaultChannelToken, channel.ChannelToken)

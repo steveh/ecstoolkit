@@ -98,7 +98,6 @@ func (c *DataChannel) Initialize(log log.T, clientID string, sessionID string, t
 	c.RoundTripTime = float64(config.DefaultRoundTripTime)
 	c.RoundTripTimeVariation = config.DefaultRoundTripTimeVariation
 	c.RetransmissionTimeout = config.DefaultTransmissionTimeout
-	c.wsChannel = &communicator.WebSocketChannel{}
 	c.encryptionEnabled = false
 	c.isSessionTypeSet = make(chan bool, 1)
 	c.isStreamMessageResendTimeout = make(chan bool, 1)
@@ -106,9 +105,9 @@ func (c *DataChannel) Initialize(log log.T, clientID string, sessionID string, t
 	c.IsAwsCliUpgradeNeeded = isAwsCliUpgradeNeeded
 }
 
-// SetWebsocket function populates websocket channel object.
-func (c *DataChannel) SetWebsocket(log log.T, channelURL string, channelToken string) {
-	c.wsChannel.Initialize(log, channelURL, channelToken)
+// SetWebSocketChannel sets wsChannel.
+func (c *DataChannel) SetWebSocketChannel(wsChannel communicator.IWebSocketChannel) {
+	c.wsChannel = wsChannel
 }
 
 // FinalizeDataChannelHandshake sends the token for service to acknowledge the connection.

@@ -22,6 +22,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	"github.com/steveh/ecstoolkit/communicator"
 	"github.com/steveh/ecstoolkit/config"
 	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
@@ -38,7 +39,14 @@ func (s *Session) OpenDataChannel(ctx context.Context, log log.T) error {
 	}
 
 	s.DataChannel.Initialize(log, s.ClientID, s.SessionID, s.TargetID, s.IsAwsCliUpgradeNeeded)
-	s.DataChannel.SetWebsocket(log, s.StreamURL, s.TokenValue)
+
+	wsChannel, err := communicator.NewWebSocketChannel(s.StreamURL, s.TokenValue)
+	if err != nil {
+		return fmt.Errorf("creating websocket channel: %w", err)
+	}
+
+	s.DataChannel.SetWebSocketChannel(wsChannel)
+
 	s.DataChannel.GetWsChannel().SetOnMessage(
 		func(input []byte) {
 			if err := s.DataChannel.OutputMessageHandler(ctx, log, s.Stop, s.SessionID, input); err != nil {
