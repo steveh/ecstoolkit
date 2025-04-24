@@ -138,7 +138,7 @@ func TestStartSessionWithClosedWsConn(t *testing.T) {
 		portSessionType: &StandardStreamForwarding{
 			inputStream:  in,
 			outputStream: out,
-			session:      sess,
+			session:      &sess,
 			logger:       mockLog,
 		},
 		logger: mockLog,

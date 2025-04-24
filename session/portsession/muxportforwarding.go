@@ -58,7 +58,7 @@ type MuxPortForwarding struct {
 	sessionID      string
 	socketFile     string
 	portParameters PortParameters
-	session        session.Session
+	session        session.ISessionSubTypeSupport
 	muxClient      *MuxClient
 	mgsConn        *MgsConn
 	logger         log.T
@@ -272,7 +272,7 @@ func (p *MuxPortForwarding) handleControlSignals() {
 		<-c
 		p.logger.Debug("Terminate signal received, exiting.")
 
-		if err := p.session.DataChannel.SendFlag(message.TerminateSession); err != nil {
+		if err := p.session.SendFlag(message.TerminateSession); err != nil {
 			p.logger.Error("sending TerminateSession flag", "error", err)
 		}
 
@@ -305,7 +305,7 @@ func (p *MuxPortForwarding) transferDataToServer(ctx context.Context) error {
 
 			p.logger.Trace("Received message from mux client", "size", numBytes)
 
-			if err = p.session.DataChannel.SendInputDataMessage(message.Output, msg[:numBytes]); err != nil {
+			if err = p.session.SendInputDataMessage(message.Output, msg[:numBytes]); err != nil {
 				p.logger.Error("sending packet on data channel", "error", err)
 
 				return fmt.Errorf("sending input data message: %w", err)

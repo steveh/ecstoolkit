@@ -75,19 +75,19 @@ func NewPortSession(ctx context.Context, logger log.T, sessionVar *session.Sessi
 			s.portSessionType = &MuxPortForwarding{
 				sessionID:      s.SessionID,
 				portParameters: s.portParameters,
-				session:        s.Session,
+				session:        &s.Session,
 			}
 		} else {
 			s.portSessionType = &BasicPortForwarding{
 				sessionID:      s.SessionID,
 				portParameters: s.portParameters,
-				session:        s.Session,
+				session:        &s.Session,
 			}
 		}
 	} else {
 		s.portSessionType = &StandardStreamForwarding{
 			portParameters: s.portParameters,
-			session:        s.Session,
+			session:        &s.Session,
 		}
 	}
 

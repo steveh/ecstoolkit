@@ -54,6 +54,8 @@ type Session struct {
 	logger                log.T
 }
 
+var _ ISessionSubTypeSupport = (*Session)(nil)
+
 // NewSession creates a new session instance with the provided parameters.
 func NewSession(ssmClient *ssm.Client, kmsClient *kms.Client, ssmSession *types.Session, region string, targetID string, logger log.T) (*Session, error) {
 	endpoint := url.URL{Scheme: "https", Host: fmt.Sprintf("ssm.%s.amazonaws.com", region)}
@@ -211,17 +213,45 @@ func (s *Session) ResumeSessionHandler(ctx context.Context, log log.T) error {
 }
 
 // TerminateSession calls TerminateSession API.
-func (s *Session) TerminateSession(ctx context.Context, log log.T) error {
+func (s *Session) TerminateSession(ctx context.Context) error {
 	terminateSessionInput := ssm.TerminateSessionInput{
 		SessionId: &s.SessionID,
 	}
 
-	log.Debug("Terminate Session input parameters", "input", terminateSessionInput)
+	s.logger.Debug("Terminate Session input parameters", "input", terminateSessionInput)
 
 	if _, err := s.ssmClient.TerminateSession(ctx, &terminateSessionInput); err != nil {
-		log.Error("Terminate Session failed", "error", err)
+		s.logger.Error("Terminate Session failed", "error", err)
 
 		return fmt.Errorf("terminate session: %w", err)
+	}
+
+	return nil
+}
+
+// GetAgentVersion retrieves the agent version from the data channel.
+func (s *Session) GetAgentVersion() string {
+	return s.DataChannel.GetAgentVersion()
+}
+
+// GetTargetID retrieves the target ID from the session.
+func (s *Session) GetTargetID() string {
+	return s.TargetID
+}
+
+// SendFlag sends a flag message through the data channel.
+func (s *Session) SendFlag(flagType message.PayloadTypeFlag) error {
+	if err := s.DataChannel.SendFlag(flagType); err != nil {
+		return fmt.Errorf("sending flag: %w", err)
+	}
+
+	return nil
+}
+
+// SendInputDataMessage sends input data messages through the data channel.
+func (s *Session) SendInputDataMessage(payloadType message.PayloadType, inputData []byte) error {
+	if err := s.DataChannel.SendInputDataMessage(payloadType, inputData); err != nil {
+		return fmt.Errorf("sending input data message: %w", err)
 	}
 
 	return nil

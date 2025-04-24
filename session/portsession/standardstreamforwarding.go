@@ -33,7 +33,7 @@ type StandardStreamForwarding struct {
 	inputStream    *os.File
 	outputStream   *os.File
 	portParameters PortParameters
-	session        session.Session
+	session        session.ISessionSubTypeSupport
 	logger         log.T
 }
 
@@ -84,7 +84,7 @@ func (p *StandardStreamForwarding) ReadStream(_ context.Context) error {
 
 		p.logger.Trace("Received message from stdin", "size", numBytes)
 
-		if err = p.session.DataChannel.SendInputDataMessage(message.Output, msg[:numBytes]); err != nil {
+		if err = p.session.SendInputDataMessage(message.Output, msg[:numBytes]); err != nil {
 			p.logger.Error("sending packet", "error", err)
 
 			return fmt.Errorf("sending input data message: %w", err)
@@ -107,7 +107,7 @@ func (p *StandardStreamForwarding) WriteStream(outputMessage message.ClientMessa
 // handleReadError handles read error.
 func (p *StandardStreamForwarding) handleReadError(err error) error {
 	if errors.Is(err, io.EOF) {
-		p.logger.Debug("Session to instance was closed", "targetID", p.session.TargetID, "port", p.portParameters.PortNumber)
+		p.logger.Debug("Session to instance was closed", "targetID", p.session.GetTargetID(), "port", p.portParameters.PortNumber)
 
 		return nil
 	}

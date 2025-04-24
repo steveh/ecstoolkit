@@ -39,7 +39,7 @@ type BasicPortForwarding struct {
 	listener       *net.Listener
 	sessionID      string
 	portParameters PortParameters
-	session        session.Session
+	session        session.ISessionSubTypeSupport
 	logger         log.T
 }
 
@@ -91,7 +91,7 @@ func (p *BasicPortForwarding) ReadStream(_ context.Context) error {
 			p.logger.Debug("Reading from port failed", "port", p.portParameters.PortNumber, "error", err)
 
 			// Send DisconnectToPort flag to agent when client tcp connection drops to ensure agent closes tcp connection too with server port
-			if err = p.session.DataChannel.SendFlag(message.DisconnectToPort); err != nil {
+			if err = p.session.SendFlag(message.DisconnectToPort); err != nil {
 				p.logger.Error("sending packet", "error", err)
 
 				return fmt.Errorf("sending disconnect flag: %w", err)
@@ -107,7 +107,7 @@ func (p *BasicPortForwarding) ReadStream(_ context.Context) error {
 
 		p.logger.Trace("Received message from stdin", "size", numBytes)
 
-		if err = p.session.DataChannel.SendInputDataMessage(message.Output, msg[:numBytes]); err != nil {
+		if err = p.session.SendInputDataMessage(message.Output, msg[:numBytes]); err != nil {
 			p.logger.Error("sending packet", "error", err)
 
 			return fmt.Errorf("sending input data message: %w", err)
@@ -202,8 +202,8 @@ func (p *BasicPortForwarding) handleControlSignals(ctx context.Context) {
 		<-c
 		p.logger.Debug("Terminate signal received, exiting.")
 
-		if version.DoesAgentSupportTerminateSessionFlag(p.logger, p.session.DataChannel.GetAgentVersion()) {
-			if err := p.session.DataChannel.SendFlag(message.TerminateSession); err != nil {
+		if version.DoesAgentSupportTerminateSessionFlag(p.logger, p.session.GetAgentVersion()) {
+			if err := p.session.SendFlag(message.TerminateSession); err != nil {
 				p.logger.Error("sending TerminateSession flag", "error", err)
 			}
 
@@ -213,7 +213,7 @@ func (p *BasicPortForwarding) handleControlSignals(ctx context.Context) {
 				p.logger.Error("stopping session", "error", err)
 			}
 		} else {
-			if err := p.session.TerminateSession(ctx, p.logger); err != nil {
+			if err := p.session.TerminateSession(ctx); err != nil {
 				p.logger.Error("terminating session", "error", err)
 			}
 		}

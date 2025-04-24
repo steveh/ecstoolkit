@@ -138,7 +138,7 @@ func (e *Executor) initSession(ctx context.Context, sess *session.Session) error
 			if <-sess.DataChannel.IsStreamMessageResendTimeout() {
 				e.logger.Error("Stream data timeout", "sessionID", sess.SessionID)
 
-				if err := sess.TerminateSession(ctx, e.logger); err != nil {
+				if err := sess.TerminateSession(ctx); err != nil {
 					e.logger.Error("Unable to terminate session upon stream data timeout", "error", err)
 				}
 
