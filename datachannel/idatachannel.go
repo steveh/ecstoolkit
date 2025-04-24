@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/steveh/ecstoolkit/communicator"
-	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
 )
 
@@ -16,12 +15,12 @@ type RoundTripTiming interface {
 
 // IDataChannel defines the interface for data channel operations.
 type IDataChannel interface {
-	Reconnect(log log.T) error
-	SendFlag(log log.T, flagType message.PayloadTypeFlag) error
-	Open(log log.T) error
-	Close(log log.T) error
-	SendInputDataMessage(log log.T, payloadType message.PayloadType, inputData []byte) error
-	ResendStreamDataMessageScheduler(log log.T) error
+	Reconnect() error
+	SendFlag(flagType message.PayloadTypeFlag) error
+	Open() error
+	Close() error
+	SendInputDataMessage(payloadType message.PayloadType, inputData []byte) error
+	ResendStreamDataMessageScheduler() error
 	SendMessage(input []byte, inputType int) error
 	RegisterOutputStreamHandler(handler OutputStreamDataMessageHandler, isSessionSpecificHandler bool)
 	DeregisterOutputStreamHandler(handler OutputStreamDataMessageHandler)
@@ -33,7 +32,7 @@ type IDataChannel interface {
 	SetWsChannel(wsChannel communicator.IWebSocketChannel)
 	SetChannelToken(channelToken string)
 	SetOnError(onErrorHandler func(error))
-	RegisterOutputMessageHandler(ctx context.Context, log log.T, stopHandler Stop, onMessageHandler func(input []byte))
+	RegisterOutputMessageHandler(ctx context.Context, stopHandler Stop, onMessageHandler func(input []byte))
 	GetStreamDataSequenceNumber() int64
 	GetAgentVersion() string
 }

@@ -271,7 +271,7 @@ func (p *MuxPortForwarding) handleControlSignals(log log.T) {
 		<-c
 		log.Debug("Terminate signal received, exiting.")
 
-		if err := p.session.DataChannel.SendFlag(log, message.TerminateSession); err != nil {
+		if err := p.session.DataChannel.SendFlag(message.TerminateSession); err != nil {
 			log.Error("sending TerminateSession flag", "error", err)
 		}
 
@@ -304,7 +304,7 @@ func (p *MuxPortForwarding) transferDataToServer(ctx context.Context, log log.T)
 
 			log.Trace("Received message from mux client", "size", numBytes)
 
-			if err = p.session.DataChannel.SendInputDataMessage(log, message.Output, msg[:numBytes]); err != nil {
+			if err = p.session.DataChannel.SendInputDataMessage(message.Output, msg[:numBytes]); err != nil {
 				log.Error("sending packet on data channel", "error", err)
 
 				return fmt.Errorf("sending input data message: %w", err)

@@ -9,8 +9,6 @@ import (
 
 	datachannel "github.com/steveh/ecstoolkit/datachannel"
 
-	log "github.com/steveh/ecstoolkit/log"
-
 	message "github.com/steveh/ecstoolkit/message"
 
 	mock "github.com/stretchr/testify/mock"
@@ -29,17 +27,17 @@ func (_m *IDataChannel) EXPECT() *IDataChannel_Expecter {
 	return &IDataChannel_Expecter{mock: &_m.Mock}
 }
 
-// Close provides a mock function with given fields: _a0
-func (_m *IDataChannel) Close(_a0 log.T) error {
-	ret := _m.Called(_a0)
+// Close provides a mock function with no fields
+func (_m *IDataChannel) Close() error {
+	ret := _m.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for Close")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(log.T) error); ok {
-		r0 = rf(_a0)
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r0 = rf()
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -53,14 +51,13 @@ type IDataChannel_Close_Call struct {
 }
 
 // Close is a helper method to define mock.On call
-//   - _a0 log.T
-func (_e *IDataChannel_Expecter) Close(_a0 interface{}) *IDataChannel_Close_Call {
-	return &IDataChannel_Close_Call{Call: _e.mock.On("Close", _a0)}
+func (_e *IDataChannel_Expecter) Close() *IDataChannel_Close_Call {
+	return &IDataChannel_Close_Call{Call: _e.mock.On("Close")}
 }
 
-func (_c *IDataChannel_Close_Call) Run(run func(_a0 log.T)) *IDataChannel_Close_Call {
+func (_c *IDataChannel_Close_Call) Run(run func()) *IDataChannel_Close_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(log.T))
+		run()
 	})
 	return _c
 }
@@ -70,7 +67,7 @@ func (_c *IDataChannel_Close_Call) Return(_a0 error) *IDataChannel_Close_Call {
 	return _c
 }
 
-func (_c *IDataChannel_Close_Call) RunAndReturn(run func(log.T) error) *IDataChannel_Close_Call {
+func (_c *IDataChannel_Close_Call) RunAndReturn(run func() error) *IDataChannel_Close_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -384,17 +381,17 @@ func (_c *IDataChannel_IsStreamMessageResendTimeout_Call) RunAndReturn(run func(
 	return _c
 }
 
-// Open provides a mock function with given fields: _a0
-func (_m *IDataChannel) Open(_a0 log.T) error {
-	ret := _m.Called(_a0)
+// Open provides a mock function with no fields
+func (_m *IDataChannel) Open() error {
+	ret := _m.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for Open")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(log.T) error); ok {
-		r0 = rf(_a0)
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r0 = rf()
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -408,14 +405,13 @@ type IDataChannel_Open_Call struct {
 }
 
 // Open is a helper method to define mock.On call
-//   - _a0 log.T
-func (_e *IDataChannel_Expecter) Open(_a0 interface{}) *IDataChannel_Open_Call {
-	return &IDataChannel_Open_Call{Call: _e.mock.On("Open", _a0)}
+func (_e *IDataChannel_Expecter) Open() *IDataChannel_Open_Call {
+	return &IDataChannel_Open_Call{Call: _e.mock.On("Open")}
 }
 
-func (_c *IDataChannel_Open_Call) Run(run func(_a0 log.T)) *IDataChannel_Open_Call {
+func (_c *IDataChannel_Open_Call) Run(run func()) *IDataChannel_Open_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(log.T))
+		run()
 	})
 	return _c
 }
@@ -425,22 +421,22 @@ func (_c *IDataChannel_Open_Call) Return(_a0 error) *IDataChannel_Open_Call {
 	return _c
 }
 
-func (_c *IDataChannel_Open_Call) RunAndReturn(run func(log.T) error) *IDataChannel_Open_Call {
+func (_c *IDataChannel_Open_Call) RunAndReturn(run func() error) *IDataChannel_Open_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// Reconnect provides a mock function with given fields: _a0
-func (_m *IDataChannel) Reconnect(_a0 log.T) error {
-	ret := _m.Called(_a0)
+// Reconnect provides a mock function with no fields
+func (_m *IDataChannel) Reconnect() error {
+	ret := _m.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for Reconnect")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(log.T) error); ok {
-		r0 = rf(_a0)
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r0 = rf()
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -454,14 +450,13 @@ type IDataChannel_Reconnect_Call struct {
 }
 
 // Reconnect is a helper method to define mock.On call
-//   - _a0 log.T
-func (_e *IDataChannel_Expecter) Reconnect(_a0 interface{}) *IDataChannel_Reconnect_Call {
-	return &IDataChannel_Reconnect_Call{Call: _e.mock.On("Reconnect", _a0)}
+func (_e *IDataChannel_Expecter) Reconnect() *IDataChannel_Reconnect_Call {
+	return &IDataChannel_Reconnect_Call{Call: _e.mock.On("Reconnect")}
 }
 
-func (_c *IDataChannel_Reconnect_Call) Run(run func(_a0 log.T)) *IDataChannel_Reconnect_Call {
+func (_c *IDataChannel_Reconnect_Call) Run(run func()) *IDataChannel_Reconnect_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(log.T))
+		run()
 	})
 	return _c
 }
@@ -471,14 +466,14 @@ func (_c *IDataChannel_Reconnect_Call) Return(_a0 error) *IDataChannel_Reconnect
 	return _c
 }
 
-func (_c *IDataChannel_Reconnect_Call) RunAndReturn(run func(log.T) error) *IDataChannel_Reconnect_Call {
+func (_c *IDataChannel_Reconnect_Call) RunAndReturn(run func() error) *IDataChannel_Reconnect_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// RegisterOutputMessageHandler provides a mock function with given fields: ctx, _a1, stopHandler, onMessageHandler
-func (_m *IDataChannel) RegisterOutputMessageHandler(ctx context.Context, _a1 log.T, stopHandler datachannel.Stop, onMessageHandler func([]byte)) {
-	_m.Called(ctx, _a1, stopHandler, onMessageHandler)
+// RegisterOutputMessageHandler provides a mock function with given fields: ctx, stopHandler, onMessageHandler
+func (_m *IDataChannel) RegisterOutputMessageHandler(ctx context.Context, stopHandler datachannel.Stop, onMessageHandler func([]byte)) {
+	_m.Called(ctx, stopHandler, onMessageHandler)
 }
 
 // IDataChannel_RegisterOutputMessageHandler_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RegisterOutputMessageHandler'
@@ -488,16 +483,15 @@ type IDataChannel_RegisterOutputMessageHandler_Call struct {
 
 // RegisterOutputMessageHandler is a helper method to define mock.On call
 //   - ctx context.Context
-//   - _a1 log.T
 //   - stopHandler datachannel.Stop
 //   - onMessageHandler func([]byte)
-func (_e *IDataChannel_Expecter) RegisterOutputMessageHandler(ctx interface{}, _a1 interface{}, stopHandler interface{}, onMessageHandler interface{}) *IDataChannel_RegisterOutputMessageHandler_Call {
-	return &IDataChannel_RegisterOutputMessageHandler_Call{Call: _e.mock.On("RegisterOutputMessageHandler", ctx, _a1, stopHandler, onMessageHandler)}
+func (_e *IDataChannel_Expecter) RegisterOutputMessageHandler(ctx interface{}, stopHandler interface{}, onMessageHandler interface{}) *IDataChannel_RegisterOutputMessageHandler_Call {
+	return &IDataChannel_RegisterOutputMessageHandler_Call{Call: _e.mock.On("RegisterOutputMessageHandler", ctx, stopHandler, onMessageHandler)}
 }
 
-func (_c *IDataChannel_RegisterOutputMessageHandler_Call) Run(run func(ctx context.Context, _a1 log.T, stopHandler datachannel.Stop, onMessageHandler func([]byte))) *IDataChannel_RegisterOutputMessageHandler_Call {
+func (_c *IDataChannel_RegisterOutputMessageHandler_Call) Run(run func(ctx context.Context, stopHandler datachannel.Stop, onMessageHandler func([]byte))) *IDataChannel_RegisterOutputMessageHandler_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(log.T), args[2].(datachannel.Stop), args[3].(func([]byte)))
+		run(args[0].(context.Context), args[1].(datachannel.Stop), args[2].(func([]byte)))
 	})
 	return _c
 }
@@ -507,7 +501,7 @@ func (_c *IDataChannel_RegisterOutputMessageHandler_Call) Return() *IDataChannel
 	return _c
 }
 
-func (_c *IDataChannel_RegisterOutputMessageHandler_Call) RunAndReturn(run func(context.Context, log.T, datachannel.Stop, func([]byte))) *IDataChannel_RegisterOutputMessageHandler_Call {
+func (_c *IDataChannel_RegisterOutputMessageHandler_Call) RunAndReturn(run func(context.Context, datachannel.Stop, func([]byte))) *IDataChannel_RegisterOutputMessageHandler_Call {
 	_c.Run(run)
 	return _c
 }
@@ -546,17 +540,17 @@ func (_c *IDataChannel_RegisterOutputStreamHandler_Call) RunAndReturn(run func(d
 	return _c
 }
 
-// ResendStreamDataMessageScheduler provides a mock function with given fields: _a0
-func (_m *IDataChannel) ResendStreamDataMessageScheduler(_a0 log.T) error {
-	ret := _m.Called(_a0)
+// ResendStreamDataMessageScheduler provides a mock function with no fields
+func (_m *IDataChannel) ResendStreamDataMessageScheduler() error {
+	ret := _m.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for ResendStreamDataMessageScheduler")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(log.T) error); ok {
-		r0 = rf(_a0)
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r0 = rf()
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -570,14 +564,13 @@ type IDataChannel_ResendStreamDataMessageScheduler_Call struct {
 }
 
 // ResendStreamDataMessageScheduler is a helper method to define mock.On call
-//   - _a0 log.T
-func (_e *IDataChannel_Expecter) ResendStreamDataMessageScheduler(_a0 interface{}) *IDataChannel_ResendStreamDataMessageScheduler_Call {
-	return &IDataChannel_ResendStreamDataMessageScheduler_Call{Call: _e.mock.On("ResendStreamDataMessageScheduler", _a0)}
+func (_e *IDataChannel_Expecter) ResendStreamDataMessageScheduler() *IDataChannel_ResendStreamDataMessageScheduler_Call {
+	return &IDataChannel_ResendStreamDataMessageScheduler_Call{Call: _e.mock.On("ResendStreamDataMessageScheduler")}
 }
 
-func (_c *IDataChannel_ResendStreamDataMessageScheduler_Call) Run(run func(_a0 log.T)) *IDataChannel_ResendStreamDataMessageScheduler_Call {
+func (_c *IDataChannel_ResendStreamDataMessageScheduler_Call) Run(run func()) *IDataChannel_ResendStreamDataMessageScheduler_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(log.T))
+		run()
 	})
 	return _c
 }
@@ -587,22 +580,22 @@ func (_c *IDataChannel_ResendStreamDataMessageScheduler_Call) Return(_a0 error) 
 	return _c
 }
 
-func (_c *IDataChannel_ResendStreamDataMessageScheduler_Call) RunAndReturn(run func(log.T) error) *IDataChannel_ResendStreamDataMessageScheduler_Call {
+func (_c *IDataChannel_ResendStreamDataMessageScheduler_Call) RunAndReturn(run func() error) *IDataChannel_ResendStreamDataMessageScheduler_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// SendFlag provides a mock function with given fields: _a0, flagType
-func (_m *IDataChannel) SendFlag(_a0 log.T, flagType message.PayloadTypeFlag) error {
-	ret := _m.Called(_a0, flagType)
+// SendFlag provides a mock function with given fields: flagType
+func (_m *IDataChannel) SendFlag(flagType message.PayloadTypeFlag) error {
+	ret := _m.Called(flagType)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SendFlag")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(log.T, message.PayloadTypeFlag) error); ok {
-		r0 = rf(_a0, flagType)
+	if rf, ok := ret.Get(0).(func(message.PayloadTypeFlag) error); ok {
+		r0 = rf(flagType)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -616,15 +609,14 @@ type IDataChannel_SendFlag_Call struct {
 }
 
 // SendFlag is a helper method to define mock.On call
-//   - _a0 log.T
 //   - flagType message.PayloadTypeFlag
-func (_e *IDataChannel_Expecter) SendFlag(_a0 interface{}, flagType interface{}) *IDataChannel_SendFlag_Call {
-	return &IDataChannel_SendFlag_Call{Call: _e.mock.On("SendFlag", _a0, flagType)}
+func (_e *IDataChannel_Expecter) SendFlag(flagType interface{}) *IDataChannel_SendFlag_Call {
+	return &IDataChannel_SendFlag_Call{Call: _e.mock.On("SendFlag", flagType)}
 }
 
-func (_c *IDataChannel_SendFlag_Call) Run(run func(_a0 log.T, flagType message.PayloadTypeFlag)) *IDataChannel_SendFlag_Call {
+func (_c *IDataChannel_SendFlag_Call) Run(run func(flagType message.PayloadTypeFlag)) *IDataChannel_SendFlag_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(log.T), args[1].(message.PayloadTypeFlag))
+		run(args[0].(message.PayloadTypeFlag))
 	})
 	return _c
 }
@@ -634,22 +626,22 @@ func (_c *IDataChannel_SendFlag_Call) Return(_a0 error) *IDataChannel_SendFlag_C
 	return _c
 }
 
-func (_c *IDataChannel_SendFlag_Call) RunAndReturn(run func(log.T, message.PayloadTypeFlag) error) *IDataChannel_SendFlag_Call {
+func (_c *IDataChannel_SendFlag_Call) RunAndReturn(run func(message.PayloadTypeFlag) error) *IDataChannel_SendFlag_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// SendInputDataMessage provides a mock function with given fields: _a0, payloadType, inputData
-func (_m *IDataChannel) SendInputDataMessage(_a0 log.T, payloadType message.PayloadType, inputData []byte) error {
-	ret := _m.Called(_a0, payloadType, inputData)
+// SendInputDataMessage provides a mock function with given fields: payloadType, inputData
+func (_m *IDataChannel) SendInputDataMessage(payloadType message.PayloadType, inputData []byte) error {
+	ret := _m.Called(payloadType, inputData)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SendInputDataMessage")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(log.T, message.PayloadType, []byte) error); ok {
-		r0 = rf(_a0, payloadType, inputData)
+	if rf, ok := ret.Get(0).(func(message.PayloadType, []byte) error); ok {
+		r0 = rf(payloadType, inputData)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -663,16 +655,15 @@ type IDataChannel_SendInputDataMessage_Call struct {
 }
 
 // SendInputDataMessage is a helper method to define mock.On call
-//   - _a0 log.T
 //   - payloadType message.PayloadType
 //   - inputData []byte
-func (_e *IDataChannel_Expecter) SendInputDataMessage(_a0 interface{}, payloadType interface{}, inputData interface{}) *IDataChannel_SendInputDataMessage_Call {
-	return &IDataChannel_SendInputDataMessage_Call{Call: _e.mock.On("SendInputDataMessage", _a0, payloadType, inputData)}
+func (_e *IDataChannel_Expecter) SendInputDataMessage(payloadType interface{}, inputData interface{}) *IDataChannel_SendInputDataMessage_Call {
+	return &IDataChannel_SendInputDataMessage_Call{Call: _e.mock.On("SendInputDataMessage", payloadType, inputData)}
 }
 
-func (_c *IDataChannel_SendInputDataMessage_Call) Run(run func(_a0 log.T, payloadType message.PayloadType, inputData []byte)) *IDataChannel_SendInputDataMessage_Call {
+func (_c *IDataChannel_SendInputDataMessage_Call) Run(run func(payloadType message.PayloadType, inputData []byte)) *IDataChannel_SendInputDataMessage_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(log.T), args[1].(message.PayloadType), args[2].([]byte))
+		run(args[0].(message.PayloadType), args[1].([]byte))
 	})
 	return _c
 }
@@ -682,7 +673,7 @@ func (_c *IDataChannel_SendInputDataMessage_Call) Return(_a0 error) *IDataChanne
 	return _c
 }
 
-func (_c *IDataChannel_SendInputDataMessage_Call) RunAndReturn(run func(log.T, message.PayloadType, []byte) error) *IDataChannel_SendInputDataMessage_Call {
+func (_c *IDataChannel_SendInputDataMessage_Call) RunAndReturn(run func(message.PayloadType, []byte) error) *IDataChannel_SendInputDataMessage_Call {
 	_c.Call.Return(run)
 	return _c
 }

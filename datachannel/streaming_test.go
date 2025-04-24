@@ -100,7 +100,7 @@ func TestReconnect(t *testing.T) {
 	mockWsChannel.On("SendMessage", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	// test reconnect
-	err := datachannel.Reconnect(mockLogger)
+	err := datachannel.Reconnect()
 
 	require.NoError(t, err)
 	mockWsChannel.AssertExpectations(t)
@@ -111,7 +111,7 @@ func TestOpen(t *testing.T) {
 
 	mockWsChannel.On("Open", mock.Anything).Return(nil)
 
-	err := datachannel.Open(mockLogger)
+	err := datachannel.Open()
 
 	require.NoError(t, err)
 	mockWsChannel.AssertExpectations(t)
@@ -123,7 +123,7 @@ func TestClose(t *testing.T) {
 	mockWsChannel.On("Close", mock.Anything).Return(nil)
 
 	// test close
-	err := datachannel.Close(mockLogger)
+	err := datachannel.Close()
 
 	require.NoError(t, err)
 	mockWsChannel.AssertExpectations(t)
@@ -135,7 +135,7 @@ func TestFinalizeDataChannelHandshake(t *testing.T) {
 	mockWsChannel.On("SendMessage", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	mockWsChannel.On("GetStreamURL").Return(streamURL)
 
-	err := datachannel.finalizeDataChannelHandshake(mockLogger, channelToken)
+	err := datachannel.finalizeDataChannelHandshake(channelToken)
 
 	require.NoError(t, err)
 	assert.Equal(t, streamURL, datachannel.wsChannel.GetStreamURL())
@@ -158,7 +158,7 @@ func TestSendInputDataMessage(t *testing.T) {
 
 	mockWsChannel.On("SendMessage", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	err := dataChannel.SendInputDataMessage(mockLogger, message.Output, payload)
+	err := dataChannel.SendInputDataMessage(message.Output, payload)
 	require.NoError(t, err, "Error sending input data message")
 
 	assert.Equal(t, streamDataSequenceNumber+1, dataChannel.streamDataSequenceNumber)
@@ -176,7 +176,7 @@ func TestProcessAcknowledgedMessage(t *testing.T) {
 		SequenceNumber:      0,
 		IsSequentialMessage: true,
 	}
-	err := dataChannel.processAcknowledgedMessage(mockLogger, dataStreamAcknowledgeContent)
+	err := dataChannel.processAcknowledgedMessage(dataStreamAcknowledgeContent)
 	require.NoError(t, err, "Error processing acknowledged message")
 	assert.Equal(t, 0, dataChannel.outgoingMessageBuffer.Messages.Len())
 }
@@ -305,7 +305,7 @@ func TestResendStreamDataMessageScheduler(t *testing.T) {
 		return nil
 	}
 
-	if err := dataChannel.ResendStreamDataMessageScheduler(mockLogger); err != nil {
+	if err := dataChannel.ResendStreamDataMessageScheduler(); err != nil {
 		t.Errorf("Failed to resend stream data message scheduler: %v", err)
 	}
 
@@ -319,7 +319,7 @@ func TestDataChannelIncomingMessageHandlerForExpectedInputStreamDataMessage(t *t
 	dataChannel.wsChannel = mockChannel
 
 	SendAcknowledgeMessageCallCount := 0
-	sendAcknowledgeMessageCall = func(_ log.T, _ *DataChannel, _ message.ClientMessage) error {
+	sendAcknowledgeMessageCall = func(_ *DataChannel, _ message.ClientMessage) error {
 		SendAcknowledgeMessageCallCount++
 
 		return nil
@@ -336,7 +336,7 @@ func TestDataChannelIncomingMessageHandlerForExpectedInputStreamDataMessage(t *t
 	dataChannel.RegisterOutputStreamHandler(handler, true)
 	// First scenario is to test when incoming message sequence number matches with expected sequence number
 	// and no message found in incomingMessageBuffer
-	err := dataChannel.outputMessageHandler(context.TODO(), logger, stopHandler, serializedClientMessages[0])
+	err := dataChannel.outputMessageHandler(context.TODO(), stopHandler, serializedClientMessages[0])
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), dataChannel.expectedSequenceNumber)
 	assert.Empty(t, dataChannel.incomingMessageBuffer.Messages)
@@ -349,7 +349,7 @@ func TestDataChannelIncomingMessageHandlerForExpectedInputStreamDataMessage(t *t
 	dataChannel.addDataToIncomingMessageBuffer(streamingMessages[4])
 	dataChannel.addDataToIncomingMessageBuffer(streamingMessages[3])
 
-	err = dataChannel.outputMessageHandler(context.TODO(), logger, stopHandler, serializedClientMessages[1])
+	err = dataChannel.outputMessageHandler(context.TODO(), stopHandler, serializedClientMessages[1])
 	require.NoError(t, err)
 	assert.Equal(t, int64(5), dataChannel.expectedSequenceNumber)
 	assert.Len(t, dataChannel.incomingMessageBuffer.Messages, 1)
@@ -366,7 +366,7 @@ func TestDataChannelIncomingMessageHandlerForUnexpectedInputStreamDataMessage(t 
 	dataChannel.incomingMessageBuffer.Capacity = 2
 
 	SendAcknowledgeMessageCallCount := 0
-	sendAcknowledgeMessageCall = func(_ log.T, _ *DataChannel, _ message.ClientMessage) error {
+	sendAcknowledgeMessageCall = func(_ *DataChannel, _ message.ClientMessage) error {
 		SendAcknowledgeMessageCallCount++
 
 		return nil
@@ -376,13 +376,13 @@ func TestDataChannelIncomingMessageHandlerForUnexpectedInputStreamDataMessage(t 
 		return nil
 	}
 
-	err := dataChannel.outputMessageHandler(context.TODO(), logger, stopHandler, serializedClientMessages[1])
+	err := dataChannel.outputMessageHandler(context.TODO(), stopHandler, serializedClientMessages[1])
 	require.NoError(t, err)
 
-	err = dataChannel.outputMessageHandler(context.TODO(), logger, stopHandler, serializedClientMessages[2])
+	err = dataChannel.outputMessageHandler(context.TODO(), stopHandler, serializedClientMessages[2])
 	require.NoError(t, err)
 
-	err = dataChannel.outputMessageHandler(context.TODO(), logger, stopHandler, serializedClientMessages[3])
+	err = dataChannel.outputMessageHandler(context.TODO(), stopHandler, serializedClientMessages[3])
 	require.NoError(t, err)
 
 	// Since capacity of incomingMessageBuffer is 2, stream data with sequence number 3 should be ignored without sending acknowledgement
@@ -412,7 +412,7 @@ func TestDataChannelIncomingMessageHandlerForAcknowledgeMessage(t *testing.T) {
 	}
 
 	ProcessAcknowledgedMessageCallCount := 0
-	processAcknowledgedMessageCall = func(_ log.T, _ *DataChannel, _ message.AcknowledgeContent) error {
+	processAcknowledgedMessageCall = func(_ *DataChannel, _ message.AcknowledgeContent) error {
 		ProcessAcknowledgedMessageCallCount++
 
 		return nil
@@ -433,7 +433,7 @@ func TestDataChannelIncomingMessageHandlerForAcknowledgeMessage(t *testing.T) {
 	clientMessage := getClientMessage(0, message.AcknowledgeMessage, uint32(message.Output), payload)
 
 	serializedClientMessage, _ := clientMessage.SerializeClientMessage(logger)
-	if err := dataChannel.outputMessageHandler(context.TODO(), logger, stopHandler, serializedClientMessage); err != nil {
+	if err := dataChannel.outputMessageHandler(context.TODO(), stopHandler, serializedClientMessage); err != nil {
 		t.Fatal(err)
 	}
 
@@ -470,7 +470,7 @@ func TestDataChannelIncomingMessageHandlerForPausePublicationessage(t *testing.T
 	}
 
 	dataChannel.RegisterOutputStreamHandler(handler, true)
-	err := dataChannel.outputMessageHandler(context.TODO(), logger, stopHandler, serializedClientMessages[0])
+	err := dataChannel.outputMessageHandler(context.TODO(), stopHandler, serializedClientMessages[0])
 	require.NoError(t, err)
 }
 
@@ -538,7 +538,7 @@ func TestHandshakeRequestHandler(t *testing.T) {
 	}
 	mockChannel.On("SendMessage", mock.Anything, mock.MatchedBy(handshakeResponseMatcher), mock.Anything).Return(nil)
 
-	if err := dataChannel.outputMessageHandler(context.TODO(), mockLogger, func(_ log.T) error { return nil }, handshakeRequestMessageBytes); err != nil {
+	if err := dataChannel.outputMessageHandler(context.TODO(), func(_ log.T) error { return nil }, handshakeRequestMessageBytes); err != nil {
 		t.Errorf("Failed to handle output message: %v", err)
 	}
 
@@ -559,7 +559,7 @@ func TestHandleOutputMessageForDefaultTypeWithError(t *testing.T) {
 
 	dataChannel.RegisterOutputStreamHandler(handler, true)
 
-	err := dataChannel.HandleOutputMessage(context.TODO(), mockLogger, clientMessage, rawMessage)
+	err := dataChannel.HandleOutputMessage(context.TODO(), clientMessage, rawMessage)
 	require.Error(t, err)
 }
 
@@ -577,7 +577,7 @@ func TestHandleOutputMessageForExitCodePayloadTypeWithError(t *testing.T) {
 
 	rawMessage := []byte("rawMessage")
 
-	err := dataChannel.HandleOutputMessage(context.TODO(), mockLogger, clientMessage, rawMessage)
+	err := dataChannel.HandleOutputMessage(context.TODO(), clientMessage, rawMessage)
 	require.ErrorIs(t, err, mockErr)
 }
 
@@ -592,7 +592,7 @@ func TestHandleHandshakeRequestWithMessageDeserializeError(t *testing.T) {
 	clientMessage := getClientMessage(0, message.OutputStreamMessage,
 		uint32(message.HandshakeCompletePayloadType), handshakeRequestBytes)
 
-	err = dataChannel.handleHandshakeRequest(context.TODO(), mockLogger, clientMessage)
+	err = dataChannel.handleHandshakeRequest(context.TODO(), clientMessage)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "ClientMessage PayloadType is not of type HandshakeRequestPayloadType")
 }
@@ -616,7 +616,7 @@ func TestProcessOutputMessageWithHandlers(t *testing.T) {
 	clientMessage := getClientMessage(0, message.OutputStreamMessage,
 		uint32(message.HandshakeCompletePayloadType), handshakeRequestBytes)
 
-	isHandlerReady, err := dataChannel.processOutputMessageWithHandlers(mockLogger, clientMessage)
+	isHandlerReady, err := dataChannel.processOutputMessageWithHandlers(clientMessage)
 	require.Error(t, err)
 	assert.True(t, isHandlerReady)
 }

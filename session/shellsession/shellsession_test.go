@@ -129,7 +129,7 @@ func TestSendInputDataMessageWithPayloadTypeSize(t *testing.T) {
 		return nil
 	}
 
-	err = dataChannel.SendInputDataMessage(logger, message.Size, sizeDataBytes)
+	err = dataChannel.SendInputDataMessage(message.Size, sizeDataBytes)
 	require.NoError(t, err)
 	assert.Equal(t, expectedSequenceNumber, dataChannel.GetExpectedSequenceNumber())
 	assert.Equal(t, 1, SendMessageCallCount)

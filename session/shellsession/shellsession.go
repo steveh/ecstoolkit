@@ -59,10 +59,10 @@ func (s *ShellSession) Name() string {
 }
 
 // Initialize sets up the shell session with the provided session parameters.
-func (s *ShellSession) Initialize(ctx context.Context, log log.T, sessionVar *session.Session) {
+func (s *ShellSession) Initialize(ctx context.Context, _ log.T, sessionVar *session.Session) {
 	s.Session = *sessionVar
 	s.DataChannel.RegisterOutputStreamHandler(s.ProcessStreamMessagePayload, true)
-	s.DataChannel.RegisterOutputMessageHandler(ctx, log, s.Stop, func(_ []byte) {})
+	s.DataChannel.RegisterOutputMessageHandler(ctx, s.Stop, func(_ []byte) {})
 }
 
 // SetSessionHandlers sets up handlers for terminal input, resizing, and control signals.
@@ -93,7 +93,7 @@ func (s *ShellSession) handleControlSignals(log log.T) {
 		for {
 			sig := <-signals
 			if b, ok := sessionutil.SignalsByteMap[sig]; ok {
-				if err := s.DataChannel.SendInputDataMessage(log, message.Output, []byte{b}); err != nil {
+				if err := s.DataChannel.SendInputDataMessage(message.Output, []byte{b}); err != nil {
 					log.Error("sending control signals", "error", err)
 				}
 			}
@@ -121,7 +121,7 @@ func (s *ShellSession) handleTerminalResize(log log.T) {
 
 				log.Debug("Sending input size data", "data", string(inputSizeData))
 
-				if err = s.DataChannel.SendInputDataMessage(log, message.Size, inputSizeData); err != nil {
+				if err = s.DataChannel.SendInputDataMessage(message.Size, inputSizeData); err != nil {
 					log.Error("sending size data", "error", err)
 				}
 			}

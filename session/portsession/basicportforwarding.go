@@ -90,7 +90,7 @@ func (p *BasicPortForwarding) ReadStream(_ context.Context, log log.T) error {
 			log.Debug("Reading from port failed", "port", p.portParameters.PortNumber, "error", err)
 
 			// Send DisconnectToPort flag to agent when client tcp connection drops to ensure agent closes tcp connection too with server port
-			if err = p.session.DataChannel.SendFlag(log, message.DisconnectToPort); err != nil {
+			if err = p.session.DataChannel.SendFlag(message.DisconnectToPort); err != nil {
 				log.Error("sending packet", "error", err)
 
 				return fmt.Errorf("sending disconnect flag: %w", err)
@@ -106,7 +106,7 @@ func (p *BasicPortForwarding) ReadStream(_ context.Context, log log.T) error {
 
 		log.Trace("Received message from stdin", "size", numBytes)
 
-		if err = p.session.DataChannel.SendInputDataMessage(log, message.Output, msg[:numBytes]); err != nil {
+		if err = p.session.DataChannel.SendInputDataMessage(message.Output, msg[:numBytes]); err != nil {
 			log.Error("sending packet", "error", err)
 
 			return fmt.Errorf("sending input data message: %w", err)
@@ -202,7 +202,7 @@ func (p *BasicPortForwarding) handleControlSignals(ctx context.Context, log log.
 		log.Debug("Terminate signal received, exiting.")
 
 		if version.DoesAgentSupportTerminateSessionFlag(log, p.session.DataChannel.GetAgentVersion()) {
-			if err := p.session.DataChannel.SendFlag(log, message.TerminateSession); err != nil {
+			if err := p.session.DataChannel.SendFlag(message.TerminateSession); err != nil {
 				log.Error("sending TerminateSession flag", "error", err)
 			}
 

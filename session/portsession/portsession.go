@@ -93,7 +93,7 @@ func (s *PortSession) Initialize(ctx context.Context, log log.T, sessionVar *ses
 
 	s.DataChannel.RegisterOutputStreamHandler(s.ProcessStreamMessagePayload, true)
 
-	s.DataChannel.RegisterOutputMessageHandler(ctx, log, s.Stop, func(input []byte) {
+	s.DataChannel.RegisterOutputMessageHandler(ctx, s.Stop, func(input []byte) {
 		if !s.portSessionType.IsStreamNotSet() {
 			return
 		}

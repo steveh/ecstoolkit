@@ -107,14 +107,14 @@ func (s *Session) OpenDataChannel(ctx context.Context, log log.T) error {
 
 	s.DataChannel.SetWsChannel(wsChannel)
 
-	s.DataChannel.RegisterOutputMessageHandler(ctx, log, s.Stop, func(_ []byte) {})
+	s.DataChannel.RegisterOutputMessageHandler(ctx, s.Stop, func(_ []byte) {})
 
 	s.DataChannel.RegisterOutputStreamHandler(s.ProcessFirstMessage, false)
 
-	if err := s.DataChannel.Open(log); err != nil {
+	if err := s.DataChannel.Open(); err != nil {
 		log.Error("Retrying connection failed", "sessionID", s.SessionID, "error", err)
 
-		s.retryParams.CallableFunc = func() error { return s.DataChannel.Reconnect(log) }
+		s.retryParams.CallableFunc = func() error { return s.DataChannel.Reconnect() }
 		if err := s.retryParams.Call(); err != nil {
 			log.Error("Failed to call retry parameters", "error", err)
 		}
@@ -130,7 +130,7 @@ func (s *Session) OpenDataChannel(ctx context.Context, log log.T) error {
 	})
 
 	// Scheduler for resending of data
-	if err := s.DataChannel.ResendStreamDataMessageScheduler(log); err != nil {
+	if err := s.DataChannel.ResendStreamDataMessageScheduler(); err != nil {
 		log.Error("Failed to schedule resend of stream data messages", "error", err)
 	}
 
@@ -200,7 +200,7 @@ func (s *Session) ResumeSessionHandler(ctx context.Context, log log.T) error {
 
 	s.DataChannel.SetChannelToken(s.tokenValue)
 
-	err = s.DataChannel.Reconnect(log)
+	err = s.DataChannel.Reconnect()
 	if err != nil {
 		return fmt.Errorf("reconnecting data channel: %w", err)
 	}
