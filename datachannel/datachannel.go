@@ -658,9 +658,15 @@ func (c *DataChannel) SetOnError(onErrorHandler func(error)) {
 	c.wsChannel.SetOnError(onErrorHandler)
 }
 
-// SetOnMessage sets the message handler for the DataChannel.
-func (c *DataChannel) SetOnMessage(onMessageHandler func([]byte)) {
-	c.wsChannel.SetOnMessage(onMessageHandler)
+// RegisterOutputMessageHandler sets the message handler for the DataChannel.
+func (c *DataChannel) RegisterOutputMessageHandler(ctx context.Context, log log.T, stopHandler Stop, onMessageHandler func(input []byte)) {
+	c.wsChannel.SetOnMessage(func(input []byte) {
+		onMessageHandler(input)
+
+		if err := c.OutputMessageHandler(ctx, log, stopHandler, input); err != nil {
+			log.Error("Failed to handle output message", "error", err)
+		}
+	})
 }
 
 // GetStreamDataSequenceNumber returns StreamDataSequenceNumber of the DataChannel.

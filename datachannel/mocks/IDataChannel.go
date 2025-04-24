@@ -720,6 +720,42 @@ func (_c *IDataChannel_Reconnect_Call) RunAndReturn(run func(log.T) error) *IDat
 	return _c
 }
 
+// RegisterOutputMessageHandler provides a mock function with given fields: ctx, _a1, stopHandler, onMessageHandler
+func (_m *IDataChannel) RegisterOutputMessageHandler(ctx context.Context, _a1 log.T, stopHandler datachannel.Stop, onMessageHandler func([]byte)) {
+	_m.Called(ctx, _a1, stopHandler, onMessageHandler)
+}
+
+// IDataChannel_RegisterOutputMessageHandler_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RegisterOutputMessageHandler'
+type IDataChannel_RegisterOutputMessageHandler_Call struct {
+	*mock.Call
+}
+
+// RegisterOutputMessageHandler is a helper method to define mock.On call
+//   - ctx context.Context
+//   - _a1 log.T
+//   - stopHandler datachannel.Stop
+//   - onMessageHandler func([]byte)
+func (_e *IDataChannel_Expecter) RegisterOutputMessageHandler(ctx interface{}, _a1 interface{}, stopHandler interface{}, onMessageHandler interface{}) *IDataChannel_RegisterOutputMessageHandler_Call {
+	return &IDataChannel_RegisterOutputMessageHandler_Call{Call: _e.mock.On("RegisterOutputMessageHandler", ctx, _a1, stopHandler, onMessageHandler)}
+}
+
+func (_c *IDataChannel_RegisterOutputMessageHandler_Call) Run(run func(ctx context.Context, _a1 log.T, stopHandler datachannel.Stop, onMessageHandler func([]byte))) *IDataChannel_RegisterOutputMessageHandler_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(log.T), args[2].(datachannel.Stop), args[3].(func([]byte)))
+	})
+	return _c
+}
+
+func (_c *IDataChannel_RegisterOutputMessageHandler_Call) Return() *IDataChannel_RegisterOutputMessageHandler_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *IDataChannel_RegisterOutputMessageHandler_Call) RunAndReturn(run func(context.Context, log.T, datachannel.Stop, func([]byte))) *IDataChannel_RegisterOutputMessageHandler_Call {
+	_c.Run(run)
+	return _c
+}
+
 // RegisterOutputStreamHandler provides a mock function with given fields: handler, isSessionSpecificHandler
 func (_m *IDataChannel) RegisterOutputStreamHandler(handler datachannel.OutputStreamDataMessageHandler, isSessionSpecificHandler bool) {
 	_m.Called(handler, isSessionSpecificHandler)
@@ -1150,39 +1186,6 @@ func (_c *IDataChannel_SetOnError_Call) Return() *IDataChannel_SetOnError_Call {
 }
 
 func (_c *IDataChannel_SetOnError_Call) RunAndReturn(run func(func(error))) *IDataChannel_SetOnError_Call {
-	_c.Run(run)
-	return _c
-}
-
-// SetOnMessage provides a mock function with given fields: onMessageHandler
-func (_m *IDataChannel) SetOnMessage(onMessageHandler func([]byte)) {
-	_m.Called(onMessageHandler)
-}
-
-// IDataChannel_SetOnMessage_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetOnMessage'
-type IDataChannel_SetOnMessage_Call struct {
-	*mock.Call
-}
-
-// SetOnMessage is a helper method to define mock.On call
-//   - onMessageHandler func([]byte)
-func (_e *IDataChannel_Expecter) SetOnMessage(onMessageHandler interface{}) *IDataChannel_SetOnMessage_Call {
-	return &IDataChannel_SetOnMessage_Call{Call: _e.mock.On("SetOnMessage", onMessageHandler)}
-}
-
-func (_c *IDataChannel_SetOnMessage_Call) Run(run func(onMessageHandler func([]byte))) *IDataChannel_SetOnMessage_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(func([]byte)))
-	})
-	return _c
-}
-
-func (_c *IDataChannel_SetOnMessage_Call) Return() *IDataChannel_SetOnMessage_Call {
-	_c.Call.Return()
-	return _c
-}
-
-func (_c *IDataChannel_SetOnMessage_Call) RunAndReturn(run func(func([]byte))) *IDataChannel_SetOnMessage_Call {
 	_c.Run(run)
 	return _c
 }

@@ -43,7 +43,7 @@ type IDataChannel interface {
 	SetWsChannel(wsChannel communicator.IWebSocketChannel)
 	SetChannelToken(channelToken string)
 	SetOnError(onErrorHandler func(error))
-	SetOnMessage(onMessageHandler func([]byte))
+	RegisterOutputMessageHandler(ctx context.Context, log log.T, stopHandler Stop, onMessageHandler func(input []byte))
 	GetStreamDataSequenceNumber() int64
 	GetAgentVersion() string
 	SetAgentVersion(agentVersion string)

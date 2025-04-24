@@ -59,7 +59,7 @@ func TestInitialize(t *testing.T) {
 	shellSession := ShellSession{}
 	session.DataChannel = mockDataChannel
 	mockDataChannel.On("RegisterOutputStreamHandler", mock.Anything, true).Times(1)
-	mockDataChannel.On("SetOnMessage", mock.Anything)
+	mockDataChannel.On("RegisterOutputMessageHandler", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 	mockDataChannel.On("SetOnError", mock.Anything)
 	shellSession.Initialize(context.TODO(), logger, session)
 	assert.Equal(t, shellSession.Session, *session)

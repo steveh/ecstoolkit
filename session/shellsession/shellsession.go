@@ -62,12 +62,7 @@ func (s *ShellSession) Name() string {
 func (s *ShellSession) Initialize(ctx context.Context, log log.T, sessionVar *session.Session) {
 	s.Session = *sessionVar
 	s.DataChannel.RegisterOutputStreamHandler(s.ProcessStreamMessagePayload, true)
-	s.DataChannel.SetOnMessage(
-		func(input []byte) {
-			if err := s.DataChannel.OutputMessageHandler(ctx, log, s.Stop, input); err != nil {
-				log.Error("Failed to handle output message", "error", err)
-			}
-		})
+	s.DataChannel.RegisterOutputMessageHandler(ctx, log, s.Stop, func(_ []byte) {})
 }
 
 // SetSessionHandlers sets up handlers for terminal input, resizing, and control signals.

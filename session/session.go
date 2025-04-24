@@ -107,12 +107,7 @@ func (s *Session) OpenDataChannel(ctx context.Context, log log.T) error {
 
 	s.DataChannel.SetWsChannel(wsChannel)
 
-	s.DataChannel.SetOnMessage(
-		func(input []byte) {
-			if err := s.DataChannel.OutputMessageHandler(ctx, log, s.Stop, input); err != nil {
-				log.Error("Failed to handle output message", "error", err)
-			}
-		})
+	s.DataChannel.RegisterOutputMessageHandler(ctx, log, s.Stop, func(_ []byte) {})
 
 	s.DataChannel.RegisterOutputStreamHandler(s.ProcessFirstMessage, false)
 
