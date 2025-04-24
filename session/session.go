@@ -38,10 +38,9 @@ import (
 // Session represents an active session with its configuration and state.
 type Session struct {
 	DataChannel           datachannel.IDataChannel
-	SessionID             string
-	TargetID              string
+	sessionID             string
+	targetID              string
 	SessionType           string
-	SessionProperties     interface{}
 	DisplayMode           sessionutil.DisplayMode
 	streamURL             string
 	tokenValue            string
@@ -66,8 +65,8 @@ func NewSession(ssmClient *ssm.Client, kmsClient *kms.Client, ssmSession *types.
 	}
 
 	session := &Session{
-		SessionID:   *ssmSession.SessionId,
-		TargetID:    targetID,
+		sessionID:   *ssmSession.SessionId,
+		targetID:    targetID,
 		DisplayMode: sessionutil.NewDisplayMode(logger),
 		streamURL:   *ssmSession.StreamUrl,
 		tokenValue:  *ssmSession.TokenValue,
@@ -98,8 +97,8 @@ func (s *Session) OpenDataChannel(ctx context.Context, log log.T) error {
 	dataChannel, err := datachannel.NewDataChannel(
 		s.kmsClient,
 		s.clientID,
-		s.SessionID,
-		s.TargetID,
+		s.sessionID,
+		s.targetID,
 		s.isAwsCliUpgradeNeeded,
 		log,
 	)
@@ -116,7 +115,7 @@ func (s *Session) OpenDataChannel(ctx context.Context, log log.T) error {
 	s.DataChannel.RegisterOutputStreamHandler(s.ProcessFirstMessage, false)
 
 	if err := s.DataChannel.Open(); err != nil {
-		log.Error("Retrying connection failed", "sessionID", s.SessionID, "error", err)
+		log.Error("Retrying connection failed", "sessionID", s.sessionID, "error", err)
 
 		s.retryParams.CallableFunc = func() error { return s.DataChannel.Reconnect() }
 		if err := s.retryParams.Call(); err != nil {
@@ -168,7 +167,7 @@ func (s *Session) Stop() error {
 // GetResumeSessionParams calls ResumeSession API and gets tokenvalue for reconnecting.
 func (s *Session) GetResumeSessionParams(ctx context.Context, log log.T) (string, error) {
 	resumeSessionInput := ssm.ResumeSessionInput{
-		SessionId: aws.String(s.SessionID),
+		SessionId: aws.String(s.sessionID),
 	}
 
 	log.Debug("Resume Session input parameters", "input", resumeSessionInput)
@@ -197,7 +196,7 @@ func (s *Session) ResumeSessionHandler(ctx context.Context, log log.T) error {
 
 		return fmt.Errorf("resume session: %w", err)
 	} else if s.tokenValue == "" {
-		log.Debug("Session timed out", "sessionID", s.SessionID)
+		log.Debug("Session timed out", "sessionID", s.sessionID)
 
 		return errors.New("session timed out")
 	}
@@ -215,7 +214,7 @@ func (s *Session) ResumeSessionHandler(ctx context.Context, log log.T) error {
 // TerminateSession calls TerminateSession API.
 func (s *Session) TerminateSession(ctx context.Context) error {
 	terminateSessionInput := ssm.TerminateSessionInput{
-		SessionId: &s.SessionID,
+		SessionId: &s.sessionID,
 	}
 
 	s.logger.Debug("Terminate Session input parameters", "input", terminateSessionInput)
@@ -236,7 +235,7 @@ func (s *Session) GetAgentVersion() string {
 
 // GetTargetID retrieves the target ID from the session.
 func (s *Session) GetTargetID() string {
-	return s.TargetID
+	return s.targetID
 }
 
 // SendFlag sends a flag message through the data channel.
@@ -273,12 +272,12 @@ func (s *Session) DisplayMessage(message message.ClientMessage) {
 
 // GetSessionID retrieves the session ID from the session.
 func (s *Session) GetSessionID() string {
-	return s.SessionID
+	return s.sessionID
 }
 
 // GetSessionProperties retrieves the session properties from the session.
 func (s *Session) GetSessionProperties() any {
-	return s.SessionProperties
+	return s.DataChannel.GetSessionProperties()
 }
 
 // RegisterOutputMessageHandler registers a handler for output messages.

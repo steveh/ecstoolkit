@@ -61,7 +61,7 @@ type DataChannel struct {
 	// SessionType
 	sessionType       string
 	isSessionTypeSet  chan bool
-	sessionProperties interface{}
+	sessionProperties any
 
 	// Used to detect if resending a streaming message reaches timeout
 	isStreamMessageResendTimeout chan bool

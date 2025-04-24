@@ -136,7 +136,7 @@ func (e *Executor) initSession(ctx context.Context, sess *session.Session) error
 			time.Sleep(config.ResendSleepInterval)
 
 			if <-sess.DataChannel.IsStreamMessageResendTimeout() {
-				e.logger.Error("Stream data timeout", "sessionID", sess.SessionID)
+				e.logger.Error("Stream data timeout", "sessionID", sess.GetSessionID())
 
 				if err := sess.TerminateSession(ctx); err != nil {
 					e.logger.Error("Unable to terminate session upon stream data timeout", "error", err)
@@ -153,7 +153,6 @@ func (e *Executor) initSession(ctx context.Context, sess *session.Session) error
 	}
 
 	sess.SessionType = sess.DataChannel.GetSessionType()
-	sess.SessionProperties = sess.DataChannel.GetSessionProperties()
 
 	var sessionSubType session.ISessionPlugin
 

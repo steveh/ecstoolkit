@@ -15,12 +15,14 @@
 package portsession
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/steveh/ecstoolkit/communicator/mocks"
+	"github.com/steveh/ecstoolkit/config"
 	"github.com/steveh/ecstoolkit/datachannel"
 	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
@@ -61,6 +63,15 @@ func getSessionMockWithParams(t *testing.T, properties interface{}, agentVersion
 	dataChannel.SetAgentVersion(agentVersion)
 	dataChannel.SetWsChannel(&mockWebSocketChannel)
 
+	actionParams := message.SessionTypeRequest{
+		SessionType: config.PortPluginName,
+		Properties:  properties,
+	}
+	b, err := json.Marshal(actionParams)
+	require.NoError(t, err)
+	err = dataChannel.ProcessSessionTypeHandshakeAction(b)
+	require.NoError(t, err)
+
 	ssmSession := &types.Session{
 		SessionId:  aws.String(""),
 		StreamUrl:  aws.String(""),
@@ -71,7 +82,6 @@ func getSessionMockWithParams(t *testing.T, properties interface{}, agentVersion
 	require.NoError(t, err)
 
 	mockSession.DataChannel = dataChannel
-	mockSession.SessionProperties = properties
 
 	return mockSession
 }
