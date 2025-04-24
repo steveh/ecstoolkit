@@ -20,11 +20,6 @@ import (
 	"github.com/steveh/ecstoolkit/session/shellsession"
 )
 
-func init() {
-	session.Register(&portsession.PortSession{})
-	session.Register(&shellsession.ShellSession{})
-}
-
 // ExecuteSessionOptions contains the configuration options for executing a session.
 type ExecuteSessionOptions struct {
 	ClusterName        string
@@ -160,12 +155,22 @@ func (e *Executor) initSession(ctx context.Context, sess *session.Session) error
 	sess.SessionType = sess.DataChannel.GetSessionType()
 	sess.SessionProperties = sess.DataChannel.GetSessionProperties()
 
-	sessionSubType := session.SessionRegistry[sess.SessionType]
-	if sessionSubType == nil {
-		return fmt.Errorf("unknown session type %s", sess.SessionType)
+	var sessionSubType session.ISessionPlugin
+
+	var err error
+
+	switch sess.SessionType {
+	case config.ShellPluginName:
+		sessionSubType, err = shellsession.NewShellSession(ctx, e.logger, sess)
+	case config.PortPluginName:
+		sessionSubType, err = portsession.NewPortSession(ctx, e.logger, sess)
+	default:
+		return fmt.Errorf("unsupported session type: %s", sess.SessionType)
 	}
 
-	sessionSubType.Initialize(ctx, e.logger, sess)
+	if err != nil {
+		return fmt.Errorf("creating session subtype: %w", err)
+	}
 
 	if err := sessionSubType.SetSessionHandlers(ctx, e.logger); err != nil {
 		return fmt.Errorf("ending with error: %w", err)

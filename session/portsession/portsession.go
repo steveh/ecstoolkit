@@ -58,20 +58,18 @@ type PortParameters struct {
 	Type                string `json:"type"`
 }
 
-// Name is the session name used inputStream the plugin.
-func (s *PortSession) Name() string {
-	return config.PortPluginName
-}
+// NewPortSession initializes a new port session.
+func NewPortSession(ctx context.Context, logger log.T, sessionVar *session.Session) (*PortSession, error) {
+	s := &PortSession{
+		Session: *sessionVar,
+	}
 
-// Initialize sets up the port session with the provided session parameters.
-func (s *PortSession) Initialize(ctx context.Context, log log.T, sessionVar *session.Session) {
-	s.Session = *sessionVar
 	if err := jsonutil.Remarshal(s.SessionProperties, &s.portParameters); err != nil {
-		log.Error("Invalid format", "error", err)
+		return nil, fmt.Errorf("remarshalling session properties: %w", err)
 	}
 
 	if s.portParameters.Type == LocalPortForwardingType {
-		if version.DoesAgentSupportTCPMultiplexing(log, s.DataChannel.GetAgentVersion()) {
+		if version.DoesAgentSupportTCPMultiplexing(logger, s.DataChannel.GetAgentVersion()) {
 			s.portSessionType = &MuxPortForwarding{
 				sessionID:      s.SessionID,
 				portParameters: s.portParameters,
@@ -99,22 +97,29 @@ func (s *PortSession) Initialize(ctx context.Context, log log.T, sessionVar *ses
 		}
 
 		outputMessage := &message.ClientMessage{}
-		if err := outputMessage.DeserializeClientMessage(log, input); err != nil {
-			log.Warn("Ignore message deserialize error while stream connection had not set")
+		if err := outputMessage.DeserializeClientMessage(logger, input); err != nil {
+			logger.Warn("Ignore message deserialize error while stream connection had not set")
 
 			return
 		}
 
 		if outputMessage.MessageType == message.OutputStreamMessage {
-			log.Warn("Waiting for user to establish connection before processing incoming messages")
+			logger.Warn("Waiting for user to establish connection before processing incoming messages")
 
 			return
 		}
 
-		log.Warn("Received message while establishing connection", "messageType", outputMessage.MessageType)
+		logger.Warn("Received message while establishing connection", "messageType", outputMessage.MessageType)
 	})
 
-	log.Debug("Connected to instance", "targetId", sessionVar.TargetID, "port", s.portParameters.PortNumber)
+	logger.Debug("Connected to instance", "targetId", sessionVar.TargetID, "port", s.portParameters.PortNumber)
+
+	return s, nil
+}
+
+// Name is the session name used inputStream the plugin.
+func (s *PortSession) Name() string {
+	return config.PortPluginName
 }
 
 // Stop terminates the port session and cleans up resources.

@@ -53,16 +53,21 @@ var _ session.ISessionPlugin = (*ShellSession)(nil)
 // GetTerminalSizeCall is a function that retrieves the terminal dimensions.
 var GetTerminalSizeCall = term.GetSize
 
+// NewShellSession creates a new shell session.
+func NewShellSession(ctx context.Context, _ log.T, sessionVar *session.Session) (*ShellSession, error) {
+	s := &ShellSession{
+		Session: *sessionVar,
+	}
+
+	s.DataChannel.RegisterOutputStreamHandler(s.ProcessStreamMessagePayload, true)
+	s.DataChannel.RegisterOutputMessageHandler(ctx, s.Stop, func(_ []byte) {})
+
+	return s, nil
+}
+
 // Name is the session name used in the plugin.
 func (s *ShellSession) Name() string {
 	return config.ShellPluginName
-}
-
-// Initialize sets up the shell session with the provided session parameters.
-func (s *ShellSession) Initialize(ctx context.Context, _ log.T, sessionVar *session.Session) {
-	s.Session = *sessionVar
-	s.DataChannel.RegisterOutputStreamHandler(s.ProcessStreamMessagePayload, true)
-	s.DataChannel.RegisterOutputMessageHandler(ctx, s.Stop, func(_ []byte) {})
 }
 
 // SetSessionHandlers sets up handlers for terminal input, resizing, and control signals.

@@ -43,10 +43,9 @@ func TestInitializePortSession(t *testing.T) {
 
 	mockWebSocketChannel.On("SetOnMessage", mock.Anything)
 
-	portSession := PortSession{
-		Session: getSessionMock(t),
-	}
-	portSession.Initialize(context.TODO(), mockLog, &portSession.Session)
+	sess := getSessionMock(t)
+	portSession, err := NewPortSession(context.TODO(), mockLog, &sess)
+	require.NoError(t, err, "Initialize port session")
 
 	mockWebSocketChannel.AssertExpectations(t)
 	assert.Equal(t, portParameters, portSession.portParameters, "Initialize port parameters")
@@ -64,10 +63,9 @@ func TestInitializePortSessionForPortForwardingWithOldAgent(t *testing.T) {
 
 	mockWebSocketChannel.On("SetOnMessage", mock.Anything)
 
-	portSession := PortSession{
-		Session: getSessionMockWithParams(t, portParameters, "2.2.0.0"),
-	}
-	portSession.Initialize(context.TODO(), mockLog, &portSession.Session)
+	sess := getSessionMockWithParams(t, portParameters, "2.2.0.0")
+	portSession, err := NewPortSession(context.TODO(), mockLog, &sess)
+	require.NoError(t, err, "Initialize port session")
 
 	mockWebSocketChannel.AssertExpectations(t)
 	assert.Equal(t, portParameters, portSession.portParameters, "Initialize port parameters")
@@ -85,10 +83,9 @@ func TestInitializePortSessionForPortForwarding(t *testing.T) {
 
 	mockWebSocketChannel.On("SetOnMessage", mock.Anything)
 
-	portSession := PortSession{
-		Session: getSessionMockWithParams(t, portParameters, "3.1.0.0"),
-	}
-	portSession.Initialize(context.TODO(), mockLog, &portSession.Session)
+	sess := getSessionMockWithParams(t, portParameters, "3.1.0.0")
+	portSession, err := NewPortSession(context.TODO(), mockLog, &sess)
+	require.NoError(t, err, "Initialize port session")
 
 	mockWebSocketChannel.AssertExpectations(t)
 	assert.Equal(t, portParameters, portSession.portParameters, "Initialize port parameters")
