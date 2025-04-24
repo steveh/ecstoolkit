@@ -42,7 +42,7 @@ type IWebSocketChannel interface {
 // WebSocketChannel parent class for DataChannel.
 type WebSocketChannel struct {
 	IWebSocketChannel
-	URL          string
+	channelURL   string
 	OnMessage    func([]byte)
 	OnError      func(error)
 	IsOpen       bool
@@ -55,7 +55,7 @@ type WebSocketChannel struct {
 func NewWebSocketChannel(channelURL string, channelToken string) (*WebSocketChannel, error) {
 	return &WebSocketChannel{
 		ChannelToken: channelToken,
-		URL:          channelURL,
+		channelURL:   channelURL,
 	}, nil
 }
 
@@ -71,7 +71,7 @@ func (c *WebSocketChannel) SetChannelToken(channelToken string) {
 
 // GetStreamURL gets stream url.
 func (c *WebSocketChannel) GetStreamURL() string {
-	return c.URL
+	return c.channelURL
 }
 
 // SetOnError sets OnError field of websocket channel.
@@ -132,7 +132,7 @@ func (c *WebSocketChannel) SendMessage(input []byte, inputType int) error {
 
 // Close closes the corresponding connection.
 func (c *WebSocketChannel) Close(log log.T) error {
-	log.Debug("Closing websocket channel connection", "url", c.URL)
+	log.Debug("Closing websocket channel connection", "url", c.channelURL)
 
 	if c.IsOpen {
 		// Send signal to stop receiving message
@@ -145,7 +145,7 @@ func (c *WebSocketChannel) Close(log log.T) error {
 		return nil
 	}
 
-	log.Warn("Websocket channel connection is already Closed!", "url", c.URL)
+	log.Warn("Websocket channel connection is already Closed!", "url", c.channelURL)
 
 	return nil
 }
@@ -155,7 +155,7 @@ func (c *WebSocketChannel) Open(log log.T) error {
 	// initialize the write mutex
 	c.writeLock = &sync.Mutex{}
 
-	ws, err := websocketutil.NewWebsocketUtil(log, nil).OpenConnection(c.URL)
+	ws, err := websocketutil.NewWebsocketUtil(log, nil).OpenConnection(c.channelURL)
 	if err != nil {
 		return fmt.Errorf("opening websocket connection: %w", err)
 	}
@@ -176,7 +176,7 @@ func (c *WebSocketChannel) Open(log log.T) error {
 
 		for {
 			if !c.IsOpen {
-				log.Debug("Ending the channel listening routine since the channel is closed", "url", c.URL)
+				log.Debug("Ending the channel listening routine since the channel is closed", "url", c.channelURL)
 
 				break
 			}

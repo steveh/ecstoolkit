@@ -113,9 +113,8 @@ func TestWebSocketChannel_SetChannelToken(t *testing.T) {
 func TestWebSocketChannel_GetStreamURL(t *testing.T) {
 	t.Log("Starting test: webSocketChannel.GetStreamURL")
 
-	channel := &communicator.WebSocketChannel{
-		URL: defaultStreamURL,
-	}
+	channel, err := communicator.NewWebSocketChannel(defaultStreamURL, defaultChannelToken)
+	require.NoError(t, err)
 
 	url := channel.GetStreamURL()
 	assert.Equal(t, defaultStreamURL, url)
@@ -155,7 +154,7 @@ func TestNewWebSocketChannel(t *testing.T) {
 	channel, err := communicator.NewWebSocketChannel(defaultStreamURL, defaultChannelToken)
 	require.NoError(t, err)
 
-	assert.Equal(t, defaultStreamURL, channel.URL)
+	assert.Equal(t, defaultStreamURL, channel.GetStreamURL())
 	assert.Equal(t, defaultChannelToken, channel.ChannelToken)
 }
 
@@ -168,11 +167,10 @@ func TestOpenCloseWebSocketChannel(t *testing.T) {
 
 	log := log.NewMockLog()
 
-	websocketchannel := communicator.WebSocketChannel{
-		URL: u.String(),
-	}
+	websocketchannel, err := communicator.NewWebSocketChannel(u.String(), defaultChannelToken)
+	require.NoError(t, err)
 
-	err := websocketchannel.Open(log)
+	err = websocketchannel.Open(log)
 	require.NoError(t, err, "Error opening the websocket connection.")
 	assert.NotNil(t, websocketchannel.Connection, "Open connection failed.")
 	assert.True(t, websocketchannel.IsOpen, "IsOpen is not set to true.")
@@ -203,13 +201,13 @@ func TestReadWriteTextToWebSocketChannel(t *testing.T) {
 		assert.Equal(t, "echo channelreadwrite", string(input))
 	}
 
-	websocketchannel := communicator.WebSocketChannel{
-		URL:       u.String(),
-		OnMessage: onMessage,
-	}
+	websocketchannel, err := communicator.NewWebSocketChannel(u.String(), defaultChannelToken)
+	require.NoError(t, err)
+
+	websocketchannel.OnMessage = onMessage
 
 	// Open the websocket connection
-	err := websocketchannel.Open(log)
+	err = websocketchannel.Open(log)
 	require.NoError(t, err, "Error opening the websocket connection.")
 	assert.NotNil(t, websocketchannel.Connection, "Open connection failed.")
 
@@ -245,13 +243,13 @@ func TestReadWriteBinaryToWebSocketChannel(t *testing.T) {
 		assert.Equal(t, "echo channelreadwrite", string(input))
 	}
 
-	websocketchannel := communicator.WebSocketChannel{
-		URL:       u.String(),
-		OnMessage: onMessage,
-	}
+	websocketchannel, err := communicator.NewWebSocketChannel(u.String(), defaultChannelToken)
+	require.NoError(t, err)
+
+	websocketchannel.OnMessage = onMessage
 
 	// Open the websocket connection
-	err := websocketchannel.Open(log)
+	err = websocketchannel.Open(log)
 	require.NoError(t, err, "Error opening the websocket connection.")
 	assert.NotNil(t, websocketchannel.Connection, "Open connection failed.")
 
@@ -291,13 +289,13 @@ func TestMultipleReadWriteWebSocketChannel(t *testing.T) {
 		}
 	}
 
-	websocketchannel := communicator.WebSocketChannel{
-		URL:       u.String(),
-		OnMessage: onMessage,
-	}
+	websocketchannel, err := communicator.NewWebSocketChannel(u.String(), defaultChannelToken)
+	require.NoError(t, err)
+
+	websocketchannel.OnMessage = onMessage
 
 	// Open the websocket connection
-	err := websocketchannel.Open(log)
+	err = websocketchannel.Open(log)
 	require.NoError(t, err, "Error opening the websocket connection.")
 	assert.NotNil(t, websocketchannel.Connection, "Open connection failed.")
 
