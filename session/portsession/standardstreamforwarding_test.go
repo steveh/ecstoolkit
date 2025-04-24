@@ -67,18 +67,21 @@ func TestStartSessionForStandardStreamForwarding(t *testing.T) {
 		return nil
 	}
 
+	sess := *getSessionMock(t)
 	portSession := PortSession{
-		Session:        getSessionMock(t),
+		Session:        sess,
 		portParameters: PortParameters{PortNumber: "22"},
 		portSessionType: &StandardStreamForwarding{
-			session:        getSessionMock(t),
+			session:        sess,
 			portParameters: PortParameters{PortNumber: "22"},
+			logger:         mockLog,
 		},
+		logger: mockLog,
 	}
 
 	// Start session handlers in a goroutine
 	go func() {
-		if err := portSession.SetSessionHandlers(context.TODO(), mockLog); err != nil {
+		if err := portSession.SetSessionHandlers(context.TODO()); err != nil {
 			errChan <- fmt.Errorf("failed to set session handlers: %w", err)
 
 			return

@@ -54,14 +54,17 @@ func TestSetSessionHandlers(t *testing.T) {
 	mockWebSocketChannel.On("SendMessage", mock.Anything, mock.Anything).
 		Return(countTimes())
 
-	mockSession := getSessionMock(t)
+	mockSession := *getSessionMock(t)
+
 	portSession := PortSession{
 		Session:        mockSession,
 		portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding"},
 		portSessionType: &BasicPortForwarding{
 			session:        mockSession,
 			portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding"},
+			logger:         mockLog,
 		},
+		logger: mockLog,
 	}
 	signalCh := make(chan os.Signal, 1)
 
@@ -85,7 +88,7 @@ func TestSetSessionHandlers(t *testing.T) {
 			t.Logf("Error sending signal: %v", err)
 		}
 
-		if err := portSession.SetSessionHandlers(context.TODO(), mockLog); err != nil {
+		if err := portSession.SetSessionHandlers(context.TODO()); err != nil {
 			t.Logf("Error setting session handlers: %v", err)
 		}
 	}()
@@ -101,15 +104,19 @@ func TestStartSessionTCPLocalPortFromDocument(t *testing.T) {
 		return nil, errors.New("accept failed")
 	}
 
+	sess := *getSessionMock(t)
+
 	portSession := PortSession{
-		Session:        getSessionMock(t),
+		Session:        sess,
 		portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding", LocalPortNumber: "54321"},
 		portSessionType: &BasicPortForwarding{
-			session:        getSessionMock(t),
+			session:        sess,
 			portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding"},
+			logger:         mockLog,
 		},
+		logger: mockLog,
 	}
-	if err := portSession.SetSessionHandlers(context.TODO(), mockLog); err != nil {
+	if err := portSession.SetSessionHandlers(context.TODO()); err != nil {
 		t.Logf("Error setting session handlers: %v", err)
 	}
 
@@ -121,15 +128,18 @@ func TestStartSessionTCPAcceptFailed(t *testing.T) {
 	acceptConnection = func(_ net.Listener) (net.Conn, error) {
 		return nil, connErr
 	}
+	sess := *getSessionMock(t)
 	portSession := PortSession{
-		Session:        getSessionMock(t),
+		Session:        sess,
 		portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding"},
 		portSessionType: &BasicPortForwarding{
-			session:        getSessionMock(t),
+			session:        sess,
 			portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding"},
+			logger:         mockLog,
 		},
+		logger: mockLog,
 	}
-	require.ErrorIs(t, portSession.SetSessionHandlers(context.TODO(), mockLog), connErr)
+	require.ErrorIs(t, portSession.SetSessionHandlers(context.TODO()), connErr)
 }
 
 func TestStartSessionTCPConnectFailed(t *testing.T) {
@@ -137,13 +147,16 @@ func TestStartSessionTCPConnectFailed(t *testing.T) {
 	getNewListener = func(_ string, _ string) (net.Listener, error) {
 		return nil, listenerError
 	}
+	sess := *getSessionMock(t)
 	portSession := PortSession{
-		Session:        getSessionMock(t),
+		Session:        sess,
 		portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding"},
 		portSessionType: &BasicPortForwarding{
-			session:        getSessionMock(t),
+			session:        sess,
 			portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding"},
+			logger:         mockLog,
 		},
+		logger: mockLog,
 	}
-	require.ErrorIs(t, portSession.SetSessionHandlers(context.TODO(), mockLog), listenerError)
+	require.ErrorIs(t, portSession.SetSessionHandlers(context.TODO()), listenerError)
 }

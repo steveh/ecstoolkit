@@ -172,7 +172,7 @@ func (e *Executor) initSession(ctx context.Context, sess *session.Session) error
 		return fmt.Errorf("creating session subtype: %w", err)
 	}
 
-	if err := sessionSubType.SetSessionHandlers(ctx, e.logger); err != nil {
+	if err := sessionSubType.SetSessionHandlers(ctx); err != nil {
 		return fmt.Errorf("ending with error: %w", err)
 	}
 

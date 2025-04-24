@@ -34,6 +34,7 @@ type StandardStreamForwarding struct {
 	outputStream   *os.File
 	portParameters PortParameters
 	session        session.Session
+	logger         log.T
 }
 
 // Ensure StandardStreamForwarding implements IPortSession.
@@ -64,7 +65,7 @@ func (p *StandardStreamForwarding) Stop() error {
 }
 
 // InitializeStreams initializes the streams with its file descriptors.
-func (p *StandardStreamForwarding) InitializeStreams(_ context.Context, _ log.T, _ string) error {
+func (p *StandardStreamForwarding) InitializeStreams(_ context.Context, _ string) error {
 	p.inputStream = os.Stdin
 	p.outputStream = os.Stdout
 
@@ -72,19 +73,19 @@ func (p *StandardStreamForwarding) InitializeStreams(_ context.Context, _ log.T,
 }
 
 // ReadStream reads data from the input stream.
-func (p *StandardStreamForwarding) ReadStream(_ context.Context, log log.T) error {
+func (p *StandardStreamForwarding) ReadStream(_ context.Context) error {
 	msg := make([]byte, config.StreamDataPayloadSize)
 
 	for {
 		numBytes, err := p.inputStream.Read(msg)
 		if err != nil {
-			return p.handleReadError(log, err)
+			return p.handleReadError(err)
 		}
 
-		log.Trace("Received message from stdin", "size", numBytes)
+		p.logger.Trace("Received message from stdin", "size", numBytes)
 
 		if err = p.session.DataChannel.SendInputDataMessage(message.Output, msg[:numBytes]); err != nil {
-			log.Error("sending packet", "error", err)
+			p.logger.Error("sending packet", "error", err)
 
 			return fmt.Errorf("sending input data message: %w", err)
 		}
@@ -104,14 +105,14 @@ func (p *StandardStreamForwarding) WriteStream(outputMessage message.ClientMessa
 }
 
 // handleReadError handles read error.
-func (p *StandardStreamForwarding) handleReadError(log log.T, err error) error {
+func (p *StandardStreamForwarding) handleReadError(err error) error {
 	if errors.Is(err, io.EOF) {
-		log.Debug("Session to instance was closed", "targetID", p.session.TargetID, "port", p.portParameters.PortNumber)
+		p.logger.Debug("Session to instance was closed", "targetID", p.session.TargetID, "port", p.portParameters.PortNumber)
 
 		return nil
 	}
 
-	log.Error("Reading input failed", "error", err)
+	p.logger.Error("Reading input failed", "error", err)
 
 	return fmt.Errorf("reading input: %w", err)
 }

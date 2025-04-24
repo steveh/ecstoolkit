@@ -848,7 +848,7 @@ func (c *DataChannel) processOutputMessageWithHandlers(message message.ClientMes
 	var err error
 
 	for _, handler := range c.outputStreamHandlers {
-		isHandlerReady, err = handler(c.logger, message)
+		isHandlerReady, err = handler(message)
 		// Break the processing of message and return if session specific handler is not ready
 		if err != nil || !isHandlerReady {
 			break

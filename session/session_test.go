@@ -97,9 +97,10 @@ func TestProcessFirstMessageOutputMessageFirst(t *testing.T) {
 
 	session := Session{
 		DataChannel: dataChannel,
+		logger:      logger,
 	}
 
-	_, err = session.ProcessFirstMessage(logger, outputMessage)
+	_, err = session.ProcessFirstMessage(outputMessage)
 	if err != nil {
 		t.Errorf("Failed to process first message: %v", err)
 	}

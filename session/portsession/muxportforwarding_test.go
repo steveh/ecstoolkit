@@ -35,7 +35,7 @@ func TestReadStream(t *testing.T) {
 		}
 	}()
 
-	session := getSessionMock(t)
+	session := *getSessionMock(t)
 
 	portSession := PortSession{
 		Session: session,
@@ -43,7 +43,9 @@ func TestReadStream(t *testing.T) {
 			session:   session,
 			muxClient: &MuxClient{in, nil},
 			mgsConn:   &MgsConn{nil, out},
+			logger:    mockLog,
 		},
+		logger: mockLog,
 	}
 
 	go func() {
@@ -67,7 +69,7 @@ func TestReadStream(t *testing.T) {
 	}
 
 	go func() {
-		if err := portSession.portSessionType.ReadStream(context.TODO(), mockLog); err != nil {
+		if err := portSession.portSessionType.ReadStream(context.TODO()); err != nil {
 			t.Errorf("Failed to read stream: %v", err)
 		}
 	}()
@@ -93,11 +95,14 @@ func TestWriteStream(t *testing.T) {
 		}
 	}()
 
+	sess := *getSessionMock(t)
 	portSession := PortSession{
 		portSessionType: &MuxPortForwarding{
-			session: getSessionMock(t),
+			session: sess,
 			mgsConn: &MgsConn{nil, in},
+			logger:  mockLog,
 		},
+		logger: mockLog,
 	}
 
 	go func() {

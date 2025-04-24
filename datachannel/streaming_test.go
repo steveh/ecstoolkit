@@ -325,7 +325,7 @@ func TestDataChannelIncomingMessageHandlerForExpectedInputStreamDataMessage(t *t
 		return nil
 	}
 
-	var handler OutputStreamDataMessageHandler = func(_ log.T, _ message.ClientMessage) (bool, error) {
+	var handler OutputStreamDataMessageHandler = func(_ message.ClientMessage) (bool, error) {
 		return true, nil
 	}
 
@@ -461,7 +461,7 @@ func TestDataChannelIncomingMessageHandlerForPausePublicationessage(t *testing.T
 		}
 	}
 
-	var handler OutputStreamDataMessageHandler = func(_ log.T, _ message.ClientMessage) (bool, error) {
+	var handler OutputStreamDataMessageHandler = func(_ message.ClientMessage) (bool, error) {
 		return true, nil
 	}
 
@@ -553,7 +553,7 @@ func TestHandleOutputMessageForDefaultTypeWithError(t *testing.T) {
 		uint32(message.Output), payload)
 	rawMessage := []byte("rawMessage")
 
-	var handler OutputStreamDataMessageHandler = func(_ log.T, _ message.ClientMessage) (bool, error) {
+	var handler OutputStreamDataMessageHandler = func(_ message.ClientMessage) (bool, error) {
 		return true, errors.New("OutputStreamDataMessageHandler Error")
 	}
 
@@ -602,7 +602,7 @@ func TestProcessOutputMessageWithHandlers(t *testing.T) {
 	mockChannel := &communicatorMocks.IWebSocketChannel{}
 	dataChannel.wsChannel = mockChannel
 
-	var handler OutputStreamDataMessageHandler = func(_ log.T, _ message.ClientMessage) (bool, error) {
+	var handler OutputStreamDataMessageHandler = func(_ message.ClientMessage) (bool, error) {
 		return true, errors.New("OutputStreamDataMessageHandler Error")
 	}
 

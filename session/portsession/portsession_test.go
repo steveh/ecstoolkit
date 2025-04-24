@@ -44,7 +44,7 @@ func TestInitializePortSession(t *testing.T) {
 	mockWebSocketChannel.On("SetOnMessage", mock.Anything)
 
 	sess := getSessionMock(t)
-	portSession, err := NewPortSession(context.TODO(), mockLog, &sess)
+	portSession, err := NewPortSession(context.TODO(), mockLog, sess)
 	require.NoError(t, err, "Initialize port session")
 
 	mockWebSocketChannel.AssertExpectations(t)
@@ -64,7 +64,7 @@ func TestInitializePortSessionForPortForwardingWithOldAgent(t *testing.T) {
 	mockWebSocketChannel.On("SetOnMessage", mock.Anything)
 
 	sess := getSessionMockWithParams(t, portParameters, "2.2.0.0")
-	portSession, err := NewPortSession(context.TODO(), mockLog, &sess)
+	portSession, err := NewPortSession(context.TODO(), mockLog, sess)
 	require.NoError(t, err, "Initialize port session")
 
 	mockWebSocketChannel.AssertExpectations(t)
@@ -84,7 +84,7 @@ func TestInitializePortSessionForPortForwarding(t *testing.T) {
 	mockWebSocketChannel.On("SetOnMessage", mock.Anything)
 
 	sess := getSessionMockWithParams(t, portParameters, "3.1.0.0")
-	portSession, err := NewPortSession(context.TODO(), mockLog, &sess)
+	portSession, err := NewPortSession(context.TODO(), mockLog, sess)
 	require.NoError(t, err, "Initialize port session")
 
 	mockWebSocketChannel.AssertExpectations(t)
@@ -131,19 +131,22 @@ func TestStartSessionWithClosedWsConn(t *testing.T) {
 		return nil
 	}
 
+	sess := *getSessionMock(t)
 	portSession := PortSession{
-		Session:        getSessionMock(t),
+		Session:        sess,
 		portParameters: PortParameters{PortNumber: "22"},
 		portSessionType: &StandardStreamForwarding{
 			inputStream:  in,
 			outputStream: out,
-			session:      getSessionMock(t),
+			session:      sess,
+			logger:       mockLog,
 		},
+		logger: mockLog,
 	}
 
 	// Start session handlers in a goroutine
 	go func() {
-		if err := portSession.SetSessionHandlers(context.TODO(), mockLog); err != nil {
+		if err := portSession.SetSessionHandlers(context.TODO()); err != nil {
 			errChan <- fmt.Errorf("failed to set session handlers: %w", err)
 
 			return
@@ -192,18 +195,19 @@ func TestProcessStreamMessagePayload(t *testing.T) {
 
 	var payload []byte
 
-	session := getSessionMock(t)
+	session := *getSessionMock(t)
 
 	go func() {
 		portSession := PortSession{
 			Session:         session,
 			portParameters:  PortParameters{PortNumber: "22"},
 			portSessionType: ssf,
+			logger:          mockLog,
 		}
 
 		t.Log("Calling ProcessStreamMessagePayload")
 
-		isReady, err := portSession.ProcessStreamMessagePayload(mockLog, outputMessage)
+		isReady, err := portSession.ProcessStreamMessagePayload(outputMessage)
 		if err != nil {
 			errChan <- fmt.Errorf("failed to process stream message payload: %w", err)
 

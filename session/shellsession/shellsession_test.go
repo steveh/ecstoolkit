@@ -49,7 +49,9 @@ var (
 )
 
 func TestName(t *testing.T) {
-	shellSession := ShellSession{}
+	shellSession := ShellSession{
+		logger: logger,
+	}
 	name := shellSession.Name()
 	assert.Equal(t, "Standard_Stream", name)
 }
@@ -71,7 +73,9 @@ func TestInitialize(t *testing.T) {
 func TestHandleControlSignals(t *testing.T) {
 	session := session.Session{}
 	session.DataChannel = mockDataChannel
-	shellSession := ShellSession{}
+	shellSession := ShellSession{
+		logger: logger,
+	}
 	shellSession.Session = session
 
 	waitCh := make(chan int, 1)
@@ -93,7 +97,7 @@ func TestHandleControlSignals(t *testing.T) {
 		}
 
 		signal.Notify(signalCh, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTSTP)
-		shellSession.handleControlSignals(logger)
+		shellSession.handleControlSignals()
 
 		if err := p.Signal(syscall.SIGINT); err != nil {
 			t.Errorf("Failed to send signal: %v", err)
@@ -153,6 +157,7 @@ func TestTerminalResizeWhenSessionSizeDataIsNotEqualToActualSize(t *testing.T) {
 	shellSession := ShellSession{
 		Session:  session,
 		SizeData: sizeData,
+		logger:   logger,
 	}
 	GetTerminalSizeCall = func(_ int) (int, int, error) {
 		return 123, 123, nil
@@ -176,19 +181,21 @@ func TestTerminalResizeWhenSessionSizeDataIsNotEqualToActualSize(t *testing.T) {
 		return nil
 	}
 
-	go shellSession.handleTerminalResize(logger)
+	go shellSession.handleTerminalResize()
 	wg.Wait()
 	assert.Equal(t, 1, SendMessageCallCount)
 }
 
 func TestProcessStreamMessagePayload(t *testing.T) {
-	shellSession := ShellSession{}
+	shellSession := ShellSession{
+		logger: logger,
+	}
 	shellSession.DisplayMode = sessionutil.NewDisplayMode(logger)
 
 	msg := message.ClientMessage{
 		Payload: []byte("Hello Agent\n"),
 	}
-	isReady, err := shellSession.ProcessStreamMessagePayload(logger, msg)
+	isReady, err := shellSession.ProcessStreamMessagePayload(msg)
 	assert.True(t, isReady)
 	require.NoError(t, err)
 }

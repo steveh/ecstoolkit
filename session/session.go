@@ -51,10 +51,11 @@ type Session struct {
 	ssmClient             *ssm.Client
 	kmsClient             *kms.Client
 	retryParams           retry.RepeatableExponentialRetryer
+	logger                log.T
 }
 
 // NewSession creates a new session instance with the provided parameters.
-func NewSession(ssmClient *ssm.Client, kmsClient *kms.Client, ssmSession *types.Session, region string, targetID string, log log.T) (*Session, error) {
+func NewSession(ssmClient *ssm.Client, kmsClient *kms.Client, ssmSession *types.Session, region string, targetID string, logger log.T) (*Session, error) {
 	endpoint := url.URL{Scheme: "https", Host: fmt.Sprintf("ssm.%s.amazonaws.com", region)}
 
 	clientID, err := uuid.NewRandom()
@@ -65,13 +66,14 @@ func NewSession(ssmClient *ssm.Client, kmsClient *kms.Client, ssmSession *types.
 	session := &Session{
 		SessionID:   *ssmSession.SessionId,
 		TargetID:    targetID,
-		DisplayMode: sessionutil.NewDisplayMode(log),
+		DisplayMode: sessionutil.NewDisplayMode(logger),
 		streamURL:   *ssmSession.StreamUrl,
 		tokenValue:  *ssmSession.TokenValue,
 		endpoint:    endpoint.String(),
 		clientID:    clientID.String(),
 		ssmClient:   ssmClient,
 		kmsClient:   kmsClient,
+		logger:      logger,
 	}
 
 	return session, nil
@@ -140,16 +142,16 @@ func (s *Session) OpenDataChannel(ctx context.Context, log log.T) error {
 // ProcessFirstMessage only processes messages with PayloadType Output to determine the
 // sessionType of the session to be launched. This is a fallback for agent versions that do not support handshake, they
 // immediately start sending shell output.
-func (s *Session) ProcessFirstMessage(log log.T, outputMessage message.ClientMessage) (bool, error) {
+func (s *Session) ProcessFirstMessage(outputMessage message.ClientMessage) (bool, error) {
 	// Immediately deregister self so that this handler is only called once, for the first message
 	s.DataChannel.DeregisterOutputStreamHandler(s.ProcessFirstMessage)
 	// Only set session type if the session type has not already been set. Usually session type will be set
 	// by handshake protocol which would be the first message but older agents may not perform handshake
 	if s.SessionType == "" {
 		if outputMessage.PayloadType == uint32(message.Output) {
-			log.Warn("Setting session type to shell based on PayloadType!")
+			s.logger.Warn("Setting session type to shell based on PayloadType!")
 			s.DataChannel.SetSessionType(config.ShellPluginName)
-			s.DisplayMode.DisplayMessage(log, outputMessage)
+			s.DisplayMode.DisplayMessage(s.logger, outputMessage)
 		}
 	}
 

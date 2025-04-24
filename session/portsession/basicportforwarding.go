@@ -40,6 +40,7 @@ type BasicPortForwarding struct {
 	sessionID      string
 	portParameters PortParameters
 	session        session.Session
+	logger         log.T
 }
 
 // Ensure BasicPortForwarding implements IPortSession.
@@ -70,10 +71,10 @@ func (p *BasicPortForwarding) Stop() error {
 }
 
 // InitializeStreams establishes connection and initializes the stream.
-func (p *BasicPortForwarding) InitializeStreams(ctx context.Context, log log.T, _ string) error {
-	p.handleControlSignals(ctx, log)
+func (p *BasicPortForwarding) InitializeStreams(ctx context.Context, _ string) error {
+	p.handleControlSignals(ctx)
 
-	if err := p.startLocalConn(log); err != nil {
+	if err := p.startLocalConn(); err != nil {
 		return err
 	}
 
@@ -81,22 +82,22 @@ func (p *BasicPortForwarding) InitializeStreams(ctx context.Context, log log.T, 
 }
 
 // ReadStream reads data from the stream.
-func (p *BasicPortForwarding) ReadStream(_ context.Context, log log.T) error {
+func (p *BasicPortForwarding) ReadStream(_ context.Context) error {
 	msg := make([]byte, config.StreamDataPayloadSize)
 
 	for {
 		numBytes, err := (*p.stream).Read(msg)
 		if err != nil {
-			log.Debug("Reading from port failed", "port", p.portParameters.PortNumber, "error", err)
+			p.logger.Debug("Reading from port failed", "port", p.portParameters.PortNumber, "error", err)
 
 			// Send DisconnectToPort flag to agent when client tcp connection drops to ensure agent closes tcp connection too with server port
 			if err = p.session.DataChannel.SendFlag(message.DisconnectToPort); err != nil {
-				log.Error("sending packet", "error", err)
+				p.logger.Error("sending packet", "error", err)
 
 				return fmt.Errorf("sending disconnect flag: %w", err)
 			}
 
-			if err = p.reconnect(log); err != nil {
+			if err = p.reconnect(); err != nil {
 				return fmt.Errorf("reconnecting: %w", err)
 			}
 
@@ -104,10 +105,10 @@ func (p *BasicPortForwarding) ReadStream(_ context.Context, log log.T) error {
 			continue
 		}
 
-		log.Trace("Received message from stdin", "size", numBytes)
+		p.logger.Trace("Received message from stdin", "size", numBytes)
 
 		if err = p.session.DataChannel.SendInputDataMessage(message.Output, msg[:numBytes]); err != nil {
-			log.Error("sending packet", "error", err)
+			p.logger.Error("sending packet", "error", err)
 
 			return fmt.Errorf("sending input data message: %w", err)
 		}
@@ -127,28 +128,28 @@ func (p *BasicPortForwarding) WriteStream(outputMessage message.ClientMessage) e
 }
 
 // startLocalConn establishes a new local connection to forward remote server packets to.
-func (p *BasicPortForwarding) startLocalConn(log log.T) error {
+func (p *BasicPortForwarding) startLocalConn() error {
 	// When localPortNumber is not specified, set port number to 0 to let net.conn choose an open port at random
 	localPortNumber := p.portParameters.LocalPortNumber
 	if p.portParameters.LocalPortNumber == "" {
 		localPortNumber = "0"
 	}
 
-	listener, err := p.startLocalListener(log, localPortNumber)
+	listener, err := p.startLocalListener(localPortNumber)
 	if err != nil {
-		log.Error("Unable to open tcp connection to port", "error", err)
+		p.logger.Error("Unable to open tcp connection to port", "error", err)
 
 		return fmt.Errorf("starting local listener: %w", err)
 	}
 
 	tcpConn, err := acceptConnection(listener)
 	if err != nil {
-		log.Error("accepting connection", "error", err)
+		p.logger.Error("accepting connection", "error", err)
 
 		return fmt.Errorf("accepting connection: %w", err)
 	}
 
-	log.Debug("Connection accepted", "sessionID", p.sessionID)
+	p.logger.Debug("Connection accepted", "sessionID", p.sessionID)
 
 	p.listener = &listener
 	p.stream = &tcpConn
@@ -157,7 +158,7 @@ func (p *BasicPortForwarding) startLocalConn(log log.T) error {
 }
 
 // startLocalListener starts a local listener to given address.
-func (p *BasicPortForwarding) startLocalListener(log log.T, portNumber string) (net.Listener, error) {
+func (p *BasicPortForwarding) startLocalListener(portNumber string) (net.Listener, error) {
 	var displayMessage string
 
 	var listener net.Listener
@@ -187,43 +188,43 @@ func (p *BasicPortForwarding) startLocalListener(log log.T, portNumber string) (
 		displayMessage = fmt.Sprintf("Port %s opened for sessionID %s.", p.portParameters.LocalPortNumber, p.sessionID)
 	}
 
-	log.Debug(displayMessage)
+	p.logger.Debug(displayMessage)
 
 	return listener, nil
 }
 
 // handleControlSignals handles terminate signals.
-func (p *BasicPortForwarding) handleControlSignals(ctx context.Context, log log.T) {
+func (p *BasicPortForwarding) handleControlSignals(ctx context.Context) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, sessionutil.ControlSignals...)
 
 	go func() {
 		<-c
-		log.Debug("Terminate signal received, exiting.")
+		p.logger.Debug("Terminate signal received, exiting.")
 
-		if version.DoesAgentSupportTerminateSessionFlag(log, p.session.DataChannel.GetAgentVersion()) {
+		if version.DoesAgentSupportTerminateSessionFlag(p.logger, p.session.DataChannel.GetAgentVersion()) {
 			if err := p.session.DataChannel.SendFlag(message.TerminateSession); err != nil {
-				log.Error("sending TerminateSession flag", "error", err)
+				p.logger.Error("sending TerminateSession flag", "error", err)
 			}
 
-			log.Debug("Exiting session", "sessionID", p.sessionID)
+			p.logger.Debug("Exiting session", "sessionID", p.sessionID)
 
 			if err := p.Stop(); err != nil {
-				log.Error("stopping session", "error", err)
+				p.logger.Error("stopping session", "error", err)
 			}
 		} else {
-			if err := p.session.TerminateSession(ctx, log); err != nil {
-				log.Error("terminating session", "error", err)
+			if err := p.session.TerminateSession(ctx, p.logger); err != nil {
+				p.logger.Error("terminating session", "error", err)
 			}
 		}
 	}()
 }
 
 // reconnect closes existing connection, listens to new connection and accept it.
-func (p *BasicPortForwarding) reconnect(log log.T) error {
+func (p *BasicPortForwarding) reconnect() error {
 	// close existing connection as it is in a state from which data cannot be read
 	if err := (*p.stream).Close(); err != nil {
-		log.Error("closing existing stream", "error", err)
+		p.logger.Error("closing existing stream", "error", err)
 		// Continue even if close fails since we want to establish a new connection
 	}
 

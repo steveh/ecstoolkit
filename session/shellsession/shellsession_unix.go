@@ -26,7 +26,6 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
 )
 
@@ -98,7 +97,7 @@ func (s *ShellSession) enableEchoAndInputBuffering() error {
 }
 
 // handleKeyboardInput handles input entered by customer on terminal.
-func (s *ShellSession) handleKeyboardInput(ctx context.Context, log log.T) error {
+func (s *ShellSession) handleKeyboardInput(ctx context.Context) error {
 	ctx, cancelFunc := context.WithCancel(ctx)
 	s.shutdown = cancelFunc
 
@@ -109,7 +108,7 @@ func (s *ShellSession) handleKeyboardInput(ctx context.Context, log log.T) error
 
 	defer func() {
 		if enableErr := s.enableEchoAndInputBuffering(); enableErr != nil {
-			log.Error("Failed to enable echo and input buffering", "error", enableErr)
+			s.logger.Error("Failed to enable echo and input buffering", "error", enableErr)
 		}
 	}()
 
@@ -123,13 +122,13 @@ func (s *ShellSession) handleKeyboardInput(ctx context.Context, log log.T) error
 
 		for {
 			if stdinBytesLen, err = reader.Read(stdinBytes); err != nil {
-				log.Error("Unable to read from Stdin", "error", err)
+				s.logger.Error("Unable to read from Stdin", "error", err)
 
 				break
 			}
 
 			if err = s.DataChannel.SendInputDataMessage(message.Output, stdinBytes[:stdinBytesLen]); err != nil {
-				log.Error("sending UTF8 char", "error", err)
+				s.logger.Error("sending UTF8 char", "error", err)
 
 				break
 			}

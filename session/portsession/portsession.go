@@ -36,6 +36,7 @@ type PortSession struct {
 	session.Session
 	portParameters  PortParameters
 	portSessionType IPortSession
+	logger          log.T
 }
 
 var _ session.ISessionPlugin = (*PortSession)(nil)
@@ -43,8 +44,8 @@ var _ session.ISessionPlugin = (*PortSession)(nil)
 // IPortSession defines the interface for port session operations.
 type IPortSession interface {
 	IsStreamNotSet() (status bool)
-	InitializeStreams(ctx context.Context, log log.T, agentVersion string) (err error)
-	ReadStream(ctx context.Context, log log.T) (err error)
+	InitializeStreams(ctx context.Context, agentVersion string) (err error)
+	ReadStream(ctx context.Context) (err error)
 	WriteStream(outputMessage message.ClientMessage) (err error)
 	Stop() error
 }
@@ -62,6 +63,7 @@ type PortParameters struct {
 func NewPortSession(ctx context.Context, logger log.T, sessionVar *session.Session) (*PortSession, error) {
 	s := &PortSession{
 		Session: *sessionVar,
+		logger:  logger,
 	}
 
 	if err := jsonutil.Remarshal(s.SessionProperties, &s.portParameters); err != nil {
@@ -132,13 +134,13 @@ func (s *PortSession) Stop() error {
 }
 
 // SetSessionHandlers redirects inputStream/outputStream data to datachannel.
-func (s *PortSession) SetSessionHandlers(ctx context.Context, log log.T) error {
+func (s *PortSession) SetSessionHandlers(ctx context.Context) error {
 	var err error
-	if err = s.portSessionType.InitializeStreams(ctx, log, s.DataChannel.GetAgentVersion()); err != nil {
+	if err = s.portSessionType.InitializeStreams(ctx, s.DataChannel.GetAgentVersion()); err != nil {
 		return fmt.Errorf("initializing streams: %w", err)
 	}
 
-	if err = s.portSessionType.ReadStream(ctx, log); err != nil {
+	if err = s.portSessionType.ReadStream(ctx); err != nil {
 		return fmt.Errorf("reading stream: %w", err)
 	}
 
@@ -146,14 +148,14 @@ func (s *PortSession) SetSessionHandlers(ctx context.Context, log log.T) error {
 }
 
 // ProcessStreamMessagePayload writes messages received on datachannel to stdout.
-func (s *PortSession) ProcessStreamMessagePayload(log log.T, outputMessage message.ClientMessage) (bool, error) {
+func (s *PortSession) ProcessStreamMessagePayload(outputMessage message.ClientMessage) (bool, error) {
 	if s.portSessionType.IsStreamNotSet() {
-		log.Debug("Waiting for streams to be established before processing incoming messages")
+		s.logger.Debug("Waiting for streams to be established before processing incoming messages")
 
 		return false, nil
 	}
 
-	log.Trace("Received payload from datachannel", "size", outputMessage.PayloadLength)
+	s.logger.Trace("Received payload from datachannel", "size", outputMessage.PayloadLength)
 
 	if err := s.portSessionType.WriteStream(outputMessage); err != nil {
 		return true, fmt.Errorf("writing stream: %w", err)
