@@ -39,18 +39,18 @@ import (
 type Session struct {
 	DataChannel           datachannel.IDataChannel
 	SessionID             string
-	StreamURL             string
-	TokenValue            string
-	IsAwsCliUpgradeNeeded bool
-	Endpoint              string
-	ClientID              string
 	TargetID              string
-	SSMClient             *ssm.Client
-	KMSClient             *kms.Client
-	retryParams           retry.RepeatableExponentialRetryer
 	SessionType           string
 	SessionProperties     interface{}
 	DisplayMode           sessionutil.DisplayMode
+	streamURL             string
+	tokenValue            string
+	isAwsCliUpgradeNeeded bool
+	endpoint              string
+	clientID              string
+	ssmClient             *ssm.Client
+	kmsClient             *kms.Client
+	retryParams           retry.RepeatableExponentialRetryer
 }
 
 // NewSession creates a new session instance with the provided parameters.
@@ -64,14 +64,14 @@ func NewSession(ssmClient *ssm.Client, kmsClient *kms.Client, ssmSession *types.
 
 	session := &Session{
 		SessionID:   *ssmSession.SessionId,
-		StreamURL:   *ssmSession.StreamUrl,
-		TokenValue:  *ssmSession.TokenValue,
-		Endpoint:    endpoint.String(),
-		ClientID:    clientID.String(),
 		TargetID:    targetID,
 		DisplayMode: sessionutil.NewDisplayMode(log),
-		SSMClient:   ssmClient,
-		KMSClient:   kmsClient,
+		streamURL:   *ssmSession.StreamUrl,
+		tokenValue:  *ssmSession.TokenValue,
+		endpoint:    endpoint.String(),
+		clientID:    clientID.String(),
+		ssmClient:   ssmClient,
+		kmsClient:   kmsClient,
 	}
 
 	return session, nil
@@ -86,17 +86,17 @@ func (s *Session) OpenDataChannel(ctx context.Context, log log.T) error {
 		MaxAttempts:         config.DataChannelNumMaxRetries,
 	}
 
-	wsChannel, err := communicator.NewWebSocketChannel(s.StreamURL, s.TokenValue)
+	wsChannel, err := communicator.NewWebSocketChannel(s.streamURL, s.tokenValue)
 	if err != nil {
 		return fmt.Errorf("creating websocket channel: %w", err)
 	}
 
 	dataChannel, err := datachannel.NewDataChannel(
-		s.KMSClient,
-		s.ClientID,
+		s.kmsClient,
+		s.clientID,
 		s.SessionID,
 		s.TargetID,
-		s.IsAwsCliUpgradeNeeded,
+		s.isAwsCliUpgradeNeeded,
 		log,
 	)
 	if err != nil {
@@ -127,7 +127,7 @@ func (s *Session) OpenDataChannel(ctx context.Context, log log.T) error {
 
 	s.DataChannel.SetOnError(
 		func(wsErr error) {
-			log.Error("Trying to reconnect session", "url", s.StreamURL, "sequenceNumber", s.DataChannel.GetStreamDataSequenceNumber(), "error", wsErr)
+			log.Error("Trying to reconnect session", "url", s.streamURL, "sequenceNumber", s.DataChannel.GetStreamDataSequenceNumber(), "error", wsErr)
 
 			s.retryParams.CallableFunc = func() error { return s.ResumeSessionHandler(ctx, log) }
 			if err := s.retryParams.Call(); err != nil {
@@ -175,7 +175,7 @@ func (s *Session) GetResumeSessionParams(ctx context.Context, log log.T) (string
 
 	log.Debug("Resume Session input parameters", "input", resumeSessionInput)
 
-	resumeSessionOutput, err := s.SSMClient.ResumeSession(ctx, &resumeSessionInput)
+	resumeSessionOutput, err := s.ssmClient.ResumeSession(ctx, &resumeSessionInput)
 	if err != nil {
 		log.Error("Resume Session failed", "error", err)
 
@@ -193,18 +193,18 @@ func (s *Session) GetResumeSessionParams(ctx context.Context, log log.T) (string
 func (s *Session) ResumeSessionHandler(ctx context.Context, log log.T) error {
 	var err error
 
-	s.TokenValue, err = s.GetResumeSessionParams(ctx, log)
+	s.tokenValue, err = s.GetResumeSessionParams(ctx, log)
 	if err != nil {
 		log.Error("getting token", "error", err)
 
 		return fmt.Errorf("resume session: %w", err)
-	} else if s.TokenValue == "" {
+	} else if s.tokenValue == "" {
 		log.Debug("Session timed out", "sessionID", s.SessionID)
 
 		return errors.New("session timed out")
 	}
 
-	s.DataChannel.SetChannelToken(s.TokenValue)
+	s.DataChannel.SetChannelToken(s.tokenValue)
 
 	err = s.DataChannel.Reconnect(log)
 	if err != nil {
@@ -222,7 +222,7 @@ func (s *Session) TerminateSession(ctx context.Context, log log.T) error {
 
 	log.Debug("Terminate Session input parameters", "input", terminateSessionInput)
 
-	if _, err := s.SSMClient.TerminateSession(ctx, &terminateSessionInput); err != nil {
+	if _, err := s.ssmClient.TerminateSession(ctx, &terminateSessionInput); err != nil {
 		log.Error("Terminate Session failed", "error", err)
 
 		return fmt.Errorf("terminate session: %w", err)
