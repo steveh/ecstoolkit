@@ -67,7 +67,7 @@ func TestInitialize(t *testing.T) {
 	shellSession, err := NewShellSession(context.TODO(), logger, session)
 	require.NoError(t, err, "Initialize port session")
 
-	assert.Equal(t, shellSession.Session, *session)
+	assert.Equal(t, shellSession.session, session)
 }
 
 func TestHandleControlSignals(t *testing.T) {
@@ -76,7 +76,7 @@ func TestHandleControlSignals(t *testing.T) {
 	shellSession := ShellSession{
 		logger: logger,
 	}
-	shellSession.Session = session
+	shellSession.session = &session
 
 	waitCh := make(chan int, 1)
 	counter := 0
@@ -155,7 +155,7 @@ func TestTerminalResizeWhenSessionSizeDataIsNotEqualToActualSize(t *testing.T) {
 	}
 
 	shellSession := ShellSession{
-		Session:  session,
+		session:  &session,
 		SizeData: sizeData,
 		logger:   logger,
 	}
@@ -187,10 +187,14 @@ func TestTerminalResizeWhenSessionSizeDataIsNotEqualToActualSize(t *testing.T) {
 }
 
 func TestProcessStreamMessagePayload(t *testing.T) {
-	shellSession := ShellSession{
-		logger: logger,
+	sess := session.Session{
+		DisplayMode: sessionutil.NewDisplayMode(logger),
 	}
-	shellSession.DisplayMode = sessionutil.NewDisplayMode(logger)
+
+	shellSession := ShellSession{
+		session: &sess,
+		logger:  logger,
+	}
 
 	msg := message.ClientMessage{
 		Payload: []byte("Hello Agent\n"),

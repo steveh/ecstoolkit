@@ -256,3 +256,37 @@ func (s *Session) SendInputDataMessage(payloadType message.PayloadType, inputDat
 
 	return nil
 }
+
+// Close closes the data channel.
+func (s *Session) Close() error {
+	if err := s.DataChannel.Close(); err != nil {
+		return fmt.Errorf("closing data channel: %w", err)
+	}
+
+	return nil
+}
+
+// DisplayMessage displays a message to the user.
+func (s *Session) DisplayMessage(message message.ClientMessage) {
+	s.DisplayMode.DisplayMessage(s.logger, message)
+}
+
+// GetSessionID retrieves the session ID from the session.
+func (s *Session) GetSessionID() string {
+	return s.SessionID
+}
+
+// GetSessionProperties retrieves the session properties from the session.
+func (s *Session) GetSessionProperties() any {
+	return s.SessionProperties
+}
+
+// RegisterOutputMessageHandler registers a handler for output messages.
+func (s *Session) RegisterOutputMessageHandler(ctx context.Context, stopHandler datachannel.Stop, onMessageHandler func(input []byte)) {
+	s.DataChannel.RegisterOutputMessageHandler(ctx, stopHandler, onMessageHandler)
+}
+
+// RegisterOutputStreamHandler registers a handler for output stream messages.
+func (s *Session) RegisterOutputStreamHandler(handler datachannel.OutputStreamDataMessageHandler, isSessionSpecificHandler bool) {
+	s.DataChannel.RegisterOutputStreamHandler(handler, isSessionSpecificHandler)
+}

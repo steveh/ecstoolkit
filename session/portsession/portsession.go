@@ -33,7 +33,7 @@ const (
 
 // PortSession represents a session for port forwarding.
 type PortSession struct {
-	session.Session
+	session         session.ISessionTypeSupport
 	portParameters  PortParameters
 	portSessionType IPortSession
 	logger          log.T
@@ -60,40 +60,40 @@ type PortParameters struct {
 }
 
 // NewPortSession initializes a new port session.
-func NewPortSession(ctx context.Context, logger log.T, sessionVar *session.Session) (*PortSession, error) {
+func NewPortSession(ctx context.Context, logger log.T, sess session.ISessionSupport) (*PortSession, error) {
 	s := &PortSession{
-		Session: *sessionVar,
+		session: sess,
 		logger:  logger,
 	}
 
-	if err := jsonutil.Remarshal(s.SessionProperties, &s.portParameters); err != nil {
+	if err := jsonutil.Remarshal(sess.GetSessionProperties(), &s.portParameters); err != nil {
 		return nil, fmt.Errorf("remarshalling session properties: %w", err)
 	}
 
 	if s.portParameters.Type == LocalPortForwardingType {
-		if version.DoesAgentSupportTCPMultiplexing(logger, s.DataChannel.GetAgentVersion()) {
+		if version.DoesAgentSupportTCPMultiplexing(logger, sess.GetAgentVersion()) {
 			s.portSessionType = &MuxPortForwarding{
-				sessionID:      s.SessionID,
+				sessionID:      sess.GetSessionID(),
 				portParameters: s.portParameters,
-				session:        &s.Session,
+				session:        sess,
 			}
 		} else {
 			s.portSessionType = &BasicPortForwarding{
-				sessionID:      s.SessionID,
+				sessionID:      sess.GetSessionID(),
 				portParameters: s.portParameters,
-				session:        &s.Session,
+				session:        sess,
 			}
 		}
 	} else {
 		s.portSessionType = &StandardStreamForwarding{
 			portParameters: s.portParameters,
-			session:        &s.Session,
+			session:        sess,
 		}
 	}
 
-	s.DataChannel.RegisterOutputStreamHandler(s.ProcessStreamMessagePayload, true)
+	sess.RegisterOutputStreamHandler(s.ProcessStreamMessagePayload, true)
 
-	s.DataChannel.RegisterOutputMessageHandler(ctx, s.Stop, func(input []byte) {
+	sess.RegisterOutputMessageHandler(ctx, s.Stop, func(input []byte) {
 		if !s.portSessionType.IsStreamNotSet() {
 			return
 		}
@@ -114,7 +114,7 @@ func NewPortSession(ctx context.Context, logger log.T, sessionVar *session.Sessi
 		logger.Warn("Received message while establishing connection", "messageType", outputMessage.MessageType)
 	})
 
-	logger.Debug("Connected to instance", "targetId", sessionVar.TargetID, "port", s.portParameters.PortNumber)
+	logger.Debug("Connected to instance", "targetId", sess.GetTargetID(), "port", s.portParameters.PortNumber)
 
 	return s, nil
 }
@@ -136,7 +136,7 @@ func (s *PortSession) Stop() error {
 // SetSessionHandlers redirects inputStream/outputStream data to datachannel.
 func (s *PortSession) SetSessionHandlers(ctx context.Context) error {
 	var err error
-	if err = s.portSessionType.InitializeStreams(ctx, s.DataChannel.GetAgentVersion()); err != nil {
+	if err = s.portSessionType.InitializeStreams(ctx, s.session.GetAgentVersion()); err != nil {
 		return fmt.Errorf("initializing streams: %w", err)
 	}
 

@@ -57,7 +57,7 @@ func TestSetSessionHandlers(t *testing.T) {
 	mockSession := *getSessionMock(t)
 
 	portSession := PortSession{
-		Session:        mockSession,
+		session:        &mockSession,
 		portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding"},
 		portSessionType: &BasicPortForwarding{
 			session:        &mockSession,
@@ -107,7 +107,7 @@ func TestStartSessionTCPLocalPortFromDocument(t *testing.T) {
 	sess := *getSessionMock(t)
 
 	portSession := PortSession{
-		Session:        sess,
+		session:        &sess,
 		portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding", LocalPortNumber: "54321"},
 		portSessionType: &BasicPortForwarding{
 			session:        &sess,
@@ -130,7 +130,7 @@ func TestStartSessionTCPAcceptFailed(t *testing.T) {
 	}
 	sess := *getSessionMock(t)
 	portSession := PortSession{
-		Session:        sess,
+		session:        &sess,
 		portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding"},
 		portSessionType: &BasicPortForwarding{
 			session:        &sess,
@@ -149,7 +149,7 @@ func TestStartSessionTCPConnectFailed(t *testing.T) {
 	}
 	sess := *getSessionMock(t)
 	portSession := PortSession{
-		Session:        sess,
+		session:        &sess,
 		portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding"},
 		portSessionType: &BasicPortForwarding{
 			session:        &sess,

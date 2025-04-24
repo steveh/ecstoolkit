@@ -38,7 +38,7 @@ func TestReadStream(t *testing.T) {
 	session := *getSessionMock(t)
 
 	portSession := PortSession{
-		Session: session,
+		session: &session,
 		portSessionType: &MuxPortForwarding{
 			session:   &session,
 			muxClient: &MuxClient{in, nil},
