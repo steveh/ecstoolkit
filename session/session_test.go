@@ -16,14 +16,15 @@ package session
 
 import (
 	"context"
-	"fmt"
-	"sync"
+	"errors"
 	"testing"
-	"time"
 
 	wsChannelMock "github.com/steveh/ecstoolkit/communicator/mocks"
+	"github.com/steveh/ecstoolkit/config"
+	"github.com/steveh/ecstoolkit/datachannel"
 	dataChannelMock "github.com/steveh/ecstoolkit/datachannel/mocks"
 	"github.com/steveh/ecstoolkit/log"
+	"github.com/steveh/ecstoolkit/message"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -35,71 +36,11 @@ var (
 	mockWsChannel   = &wsChannelMock.IWebSocketChannel{}
 )
 
-func TestExecute(t *testing.T) {
-	sessionMock := &Session{}
-	sessionMock.DataChannel = mockDataChannel
-
-	SetupMockActions()
-	mockDataChannel.On("Open", mock.Anything).Return(nil)
-
-	isSessionTypeSetMock := make(chan bool, 1)
-	isSessionTypeSetMock <- true
-	mockDataChannel.On("IsSessionTypeSet").Return(isSessionTypeSetMock)
-	mockDataChannel.On("GetSessionType").Return("Standard_Stream")
-	mockDataChannel.On("GetSessionProperties").Return("SessionProperties")
-
-	isStreamMessageResendTimeout := make(chan bool, 1)
-	mockDataChannel.On("IsStreamMessageResendTimeout").Return(isStreamMessageResendTimeout)
-
-	setSessionHandlersWithSessionType = func(_ context.Context, session *Session, _ log.T) error {
-		return fmt.Errorf("start session error for %s", session.SessionType)
-	}
-
-	err := sessionMock.Execute(context.TODO(), logger)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "start session error for Standard_Stream")
-}
-
-func TestExecuteAndStreamMessageResendTimesOut(t *testing.T) {
-	sessionMock := &Session{}
-	sessionMock.DataChannel = mockDataChannel
-
-	SetupMockActions()
-	mockDataChannel.On("Open", mock.Anything).Return(nil)
-
-	isStreamMessageResendTimeout := make(chan bool, 1)
-	mockDataChannel.On("IsStreamMessageResendTimeout").Return(isStreamMessageResendTimeout)
-
-	var wg sync.WaitGroup
-
-	wg.Add(1)
-
-	handleStreamMessageResendTimeout = func(_ context.Context, _ *Session, _ log.T) {
-		time.Sleep(10 * time.Millisecond)
-		isStreamMessageResendTimeout <- true
-
-		wg.Done()
-	}
-
-	isSessionTypeSetMock := make(chan bool, 1)
-	isSessionTypeSetMock <- true
-	mockDataChannel.On("IsSessionTypeSet").Return(isSessionTypeSetMock)
-	mockDataChannel.On("GetSessionType").Return("Standard_Stream")
-	mockDataChannel.On("GetSessionProperties").Return("SessionProperties")
-
-	setSessionHandlersWithSessionType = func(_ context.Context, _ *Session, _ log.T) error {
-		return nil
-	}
-
-	var err error
-	go func() {
-		err = sessionMock.Execute(context.TODO(), logger)
-
-		time.Sleep(200 * time.Millisecond)
-	}()
-	wg.Wait()
-	require.NoError(t, err)
-}
+var (
+	clientID   = "clientId_abc"
+	sessionID  = "sessionId_abc"
+	instanceID = "i-123456"
+)
 
 func SetupMockActions() {
 	mockDataChannel.On("Initialize", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return()
@@ -110,4 +51,57 @@ func SetupMockActions() {
 
 	mockWsChannel.On("SetOnMessage", mock.Anything)
 	mockWsChannel.On("SetOnError", mock.Anything)
+}
+
+func TestOpenDataChannel(t *testing.T) {
+	mockDataChannel = &dataChannelMock.IDataChannel{}
+	mockWsChannel = &wsChannelMock.IWebSocketChannel{}
+
+	sessionMock := &Session{}
+	sessionMock.DataChannel = mockDataChannel
+
+	SetupMockActions()
+	mockDataChannel.On("Open", mock.Anything).Return(nil)
+
+	err := sessionMock.OpenDataChannel(context.TODO(), logger)
+	require.NoError(t, err)
+}
+
+func TestOpenDataChannelWithError(t *testing.T) {
+	mockDataChannel = &dataChannelMock.IDataChannel{}
+	mockWsChannel = &wsChannelMock.IWebSocketChannel{}
+
+	sessionMock := &Session{}
+	sessionMock.DataChannel = mockDataChannel
+
+	SetupMockActions()
+
+	// First reconnection failed when open datachannel, success after retry
+	mockDataChannel.On("Open", mock.Anything).Return(errors.New("error"))
+	mockDataChannel.On("Reconnect", mock.Anything).Return(errors.New("error")).Once()
+	mockDataChannel.On("Reconnect", mock.Anything).Return(nil).Once()
+
+	err := sessionMock.OpenDataChannel(context.TODO(), logger)
+	require.NoError(t, err)
+}
+
+func TestProcessFirstMessageOutputMessageFirst(t *testing.T) {
+	outputMessage := message.ClientMessage{
+		PayloadType: uint32(message.Output),
+		Payload:     []byte("testing"),
+	}
+
+	dataChannel := &datachannel.DataChannel{}
+	dataChannel.Initialize(logger, clientID, sessionID, instanceID, false)
+	session := Session{
+		DataChannel: dataChannel,
+	}
+
+	_, err := session.ProcessFirstMessage(logger, outputMessage)
+	if err != nil {
+		t.Errorf("Failed to process first message: %v", err)
+	}
+
+	assert.Equal(t, config.ShellPluginName, session.DataChannel.GetSessionType())
+	assert.True(t, <-session.DataChannel.IsSessionTypeSet())
 }

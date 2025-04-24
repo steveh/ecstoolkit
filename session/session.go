@@ -17,9 +17,12 @@ package session
 import (
 	"context"
 	"errors"
-	"time"
+	"fmt"
+	"math/rand"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	"github.com/steveh/ecstoolkit/communicator"
 	"github.com/steveh/ecstoolkit/config"
 	"github.com/steveh/ecstoolkit/datachannel"
 	"github.com/steveh/ecstoolkit/log"
@@ -27,38 +30,6 @@ import (
 	"github.com/steveh/ecstoolkit/retry"
 	"github.com/steveh/ecstoolkit/session/sessionutil"
 )
-
-// SessionRegistry stores the mapping of session types to their implementations.
-var SessionRegistry = map[string]ISessionPlugin{}
-
-// ISessionPlugin defines the interface for session type implementations.
-type ISessionPlugin interface {
-	SetSessionHandlers(ctx context.Context, log log.T) error
-	ProcessStreamMessagePayload(log log.T, streamDataMessage message.ClientMessage) (isHandlerReady bool, err error)
-	Initialize(ctx context.Context, log log.T, sessionVar *Session)
-	Stop(log log.T) error
-	Name() string
-}
-
-// ISession defines the interface for session operations.
-type ISession interface {
-	Execute(log log.T) error
-	OpenDataChannel(log log.T) error
-	ProcessFirstMessage(log log.T, outputMessage message.ClientMessage) (isHandlerReady bool, err error)
-	Stop(log log.T) error
-	GetResumeSessionParams(log log.T) (string, error)
-	ResumeSessionHandler(log log.T) error
-	TerminateSession(log log.T) error
-}
-
-func init() {
-	SessionRegistry = make(map[string]ISessionPlugin)
-}
-
-// Register adds a session plugin to the registry.
-func Register(session ISessionPlugin) {
-	SessionRegistry[session.Name()] = session
-}
 
 // Session represents an active session with its configuration and state.
 type Session struct {
@@ -77,63 +48,142 @@ type Session struct {
 	DisplayMode           sessionutil.DisplayMode
 }
 
-// setSessionHandlersWithSessionType set session handlers based on session subtype.
-var setSessionHandlersWithSessionType = func(ctx context.Context, session *Session, log log.T) error {
-	// SessionType is set inside DataChannel
-	sessionSubType := SessionRegistry[session.SessionType]
-	sessionSubType.Initialize(ctx, log, session)
+// OpenDataChannel initializes datachannel.
+func (s *Session) OpenDataChannel(ctx context.Context, log log.T) error {
+	s.retryParams = retry.RepeatableExponentialRetryer{
+		GeometricRatio:      config.RetryBase,
+		InitialDelayInMilli: rand.Intn(config.DataChannelRetryInitialDelayMillis) + config.DataChannelRetryInitialDelayMillis, //nolint:gosec
+		MaxDelayInMilli:     config.DataChannelRetryMaxIntervalMillis,
+		MaxAttempts:         config.DataChannelNumMaxRetries,
+	}
 
-	return sessionSubType.SetSessionHandlers(ctx, log)
-}
+	s.DataChannel.Initialize(log, s.ClientID, s.SessionID, s.TargetID, s.IsAwsCliUpgradeNeeded)
 
-// Set up a scheduler to listen on stream data resend timeout event.
-var handleStreamMessageResendTimeout = func(ctx context.Context, session *Session, log log.T) {
-	log.Debug("Setting up scheduler to listen on IsStreamMessageResendTimeout event.")
-	go func() {
-		for {
-			// Repeat this loop for every 200ms
-			time.Sleep(config.ResendSleepInterval)
-			if <-session.DataChannel.IsStreamMessageResendTimeout() {
-				log.Error("Stream data timeout", "sessionID", session.SessionID)
-				if err := session.TerminateSession(ctx, log); err != nil {
-					log.Error("Unable to terminate session upon stream data timeout", "error", err)
-				}
+	wsChannel, err := communicator.NewWebSocketChannel(s.StreamURL, s.TokenValue)
+	if err != nil {
+		return fmt.Errorf("creating websocket channel: %w", err)
+	}
 
-				return
+	s.DataChannel.SetWebSocketChannel(wsChannel)
+
+	s.DataChannel.GetWsChannel().SetOnMessage(
+		func(input []byte) {
+			if err := s.DataChannel.OutputMessageHandler(ctx, log, s.Stop, s.SessionID, input); err != nil {
+				log.Error("Failed to handle output message", "error", err)
 			}
+		})
+	s.DataChannel.RegisterOutputStreamHandler(s.ProcessFirstMessage, false)
+
+	if err := s.DataChannel.Open(log); err != nil {
+		log.Error("Retrying connection failed", "sessionID", s.SessionID, "error", err)
+
+		s.retryParams.CallableFunc = func() error { return s.DataChannel.Reconnect(log) }
+		if err := s.retryParams.Call(); err != nil {
+			log.Error("Failed to call retry parameters", "error", err)
 		}
-	}()
+	}
+
+	s.DataChannel.GetWsChannel().SetOnError(
+		func(wsErr error) {
+			log.Error("Trying to reconnect session", "url", s.StreamURL, "sequenceNumber", s.DataChannel.GetStreamDataSequenceNumber(), "error", wsErr)
+
+			s.retryParams.CallableFunc = func() error { return s.ResumeSessionHandler(ctx, log) }
+			if err := s.retryParams.Call(); err != nil {
+				log.Error("Reconnect error", "error", err)
+			}
+		})
+
+	// Scheduler for resending of data
+	if err := s.DataChannel.ResendStreamDataMessageScheduler(log); err != nil {
+		log.Error("Failed to schedule resend of stream data messages", "error", err)
+	}
+
+	return nil
 }
 
-// Execute create data channel and start the session.
-func (s *Session) Execute(ctx context.Context, log log.T) error {
-	log.Debug("Starting session", "sessionID", s.SessionID)
-
-	// sets the display mode
-	s.DisplayMode = sessionutil.NewDisplayMode(log)
-
-	if err := s.OpenDataChannel(ctx, log); err != nil {
-		log.Error("Error opening data channel", "error", err)
-
-		return err
+// ProcessFirstMessage only processes messages with PayloadType Output to determine the
+// sessionType of the session to be launched. This is a fallback for agent versions that do not support handshake, they
+// immediately start sending shell output.
+func (s *Session) ProcessFirstMessage(log log.T, outputMessage message.ClientMessage) (bool, error) {
+	// Immediately deregister self so that this handler is only called once, for the first message
+	s.DataChannel.DeregisterOutputStreamHandler(s.ProcessFirstMessage)
+	// Only set session type if the session type has not already been set. Usually session type will be set
+	// by handshake protocol which would be the first message but older agents may not perform handshake
+	if s.SessionType == "" {
+		if outputMessage.PayloadType == uint32(message.Output) {
+			log.Warn("Setting session type to shell based on PayloadType!")
+			s.DataChannel.SetSessionType(config.ShellPluginName)
+			s.DisplayMode.DisplayMessage(log, outputMessage)
+		}
 	}
 
-	handleStreamMessageResendTimeout(ctx, s, log)
+	return true, nil
+}
 
-	// The session type is set either by handshake or the first packet received.
-	if !<-s.DataChannel.IsSessionTypeSet() {
-		log.Error("Unable to set SessionType", "sessionID", s.SessionID)
+// Stop will end the session.
+func (s *Session) Stop(_ log.T) error {
+	return nil
+}
 
-		return errors.New("unable to determine SessionType")
+// GetResumeSessionParams calls ResumeSession API and gets tokenvalue for reconnecting.
+func (s *Session) GetResumeSessionParams(ctx context.Context, log log.T) (string, error) {
+	resumeSessionInput := ssm.ResumeSessionInput{
+		SessionId: aws.String(s.SessionID),
 	}
 
-	s.SessionType = s.DataChannel.GetSessionType()
-	s.SessionProperties = s.DataChannel.GetSessionProperties()
+	log.Debug("Resume Session input parameters", "input", resumeSessionInput)
 
-	if err := setSessionHandlersWithSessionType(ctx, s, log); err != nil {
-		log.Error("Session ending with error", "error", err)
+	resumeSessionOutput, err := s.SSMClient.ResumeSession(ctx, &resumeSessionInput)
+	if err != nil {
+		log.Error("Resume Session failed", "error", err)
 
-		return err
+		return "", fmt.Errorf("resume session: %w", err)
+	}
+
+	if resumeSessionOutput.TokenValue == nil {
+		return "", nil
+	}
+
+	return *resumeSessionOutput.TokenValue, nil
+}
+
+// ResumeSessionHandler gets token value and tries to Reconnect to datachannel.
+func (s *Session) ResumeSessionHandler(ctx context.Context, log log.T) error {
+	var err error
+
+	s.TokenValue, err = s.GetResumeSessionParams(ctx, log)
+	if err != nil {
+		log.Error("getting token", "error", err)
+
+		return fmt.Errorf("resume session: %w", err)
+	} else if s.TokenValue == "" {
+		log.Debug("Session timed out", "sessionID", s.SessionID)
+
+		return errors.New("session timed out")
+	}
+
+	s.DataChannel.GetWsChannel().SetChannelToken(s.TokenValue)
+
+	err = s.DataChannel.Reconnect(log)
+	if err != nil {
+		return fmt.Errorf("reconnecting data channel: %w", err)
+	}
+
+	return nil
+}
+
+// TerminateSession calls TerminateSession API.
+func (s *Session) TerminateSession(ctx context.Context, log log.T) error {
+	terminateSessionInput := ssm.TerminateSessionInput{
+		SessionId: &s.SessionID,
+	}
+
+	log.Debug("Terminate Session input parameters", "input", terminateSessionInput)
+
+	if _, err := s.SSMClient.TerminateSession(ctx, &terminateSessionInput); err != nil {
+		log.Error("Terminate Session failed", "error", err)
+
+		return fmt.Errorf("terminate session: %w", err)
 	}
 
 	return nil
