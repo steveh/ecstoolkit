@@ -46,4 +46,5 @@ type IDataChannel interface {
 	GetStreamDataSequenceNumber() int64
 	GetAgentVersion() string
 	SetAgentVersion(agentVersion string)
+	GetExpectedSequenceNumber() int64
 }

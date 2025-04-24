@@ -30,29 +30,29 @@ import (
 // DataChannel used for communication between the mgs and the cli.
 type DataChannel struct {
 	wsChannel             communicator.IWebSocketChannel
-	Role                  string
-	ClientID              string
-	SessionID             string
-	TargetID              string
-	IsAwsCliUpgradeNeeded bool
+	role                  string
+	clientID              string
+	sessionID             string
+	targetID              string
+	isAwsCliUpgradeNeeded bool
 	// records sequence number of last acknowledged message received over data channel
-	ExpectedSequenceNumber int64
+	expectedSequenceNumber int64
 	// records sequence number of last stream data message sent over data channel
-	StreamDataSequenceNumber int64
+	streamDataSequenceNumber int64
 	// buffer to store outgoing stream messages until acknowledged
 	// using linked list for this buffer as access to oldest message is required and it support faster deletion from any position of list
-	OutgoingMessageBuffer ListMessageBuffer
+	outgoingMessageBuffer ListMessageBuffer
 	// buffer to store incoming stream messages if received out of sequence
 	// using map for this buffer as incoming messages can be out of order and retrieval would be faster by sequenceId
-	IncomingMessageBuffer MapMessageBuffer
+	incomingMessageBuffer MapMessageBuffer
 	// round trip time of latest acknowledged message
-	RoundTripTime float64
+	roundTripTime float64
 	// round trip time variation of latest acknowledged message
-	RoundTripTimeVariation float64
+	roundTripTimeVariation float64
 	// timeout used for resending unacknowledged message
-	RetransmissionTimeout time.Duration
+	retransmissionTimeout time.Duration
 
-	KMSClient *kms.Client
+	kmsClient *kms.Client
 
 	// Encrypter to encrypt/decrypt if agent requests encryption
 	encryption        encryption.IEncrypter
@@ -80,33 +80,29 @@ func NewDataChannel(kmsClient *kms.Client, clientID string, sessionID string, ta
 	log.Debug("Calling initialize Datachannel", "role", config.RolePublishSubscribe)
 
 	c := &DataChannel{
-		KMSClient: kmsClient,
+		kmsClient: kmsClient,
 	}
 
-	c.Role = config.RolePublishSubscribe
-	c.ClientID = clientID
-	c.SessionID = sessionID
-	c.TargetID = targetID
-	c.ExpectedSequenceNumber = 0
-	c.StreamDataSequenceNumber = 0
-	c.OutgoingMessageBuffer = ListMessageBuffer{
+	c.role = config.RolePublishSubscribe
+	c.clientID = clientID
+	c.sessionID = sessionID
+	c.targetID = targetID
+	c.outgoingMessageBuffer = ListMessageBuffer{
 		list.New(),
 		config.OutgoingMessageBufferCapacity,
 		&sync.Mutex{},
 	}
-	c.IncomingMessageBuffer = MapMessageBuffer{
+	c.incomingMessageBuffer = MapMessageBuffer{
 		make(map[int64]StreamingMessage),
 		config.IncomingMessageBufferCapacity,
 		&sync.Mutex{},
 	}
-	c.RoundTripTime = float64(config.DefaultRoundTripTime)
-	c.RoundTripTimeVariation = config.DefaultRoundTripTimeVariation
-	c.RetransmissionTimeout = config.DefaultTransmissionTimeout
-	c.encryptionEnabled = false
+	c.roundTripTime = float64(config.DefaultRoundTripTime)
+	c.roundTripTimeVariation = config.DefaultRoundTripTimeVariation
+	c.retransmissionTimeout = config.DefaultTransmissionTimeout
 	c.isSessionTypeSet = make(chan bool, 1)
 	c.isStreamMessageResendTimeout = make(chan bool, 1)
-	c.sessionType = ""
-	c.IsAwsCliUpgradeNeeded = awsCLIUpgradeNeeded
+	c.isAwsCliUpgradeNeeded = awsCLIUpgradeNeeded
 
 	return c, nil
 }
@@ -120,7 +116,7 @@ func (c *DataChannel) FinalizeDataChannelHandshake(log log.T, tokenValue string)
 		MessageSchemaVersion: aws.String(config.MessageSchemaVersion),
 		RequestID:            aws.String(uid),
 		TokenValue:           aws.String(tokenValue),
-		ClientID:             aws.String(c.ClientID),
+		ClientID:             aws.String(c.clientID),
 		ClientVersion:        aws.String(version.Version),
 	}
 
@@ -232,7 +228,7 @@ func (c *DataChannel) SendInputDataMessage(
 		MessageID:      messageUUID,
 		PayloadType:    uint32(payloadType),
 		Payload:        inputData,
-		SequenceNumber: c.StreamDataSequenceNumber,
+		SequenceNumber: c.streamDataSequenceNumber,
 	}
 
 	if msg, err = clientMessage.SerializeClientMessage(log); err != nil {
@@ -241,7 +237,7 @@ func (c *DataChannel) SendInputDataMessage(
 		return fmt.Errorf("serializing client message: %w", err)
 	}
 
-	log.Trace("Sending message", "sequenceNumber", c.StreamDataSequenceNumber)
+	log.Trace("Sending message", "sequenceNumber", c.streamDataSequenceNumber)
 
 	if err = SendMessageCall(c, msg, websocket.BinaryMessage); err != nil {
 		log.Error("Error sending stream data message", "error", err)
@@ -251,26 +247,26 @@ func (c *DataChannel) SendInputDataMessage(
 
 	streamingMessage := StreamingMessage{
 		msg,
-		c.StreamDataSequenceNumber,
+		c.streamDataSequenceNumber,
 		time.Now(),
 		new(int),
 	}
 	c.AddDataToOutgoingMessageBuffer(streamingMessage)
 
-	c.StreamDataSequenceNumber++
+	c.streamDataSequenceNumber++
 
 	return err
 }
 
-// ResendStreamDataMessageScheduler spawns a separate go thread which keeps checking OutgoingMessageBuffer at fixed interval
+// ResendStreamDataMessageScheduler spawns a separate go thread which keeps checking outgoingMessageBuffer at fixed interval
 // and resends first message if time elapsed since lastSentTime of the message is more than acknowledge wait time.
 func (c *DataChannel) ResendStreamDataMessageScheduler(log log.T) error {
 	go func() {
 		for {
 			time.Sleep(config.ResendSleepInterval)
-			c.OutgoingMessageBuffer.Mutex.Lock()
-			streamMessageElement := c.OutgoingMessageBuffer.Messages.Front()
-			c.OutgoingMessageBuffer.Mutex.Unlock()
+			c.outgoingMessageBuffer.Mutex.Lock()
+			streamMessageElement := c.outgoingMessageBuffer.Messages.Front()
+			c.outgoingMessageBuffer.Mutex.Unlock()
 
 			if streamMessageElement == nil {
 				continue
@@ -283,7 +279,7 @@ func (c *DataChannel) ResendStreamDataMessageScheduler(log log.T) error {
 				continue
 			}
 
-			if time.Since(streamMessage.LastSentTime) > c.RetransmissionTimeout {
+			if time.Since(streamMessage.LastSentTime) > c.retransmissionTimeout {
 				log.Debug("Resend stream data message", "sequenceNumber", streamMessage.SequenceNumber, "attempt", *streamMessage.ResendAttempt)
 
 				if *streamMessage.ResendAttempt >= config.ResendMaxAttempt {
@@ -304,11 +300,11 @@ func (c *DataChannel) ResendStreamDataMessageScheduler(log log.T) error {
 	return nil
 }
 
-// ProcessAcknowledgedMessage processes acknowledge messages by deleting them from OutgoingMessageBuffer.
+// ProcessAcknowledgedMessage processes acknowledge messages by deleting them from outgoingMessageBuffer.
 func (c *DataChannel) ProcessAcknowledgedMessage(log log.T, acknowledgeMessageContent message.AcknowledgeContent) error {
 	acknowledgeSequenceNumber := acknowledgeMessageContent.SequenceNumber
 
-	for streamMessageElement := c.OutgoingMessageBuffer.Messages.Front(); streamMessageElement != nil; streamMessageElement = streamMessageElement.Next() {
+	for streamMessageElement := c.outgoingMessageBuffer.Messages.Front(); streamMessageElement != nil; streamMessageElement = streamMessageElement.Next() {
 		streamMessage, ok := streamMessageElement.Value.(StreamingMessage)
 		if !ok {
 			log.Error("Failed to type assert streamMessageElement.Value to StreamingMessage")
@@ -383,7 +379,7 @@ func (c *DataChannel) HandleOutputMessage(
 	rawMessage []byte,
 ) error {
 	// Handle unexpected sequence messages first
-	if outputMessage.SequenceNumber != c.ExpectedSequenceNumber {
+	if outputMessage.SequenceNumber != c.expectedSequenceNumber {
 		return c.handleUnexpectedSequenceMessage(log, outputMessage, rawMessage)
 	}
 
@@ -407,22 +403,22 @@ func (c *DataChannel) HandleOutputMessage(
 	}
 
 	// Increment the expected sequence number after successful processing
-	c.ExpectedSequenceNumber++
+	c.expectedSequenceNumber++
 
 	// Process any buffered messages that are now in sequence
 	return c.ProcessIncomingMessageBufferItems(log, outputMessage)
 }
 
-// ProcessIncomingMessageBufferItems checks if new expected sequence stream data is present in IncomingMessageBuffer.
+// ProcessIncomingMessageBufferItems checks if new expected sequence stream data is present in incomingMessageBuffer.
 // If so, processes it and increments the expected sequence number.
-// Repeats until expected sequence stream data is not found in IncomingMessageBuffer.
+// Repeats until expected sequence stream data is not found in incomingMessageBuffer.
 func (c *DataChannel) ProcessIncomingMessageBufferItems(
 	log log.T,
 	outputMessage message.ClientMessage,
 ) error {
 	for {
 		// Check if there's a message with the expected sequence number
-		bufferedStreamMessage, exists := c.IncomingMessageBuffer.Messages[c.ExpectedSequenceNumber]
+		bufferedStreamMessage, exists := c.incomingMessageBuffer.Messages[c.expectedSequenceNumber]
 		if !exists || bufferedStreamMessage.Content == nil {
 			// No more messages to process
 			break
@@ -475,65 +471,65 @@ func (c *DataChannel) HandleChannelClosedMessage(log log.T, stopHandler Stop, se
 	}
 }
 
-// AddDataToOutgoingMessageBuffer removes first message from OutgoingMessageBuffer if capacity is full and adds given message at the end.
+// AddDataToOutgoingMessageBuffer removes first message from outgoingMessageBuffer if capacity is full and adds given message at the end.
 func (c *DataChannel) AddDataToOutgoingMessageBuffer(streamMessage StreamingMessage) {
-	if c.OutgoingMessageBuffer.Messages.Len() == c.OutgoingMessageBuffer.Capacity {
-		c.RemoveDataFromOutgoingMessageBuffer(c.OutgoingMessageBuffer.Messages.Front())
+	if c.outgoingMessageBuffer.Messages.Len() == c.outgoingMessageBuffer.Capacity {
+		c.RemoveDataFromOutgoingMessageBuffer(c.outgoingMessageBuffer.Messages.Front())
 	}
 
-	c.OutgoingMessageBuffer.Mutex.Lock()
-	c.OutgoingMessageBuffer.Messages.PushBack(streamMessage)
-	c.OutgoingMessageBuffer.Mutex.Unlock()
+	c.outgoingMessageBuffer.Mutex.Lock()
+	c.outgoingMessageBuffer.Messages.PushBack(streamMessage)
+	c.outgoingMessageBuffer.Mutex.Unlock()
 }
 
-// RemoveDataFromOutgoingMessageBuffer removes given element from OutgoingMessageBuffer.
+// RemoveDataFromOutgoingMessageBuffer removes given element from outgoingMessageBuffer.
 func (c *DataChannel) RemoveDataFromOutgoingMessageBuffer(streamMessageElement *list.Element) {
-	c.OutgoingMessageBuffer.Mutex.Lock()
-	c.OutgoingMessageBuffer.Messages.Remove(streamMessageElement)
-	c.OutgoingMessageBuffer.Mutex.Unlock()
+	c.outgoingMessageBuffer.Mutex.Lock()
+	c.outgoingMessageBuffer.Messages.Remove(streamMessageElement)
+	c.outgoingMessageBuffer.Mutex.Unlock()
 }
 
-// AddDataToIncomingMessageBuffer adds given message to IncomingMessageBuffer if it has capacity.
+// AddDataToIncomingMessageBuffer adds given message to incomingMessageBuffer if it has capacity.
 func (c *DataChannel) AddDataToIncomingMessageBuffer(streamMessage StreamingMessage) {
-	if len(c.IncomingMessageBuffer.Messages) == c.IncomingMessageBuffer.Capacity {
+	if len(c.incomingMessageBuffer.Messages) == c.incomingMessageBuffer.Capacity {
 		return
 	}
 
-	c.IncomingMessageBuffer.Mutex.Lock()
-	c.IncomingMessageBuffer.Messages[streamMessage.SequenceNumber] = streamMessage
-	c.IncomingMessageBuffer.Mutex.Unlock()
+	c.incomingMessageBuffer.Mutex.Lock()
+	c.incomingMessageBuffer.Messages[streamMessage.SequenceNumber] = streamMessage
+	c.incomingMessageBuffer.Mutex.Unlock()
 }
 
-// RemoveDataFromIncomingMessageBuffer removes given sequence number message from IncomingMessageBuffer.
+// RemoveDataFromIncomingMessageBuffer removes given sequence number message from incomingMessageBuffer.
 func (c *DataChannel) RemoveDataFromIncomingMessageBuffer(sequenceNumber int64) {
-	c.IncomingMessageBuffer.Mutex.Lock()
-	delete(c.IncomingMessageBuffer.Messages, sequenceNumber)
-	c.IncomingMessageBuffer.Mutex.Unlock()
+	c.incomingMessageBuffer.Mutex.Lock()
+	delete(c.incomingMessageBuffer.Messages, sequenceNumber)
+	c.incomingMessageBuffer.Mutex.Unlock()
 }
 
 // CalculateRetransmissionTimeout calculates message retransmission timeout value based on round trip time on given message.
 func (c *DataChannel) CalculateRetransmissionTimeout(streamingMessage RoundTripTiming) {
 	newRoundTripTime := float64(streamingMessage.GetRoundTripTime())
 
-	c.RoundTripTimeVariation = ((1 - config.RTTVConstant) * c.RoundTripTimeVariation) +
-		(config.RTTVConstant * math.Abs(c.RoundTripTime-newRoundTripTime))
+	c.roundTripTimeVariation = ((1 - config.RTTVConstant) * c.roundTripTimeVariation) +
+		(config.RTTVConstant * math.Abs(c.roundTripTime-newRoundTripTime))
 
-	c.RoundTripTime = ((1 - config.RTTConstant) * c.RoundTripTime) +
+	c.roundTripTime = ((1 - config.RTTConstant) * c.roundTripTime) +
 		(config.RTTConstant * newRoundTripTime)
 
-	c.RetransmissionTimeout = time.Duration(c.RoundTripTime +
-		math.Max(float64(config.ClockGranularity), float64(4*c.RoundTripTimeVariation))) //nolint:mnd
+	c.retransmissionTimeout = time.Duration(c.roundTripTime +
+		math.Max(float64(config.ClockGranularity), float64(4*c.roundTripTimeVariation))) //nolint:mnd
 
-	// Ensure RetransmissionTimeout do not exceed maximum timeout defined
-	if c.RetransmissionTimeout > config.MaxTransmissionTimeout {
-		c.RetransmissionTimeout = config.MaxTransmissionTimeout
+	// Ensure retransmissionTimeout do not exceed maximum timeout defined
+	if c.retransmissionTimeout > config.MaxTransmissionTimeout {
+		c.retransmissionTimeout = config.MaxTransmissionTimeout
 	}
 }
 
 // ProcessKMSEncryptionHandshakeAction sets up the encrypter and calls KMS to generate a new data key. This is triggered
 // when encryption is specified in HandshakeRequest.
 func (c *DataChannel) ProcessKMSEncryptionHandshakeAction(ctx context.Context, log log.T, actionParams json.RawMessage) error {
-	if c.IsAwsCliUpgradeNeeded {
+	if c.isAwsCliUpgradeNeeded {
 		return errors.New("installed version of CLI does not support Session Manager encryption feature. Please upgrade to the latest version of your CLI (e.g., AWS CLI)")
 	}
 
@@ -546,11 +542,11 @@ func (c *DataChannel) ProcessKMSEncryptionHandshakeAction(ctx context.Context, l
 
 	kmsKeyID := kmsEncRequest.KMSKeyID
 
-	encryptionContext := map[string]string{"aws:ssm:SessionId": c.SessionID, "aws:ssm:TargetId": c.TargetID}
+	encryptionContext := map[string]string{"aws:ssm:SessionId": c.sessionID, "aws:ssm:TargetId": c.targetID}
 
 	var err error
 
-	c.encryption, err = newEncrypter(ctx, log, kmsKeyID, encryptionContext, c.KMSClient)
+	c.encryption, err = newEncrypter(ctx, log, kmsKeyID, encryptionContext, c.kmsClient)
 	if err != nil {
 		return fmt.Errorf("creating new encrypter: %w", err)
 	}
@@ -636,7 +632,7 @@ func (c *DataChannel) RegisterOutputMessageHandler(ctx context.Context, log log.
 
 // GetStreamDataSequenceNumber returns StreamDataSequenceNumber of the DataChannel.
 func (c *DataChannel) GetStreamDataSequenceNumber() int64 {
-	return c.StreamDataSequenceNumber
+	return c.streamDataSequenceNumber
 }
 
 // GetAgentVersion returns agent version of the target instance.
@@ -647,6 +643,11 @@ func (c *DataChannel) GetAgentVersion() string {
 // SetAgentVersion set agent version of the target instance.
 func (c *DataChannel) SetAgentVersion(agentVersion string) {
 	c.agentVersion = agentVersion
+}
+
+// GetExpectedSequenceNumber returns expected sequence number of the DataChannel.
+func (c *DataChannel) GetExpectedSequenceNumber() int64 {
+	return c.expectedSequenceNumber
 }
 
 // outputMessageHandler gets output on the data channel.
@@ -674,7 +675,7 @@ func (c *DataChannel) outputMessageHandler(ctx context.Context, log log.T, stopH
 	case message.AcknowledgeMessage:
 		return c.HandleAcknowledgeMessage(log, *outputMessage)
 	case message.ChannelClosedMessage:
-		c.HandleChannelClosedMessage(log, stopHandler, c.SessionID, *outputMessage)
+		c.HandleChannelClosedMessage(log, stopHandler, c.sessionID, *outputMessage)
 	case message.StartPublicationMessage, message.PausePublicationMessage:
 		return nil
 	default:
@@ -773,7 +774,7 @@ func (c *DataChannel) handleHandshakeComplete(log log.T, clientMessage message.C
 	log.Debug("Handshake Complete", "timeToComplete", handshakeComplete.HandshakeTimeToComplete.Seconds())
 
 	if handshakeComplete.CustomerMessage != "" {
-		log.Debug("Session message", "sessionID", c.SessionID, "message", handshakeComplete.CustomerMessage)
+		log.Debug("Session message", "sessionID", c.sessionID, "message", handshakeComplete.CustomerMessage)
 	}
 
 	return nil
@@ -978,14 +979,14 @@ func (c *DataChannel) handleUnexpectedSequenceMessage(
 	outputMessage message.ClientMessage,
 	rawMessage []byte,
 ) error {
-	log.Debug("Unexpected sequence message received", "receivedSequence", outputMessage.SequenceNumber, "expectedSequence", c.ExpectedSequenceNumber)
+	log.Debug("Unexpected sequence message received", "receivedSequence", outputMessage.SequenceNumber, "expectedSequence", c.expectedSequenceNumber)
 
-	// If incoming message sequence number is greater then expected sequence number and IncomingMessageBuffer has capacity,
-	// add message to IncomingMessageBuffer and send acknowledgement
-	if outputMessage.SequenceNumber > c.ExpectedSequenceNumber {
-		log.Debug("Received sequence number is higher than expected", "receivedSequence", outputMessage.SequenceNumber, "expectedSequence", c.ExpectedSequenceNumber)
+	// If incoming message sequence number is greater then expected sequence number and incomingMessageBuffer has capacity,
+	// add message to incomingMessageBuffer and send acknowledgement
+	if outputMessage.SequenceNumber > c.expectedSequenceNumber {
+		log.Debug("Received sequence number is higher than expected", "receivedSequence", outputMessage.SequenceNumber, "expectedSequence", c.expectedSequenceNumber)
 
-		if len(c.IncomingMessageBuffer.Messages) < c.IncomingMessageBuffer.Capacity {
+		if len(c.incomingMessageBuffer.Messages) < c.incomingMessageBuffer.Capacity {
 			if err := SendAcknowledgeMessageCall(log, c, outputMessage); err != nil {
 				return err
 			}
@@ -1011,7 +1012,7 @@ func (c *DataChannel) processBufferedMessage(
 	outputMessage message.ClientMessage,
 	bufferedStreamMessage StreamingMessage,
 ) error {
-	log.Trace("Processing stream data message from IncomingMessageBuffer", "sequenceNumber", bufferedStreamMessage.SequenceNumber)
+	log.Trace("Processing stream data message from incomingMessageBuffer", "sequenceNumber", bufferedStreamMessage.SequenceNumber)
 
 	if err := outputMessage.DeserializeClientMessage(log, bufferedStreamMessage.Content); err != nil {
 		log.Error("Cannot deserialize raw message", "error", err)
@@ -1039,7 +1040,7 @@ func (c *DataChannel) processBufferedMessage(
 		return fmt.Errorf("processing output message with handlers: %w", err)
 	}
 
-	c.ExpectedSequenceNumber++
+	c.expectedSequenceNumber++
 	c.RemoveDataFromIncomingMessageBuffer(bufferedStreamMessage.SequenceNumber)
 
 	return nil

@@ -68,15 +68,15 @@ func TestNewDataChannel(t *testing.T) {
 	datachannel, err := NewDataChannel(mockKMSClient, clientID, sessionID, instanceID, isAwsCliUpgradeNeeded, mockLogger)
 	require.NoError(t, err)
 
-	assert.Equal(t, config.RolePublishSubscribe, datachannel.Role)
-	assert.Equal(t, clientID, datachannel.ClientID)
-	assert.Equal(t, int64(0), datachannel.ExpectedSequenceNumber)
-	assert.Equal(t, int64(0), datachannel.StreamDataSequenceNumber)
-	assert.NotNil(t, datachannel.OutgoingMessageBuffer)
-	assert.NotNil(t, datachannel.IncomingMessageBuffer)
-	assert.InDelta(t, float64(config.DefaultRoundTripTime), datachannel.RoundTripTime, 0.01)
-	assert.InDelta(t, float64(config.DefaultRoundTripTimeVariation), datachannel.RoundTripTimeVariation, 0.01)
-	assert.Equal(t, config.DefaultTransmissionTimeout, datachannel.RetransmissionTimeout)
+	assert.Equal(t, config.RolePublishSubscribe, datachannel.role)
+	assert.Equal(t, clientID, datachannel.clientID)
+	assert.Equal(t, int64(0), datachannel.expectedSequenceNumber)
+	assert.Equal(t, int64(0), datachannel.streamDataSequenceNumber)
+	assert.NotNil(t, datachannel.outgoingMessageBuffer)
+	assert.NotNil(t, datachannel.incomingMessageBuffer)
+	assert.InDelta(t, float64(config.DefaultRoundTripTime), datachannel.roundTripTime, 0.01)
+	assert.InDelta(t, float64(config.DefaultRoundTripTimeVariation), datachannel.roundTripTimeVariation, 0.01)
+	assert.Equal(t, config.DefaultTransmissionTimeout, datachannel.retransmissionTimeout)
 }
 
 func TestSetWsChannel(t *testing.T) {
@@ -161,8 +161,8 @@ func TestSendInputDataMessage(t *testing.T) {
 	err := dataChannel.SendInputDataMessage(mockLogger, message.Output, payload)
 	require.NoError(t, err, "Error sending input data message")
 
-	assert.Equal(t, streamDataSequenceNumber+1, dataChannel.StreamDataSequenceNumber)
-	assert.Equal(t, 1, dataChannel.OutgoingMessageBuffer.Messages.Len())
+	assert.Equal(t, streamDataSequenceNumber+1, dataChannel.streamDataSequenceNumber)
+	assert.Equal(t, 1, dataChannel.outgoingMessageBuffer.Messages.Len())
 	mockWsChannel.AssertExpectations(t)
 }
 
@@ -178,7 +178,7 @@ func TestProcessAcknowledgedMessage(t *testing.T) {
 	}
 	err := dataChannel.ProcessAcknowledgedMessage(mockLogger, dataStreamAcknowledgeContent)
 	require.NoError(t, err, "Error processing acknowledged message")
-	assert.Equal(t, 0, dataChannel.OutgoingMessageBuffer.Messages.Len())
+	assert.Equal(t, 0, dataChannel.outgoingMessageBuffer.Messages.Len())
 }
 
 type mockStreamingMessage struct{}
@@ -193,41 +193,41 @@ func TestCalculateRetransmissionTimeout(t *testing.T) {
 	streamingMessage := mockStreamingMessage{}
 
 	dataChannel.CalculateRetransmissionTimeout(&streamingMessage)
-	assert.Equal(t, int64(105), int64(time.Duration(dataChannel.RoundTripTime)/time.Millisecond))
-	assert.Equal(t, int64(10), int64(time.Duration(dataChannel.RoundTripTimeVariation)/time.Millisecond))
-	assert.Equal(t, int64(145), int64(dataChannel.RetransmissionTimeout/time.Millisecond))
+	assert.Equal(t, int64(105), int64(time.Duration(dataChannel.roundTripTime)/time.Millisecond))
+	assert.Equal(t, int64(10), int64(time.Duration(dataChannel.roundTripTimeVariation)/time.Millisecond))
+	assert.Equal(t, int64(145), int64(dataChannel.retransmissionTimeout/time.Millisecond))
 }
 
 func TestAddDataToOutgoingMessageBuffer(t *testing.T) {
 	dataChannel := getDataChannel(t)
-	dataChannel.OutgoingMessageBuffer.Capacity = 2
+	dataChannel.outgoingMessageBuffer.Capacity = 2
 
 	dataChannel.AddDataToOutgoingMessageBuffer(streamingMessages[0])
-	assert.Equal(t, 1, dataChannel.OutgoingMessageBuffer.Messages.Len())
-	bufferedStreamMessage, ok := dataChannel.OutgoingMessageBuffer.Messages.Front().Value.(StreamingMessage)
+	assert.Equal(t, 1, dataChannel.outgoingMessageBuffer.Messages.Len())
+	bufferedStreamMessage, ok := dataChannel.outgoingMessageBuffer.Messages.Front().Value.(StreamingMessage)
 	assert.True(t, ok, "Failed to type assert to StreamingMessage")
 	assert.Equal(t, int64(0), bufferedStreamMessage.SequenceNumber)
 
 	dataChannel.AddDataToOutgoingMessageBuffer(streamingMessages[1])
-	assert.Equal(t, 2, dataChannel.OutgoingMessageBuffer.Messages.Len())
-	value := dataChannel.OutgoingMessageBuffer.Messages.Front().Value
+	assert.Equal(t, 2, dataChannel.outgoingMessageBuffer.Messages.Len())
+	value := dataChannel.outgoingMessageBuffer.Messages.Front().Value
 	bufferedStreamMessage, ok = value.(StreamingMessage)
 	assert.True(t, ok, "Failed to type assert to StreamingMessage")
 	assert.Equal(t, int64(0), bufferedStreamMessage.SequenceNumber)
 
-	value = dataChannel.OutgoingMessageBuffer.Messages.Back().Value
+	value = dataChannel.outgoingMessageBuffer.Messages.Back().Value
 	bufferedStreamMessage, ok = value.(StreamingMessage)
 	assert.True(t, ok, "Failed to type assert to StreamingMessage")
 	assert.Equal(t, int64(1), bufferedStreamMessage.SequenceNumber)
 
 	dataChannel.AddDataToOutgoingMessageBuffer(streamingMessages[2])
-	assert.Equal(t, 2, dataChannel.OutgoingMessageBuffer.Messages.Len())
-	value = dataChannel.OutgoingMessageBuffer.Messages.Front().Value
+	assert.Equal(t, 2, dataChannel.outgoingMessageBuffer.Messages.Len())
+	value = dataChannel.outgoingMessageBuffer.Messages.Front().Value
 	bufferedStreamMessage, ok = value.(StreamingMessage)
 	assert.True(t, ok, "Failed to type assert to StreamingMessage")
 	assert.Equal(t, int64(1), bufferedStreamMessage.SequenceNumber)
 
-	value = dataChannel.OutgoingMessageBuffer.Messages.Back().Value
+	value = dataChannel.outgoingMessageBuffer.Messages.Back().Value
 	bufferedStreamMessage, ok = value.(StreamingMessage)
 	assert.True(t, ok, "Failed to type assert to StreamingMessage")
 	assert.Equal(t, int64(2), bufferedStreamMessage.SequenceNumber)
@@ -235,27 +235,27 @@ func TestAddDataToOutgoingMessageBuffer(t *testing.T) {
 
 func TestAddDataToIncomingMessageBuffer(t *testing.T) {
 	dataChannel := getDataChannel(t)
-	dataChannel.IncomingMessageBuffer.Capacity = 2
+	dataChannel.incomingMessageBuffer.Capacity = 2
 
 	dataChannel.AddDataToIncomingMessageBuffer(streamingMessages[0])
-	assert.Len(t, dataChannel.IncomingMessageBuffer.Messages, 1)
-	bufferedStreamMessage := dataChannel.IncomingMessageBuffer.Messages[0]
+	assert.Len(t, dataChannel.incomingMessageBuffer.Messages, 1)
+	bufferedStreamMessage := dataChannel.incomingMessageBuffer.Messages[0]
 	assert.Equal(t, int64(0), bufferedStreamMessage.SequenceNumber)
 
 	dataChannel.AddDataToIncomingMessageBuffer(streamingMessages[1])
-	assert.Len(t, dataChannel.IncomingMessageBuffer.Messages, 2)
-	bufferedStreamMessage = dataChannel.IncomingMessageBuffer.Messages[0]
+	assert.Len(t, dataChannel.incomingMessageBuffer.Messages, 2)
+	bufferedStreamMessage = dataChannel.incomingMessageBuffer.Messages[0]
 	assert.Equal(t, int64(0), bufferedStreamMessage.SequenceNumber)
-	bufferedStreamMessage = dataChannel.IncomingMessageBuffer.Messages[1]
+	bufferedStreamMessage = dataChannel.incomingMessageBuffer.Messages[1]
 	assert.Equal(t, int64(1), bufferedStreamMessage.SequenceNumber)
 
 	dataChannel.AddDataToIncomingMessageBuffer(streamingMessages[2])
-	assert.Len(t, dataChannel.IncomingMessageBuffer.Messages, 2)
-	bufferedStreamMessage = dataChannel.IncomingMessageBuffer.Messages[0]
+	assert.Len(t, dataChannel.incomingMessageBuffer.Messages, 2)
+	bufferedStreamMessage = dataChannel.incomingMessageBuffer.Messages[0]
 	assert.Equal(t, int64(0), bufferedStreamMessage.SequenceNumber)
-	bufferedStreamMessage = dataChannel.IncomingMessageBuffer.Messages[1]
+	bufferedStreamMessage = dataChannel.incomingMessageBuffer.Messages[1]
 	assert.Equal(t, int64(1), bufferedStreamMessage.SequenceNumber)
-	bufferedStreamMessage = dataChannel.IncomingMessageBuffer.Messages[2]
+	bufferedStreamMessage = dataChannel.incomingMessageBuffer.Messages[2]
 	assert.Nil(t, bufferedStreamMessage.Content)
 }
 
@@ -265,8 +265,8 @@ func TestRemoveDataFromOutgoingMessageBuffer(t *testing.T) {
 		dataChannel.AddDataToOutgoingMessageBuffer(streamingMessages[i])
 	}
 
-	dataChannel.RemoveDataFromOutgoingMessageBuffer(dataChannel.OutgoingMessageBuffer.Messages.Front())
-	assert.Equal(t, 2, dataChannel.OutgoingMessageBuffer.Messages.Len())
+	dataChannel.RemoveDataFromOutgoingMessageBuffer(dataChannel.outgoingMessageBuffer.Messages.Front())
+	assert.Equal(t, 2, dataChannel.outgoingMessageBuffer.Messages.Len())
 }
 
 func TestRemoveDataFromIncomingMessageBuffer(t *testing.T) {
@@ -276,7 +276,7 @@ func TestRemoveDataFromIncomingMessageBuffer(t *testing.T) {
 	}
 
 	dataChannel.RemoveDataFromIncomingMessageBuffer(0)
-	assert.Len(t, dataChannel.IncomingMessageBuffer.Messages, 2)
+	assert.Len(t, dataChannel.incomingMessageBuffer.Messages, 2)
 }
 
 func TestResendStreamDataMessageScheduler(t *testing.T) {
@@ -335,15 +335,15 @@ func TestDataChannelIncomingMessageHandlerForExpectedInputStreamDataMessage(t *t
 
 	dataChannel.RegisterOutputStreamHandler(handler, true)
 	// First scenario is to test when incoming message sequence number matches with expected sequence number
-	// and no message found in IncomingMessageBuffer
+	// and no message found in incomingMessageBuffer
 	err := dataChannel.outputMessageHandler(context.TODO(), logger, stopHandler, serializedClientMessages[0])
 	require.NoError(t, err)
-	assert.Equal(t, int64(1), dataChannel.ExpectedSequenceNumber)
-	assert.Empty(t, dataChannel.IncomingMessageBuffer.Messages)
+	assert.Equal(t, int64(1), dataChannel.expectedSequenceNumber)
+	assert.Empty(t, dataChannel.incomingMessageBuffer.Messages)
 	assert.Equal(t, 1, SendAcknowledgeMessageCallCount)
 
 	// Second scenario is to test when incoming message sequence number matches with expected sequence number
-	// and there are more messages found in IncomingMessageBuffer to be processed
+	// and there are more messages found in incomingMessageBuffer to be processed
 	dataChannel.AddDataToIncomingMessageBuffer(streamingMessages[2])
 	dataChannel.AddDataToIncomingMessageBuffer(streamingMessages[6])
 	dataChannel.AddDataToIncomingMessageBuffer(streamingMessages[4])
@@ -351,11 +351,11 @@ func TestDataChannelIncomingMessageHandlerForExpectedInputStreamDataMessage(t *t
 
 	err = dataChannel.outputMessageHandler(context.TODO(), logger, stopHandler, serializedClientMessages[1])
 	require.NoError(t, err)
-	assert.Equal(t, int64(5), dataChannel.ExpectedSequenceNumber)
-	assert.Len(t, dataChannel.IncomingMessageBuffer.Messages, 1)
+	assert.Equal(t, int64(5), dataChannel.expectedSequenceNumber)
+	assert.Len(t, dataChannel.incomingMessageBuffer.Messages, 1)
 
 	// All messages from buffer should get processed except sequence number 6 as expected number to be processed at this time is 5
-	bufferedStreamMessage := dataChannel.IncomingMessageBuffer.Messages[6]
+	bufferedStreamMessage := dataChannel.incomingMessageBuffer.Messages[6]
 	assert.Equal(t, int64(6), bufferedStreamMessage.SequenceNumber)
 }
 
@@ -363,7 +363,7 @@ func TestDataChannelIncomingMessageHandlerForUnexpectedInputStreamDataMessage(t 
 	dataChannel := getDataChannel(t)
 	mockChannel := &communicatorMocks.IWebSocketChannel{}
 	dataChannel.wsChannel = mockChannel
-	dataChannel.IncomingMessageBuffer.Capacity = 2
+	dataChannel.incomingMessageBuffer.Capacity = 2
 
 	SendAcknowledgeMessageCallCount := 0
 	SendAcknowledgeMessageCall = func(_ log.T, _ *DataChannel, _ message.ClientMessage) error {
@@ -385,16 +385,16 @@ func TestDataChannelIncomingMessageHandlerForUnexpectedInputStreamDataMessage(t 
 	err = dataChannel.outputMessageHandler(context.TODO(), logger, stopHandler, serializedClientMessages[3])
 	require.NoError(t, err)
 
-	// Since capacity of IncomingMessageBuffer is 2, stream data with sequence number 3 should be ignored without sending acknowledgement
-	assert.Equal(t, expectedSequenceNumber, dataChannel.ExpectedSequenceNumber)
-	assert.Len(t, dataChannel.IncomingMessageBuffer.Messages, 2)
+	// Since capacity of incomingMessageBuffer is 2, stream data with sequence number 3 should be ignored without sending acknowledgement
+	assert.Equal(t, expectedSequenceNumber, dataChannel.expectedSequenceNumber)
+	assert.Len(t, dataChannel.incomingMessageBuffer.Messages, 2)
 	assert.Equal(t, 2, SendAcknowledgeMessageCallCount)
 
-	bufferedStreamMessage := dataChannel.IncomingMessageBuffer.Messages[1]
+	bufferedStreamMessage := dataChannel.incomingMessageBuffer.Messages[1]
 	assert.Equal(t, int64(1), bufferedStreamMessage.SequenceNumber)
-	bufferedStreamMessage = dataChannel.IncomingMessageBuffer.Messages[2]
+	bufferedStreamMessage = dataChannel.incomingMessageBuffer.Messages[2]
 	assert.Equal(t, int64(2), bufferedStreamMessage.SequenceNumber)
-	bufferedStreamMessage = dataChannel.IncomingMessageBuffer.Messages[3]
+	bufferedStreamMessage = dataChannel.incomingMessageBuffer.Messages[3]
 	assert.Nil(t, bufferedStreamMessage.Content)
 }
 
@@ -438,7 +438,7 @@ func TestDataChannelIncomingMessageHandlerForAcknowledgeMessage(t *testing.T) {
 	}
 
 	assert.Equal(t, 1, ProcessAcknowledgedMessageCallCount)
-	assert.Equal(t, 3, dataChannel.OutgoingMessageBuffer.Messages.Len())
+	assert.Equal(t, 3, dataChannel.outgoingMessageBuffer.Messages.Len())
 }
 
 func TestDataChannelIncomingMessageHandlerForPausePublicationessage(t *testing.T) {
