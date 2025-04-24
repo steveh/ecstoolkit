@@ -68,10 +68,10 @@ func TestStartSessionForStandardStreamForwarding(t *testing.T) {
 	}
 
 	portSession := PortSession{
-		Session:        getSessionMock(),
+		Session:        getSessionMock(t),
 		portParameters: PortParameters{PortNumber: "22"},
 		portSessionType: &StandardStreamForwarding{
-			session:        getSessionMock(),
+			session:        getSessionMock(t),
 			portParameters: PortParameters{PortNumber: "22"},
 		},
 	}

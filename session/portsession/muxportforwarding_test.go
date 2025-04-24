@@ -35,7 +35,7 @@ func TestReadStream(t *testing.T) {
 		}
 	}()
 
-	session := getSessionMock()
+	session := getSessionMock(t)
 
 	portSession := PortSession{
 		Session: session,
@@ -95,7 +95,7 @@ func TestWriteStream(t *testing.T) {
 
 	portSession := PortSession{
 		portSessionType: &MuxPortForwarding{
-			session: getSessionMock(),
+			session: getSessionMock(t),
 			mgsConn: &MgsConn{nil, in},
 		},
 	}

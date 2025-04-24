@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/steveh/ecstoolkit/communicator/mocks"
 	"github.com/steveh/ecstoolkit/datachannel"
 	dataChannelMock "github.com/steveh/ecstoolkit/datachannel/mocks"
@@ -117,7 +118,7 @@ func TestSendInputDataMessageWithPayloadTypeSize(t *testing.T) {
 		t.Fatalf("marshaling size data: %v", err)
 	}
 
-	dataChannel := getDataChannel()
+	dataChannel := getDataChannel(t)
 	mockChannel := &mocks.IWebSocketChannel{}
 	dataChannel.SetWsChannel(mockChannel)
 
@@ -135,7 +136,7 @@ func TestSendInputDataMessageWithPayloadTypeSize(t *testing.T) {
 }
 
 func TestTerminalResizeWhenSessionSizeDataIsNotEqualToActualSize(t *testing.T) {
-	dataChannel := getDataChannel()
+	dataChannel := getDataChannel(t)
 
 	session := session.Session{
 		DataChannel: dataChannel,
@@ -189,9 +190,14 @@ func TestProcessStreamMessagePayload(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func getDataChannel() *datachannel.DataChannel {
-	dataChannel := &datachannel.DataChannel{}
-	dataChannel.Initialize(logger, clientID, sessionID, instanceID, false)
+func getDataChannel(t *testing.T) *datachannel.DataChannel {
+	t.Helper()
+
+	mockKMSClient := &kms.Client{}
+
+	dataChannel, err := datachannel.NewDataChannel(mockKMSClient, clientID, sessionID, instanceID, false, logger)
+	require.NoError(t, err)
+
 	dataChannel.SetWsChannel(mockWsChannel)
 
 	return dataChannel

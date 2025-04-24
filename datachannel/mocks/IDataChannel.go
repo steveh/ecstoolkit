@@ -485,43 +485,6 @@ func (_c *IDataChannel_GetWsChannel_Call) RunAndReturn(run func() communicator.I
 	return _c
 }
 
-// Initialize provides a mock function with given fields: _a0, clientID, sessionID, targetID, isAwsCliUpgradeNeeded
-func (_m *IDataChannel) Initialize(_a0 log.T, clientID string, sessionID string, targetID string, isAwsCliUpgradeNeeded bool) {
-	_m.Called(_a0, clientID, sessionID, targetID, isAwsCliUpgradeNeeded)
-}
-
-// IDataChannel_Initialize_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Initialize'
-type IDataChannel_Initialize_Call struct {
-	*mock.Call
-}
-
-// Initialize is a helper method to define mock.On call
-//   - _a0 log.T
-//   - clientID string
-//   - sessionID string
-//   - targetID string
-//   - isAwsCliUpgradeNeeded bool
-func (_e *IDataChannel_Expecter) Initialize(_a0 interface{}, clientID interface{}, sessionID interface{}, targetID interface{}, isAwsCliUpgradeNeeded interface{}) *IDataChannel_Initialize_Call {
-	return &IDataChannel_Initialize_Call{Call: _e.mock.On("Initialize", _a0, clientID, sessionID, targetID, isAwsCliUpgradeNeeded)}
-}
-
-func (_c *IDataChannel_Initialize_Call) Run(run func(_a0 log.T, clientID string, sessionID string, targetID string, isAwsCliUpgradeNeeded bool)) *IDataChannel_Initialize_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(log.T), args[1].(string), args[2].(string), args[3].(string), args[4].(bool))
-	})
-	return _c
-}
-
-func (_c *IDataChannel_Initialize_Call) Return() *IDataChannel_Initialize_Call {
-	_c.Call.Return()
-	return _c
-}
-
-func (_c *IDataChannel_Initialize_Call) RunAndReturn(run func(log.T, string, string, string, bool)) *IDataChannel_Initialize_Call {
-	_c.Run(run)
-	return _c
-}
-
 // IsSessionTypeSet provides a mock function with no fields
 func (_m *IDataChannel) IsSessionTypeSet() chan bool {
 	ret := _m.Called()
@@ -1202,39 +1165,6 @@ func (_c *IDataChannel_SetSessionType_Call) Return() *IDataChannel_SetSessionTyp
 }
 
 func (_c *IDataChannel_SetSessionType_Call) RunAndReturn(run func(string)) *IDataChannel_SetSessionType_Call {
-	_c.Run(run)
-	return _c
-}
-
-// SetWebSocketChannel provides a mock function with given fields: webSocketChannel
-func (_m *IDataChannel) SetWebSocketChannel(webSocketChannel communicator.IWebSocketChannel) {
-	_m.Called(webSocketChannel)
-}
-
-// IDataChannel_SetWebSocketChannel_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetWebSocketChannel'
-type IDataChannel_SetWebSocketChannel_Call struct {
-	*mock.Call
-}
-
-// SetWebSocketChannel is a helper method to define mock.On call
-//   - webSocketChannel communicator.IWebSocketChannel
-func (_e *IDataChannel_Expecter) SetWebSocketChannel(webSocketChannel interface{}) *IDataChannel_SetWebSocketChannel_Call {
-	return &IDataChannel_SetWebSocketChannel_Call{Call: _e.mock.On("SetWebSocketChannel", webSocketChannel)}
-}
-
-func (_c *IDataChannel_SetWebSocketChannel_Call) Run(run func(webSocketChannel communicator.IWebSocketChannel)) *IDataChannel_SetWebSocketChannel_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(communicator.IWebSocketChannel))
-	})
-	return _c
-}
-
-func (_c *IDataChannel_SetWebSocketChannel_Call) Return() *IDataChannel_SetWebSocketChannel_Call {
-	_c.Call.Return()
-	return _c
-}
-
-func (_c *IDataChannel_SetWebSocketChannel_Call) RunAndReturn(run func(communicator.IWebSocketChannel)) *IDataChannel_SetWebSocketChannel_Call {
 	_c.Run(run)
 	return _c
 }

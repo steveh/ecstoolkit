@@ -15,11 +15,15 @@
 package portsession
 
 import (
+	"testing"
+
+	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/steveh/ecstoolkit/communicator/mocks"
 	"github.com/steveh/ecstoolkit/datachannel"
 	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
 	"github.com/steveh/ecstoolkit/session"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -36,21 +40,29 @@ var (
 	}
 )
 
-func getSessionMock() session.Session {
-	return getSessionMockWithParams(properties, agentVersion)
+func getSessionMock(t *testing.T) session.Session {
+	t.Helper()
+
+	return getSessionMockWithParams(t, properties, agentVersion)
 }
 
-func getSessionMockWithParams(properties interface{}, agentVersion string) session.Session {
-	datachannel := &datachannel.DataChannel{}
-	datachannel.SetAgentVersion(agentVersion)
+var mockLogger = log.NewMockLog()
+
+func getSessionMockWithParams(t *testing.T, properties interface{}, agentVersion string) session.Session {
+	t.Helper()
+
+	mockKMSClient := &kms.Client{}
+
+	dataChannel, err := datachannel.NewDataChannel(mockKMSClient, "clientId", "sessionId", "targetId", false, mockLogger)
+	require.NoError(t, err)
+
+	dataChannel.SetAgentVersion(agentVersion)
+	dataChannel.SetWsChannel(&mockWebSocketChannel)
 
 	mockSession := session.Session{
-		DataChannel: datachannel,
+		DataChannel:       dataChannel,
+		SessionProperties: properties,
 	}
-
-	mockSession.DataChannel.Initialize(mockLog, "clientId", "sessionId", "targetId", false)
-	mockSession.DataChannel.SetWsChannel(&mockWebSocketChannel)
-	mockSession.SessionProperties = properties
 
 	return mockSession
 }

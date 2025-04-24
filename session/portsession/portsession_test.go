@@ -44,7 +44,7 @@ func TestInitializePortSession(t *testing.T) {
 	mockWebSocketChannel.On("SetOnMessage", mock.Anything)
 
 	portSession := PortSession{
-		Session: getSessionMock(),
+		Session: getSessionMock(t),
 	}
 	portSession.Initialize(context.TODO(), mockLog, &portSession.Session)
 
@@ -65,7 +65,7 @@ func TestInitializePortSessionForPortForwardingWithOldAgent(t *testing.T) {
 	mockWebSocketChannel.On("SetOnMessage", mock.Anything)
 
 	portSession := PortSession{
-		Session: getSessionMockWithParams(portParameters, "2.2.0.0"),
+		Session: getSessionMockWithParams(t, portParameters, "2.2.0.0"),
 	}
 	portSession.Initialize(context.TODO(), mockLog, &portSession.Session)
 
@@ -86,7 +86,7 @@ func TestInitializePortSessionForPortForwarding(t *testing.T) {
 	mockWebSocketChannel.On("SetOnMessage", mock.Anything)
 
 	portSession := PortSession{
-		Session: getSessionMockWithParams(portParameters, "3.1.0.0"),
+		Session: getSessionMockWithParams(t, portParameters, "3.1.0.0"),
 	}
 	portSession.Initialize(context.TODO(), mockLog, &portSession.Session)
 
@@ -135,12 +135,12 @@ func TestStartSessionWithClosedWsConn(t *testing.T) {
 	}
 
 	portSession := PortSession{
-		Session:        getSessionMock(),
+		Session:        getSessionMock(t),
 		portParameters: PortParameters{PortNumber: "22"},
 		portSessionType: &StandardStreamForwarding{
 			inputStream:  in,
 			outputStream: out,
-			session:      getSessionMock(),
+			session:      getSessionMock(t),
 		},
 	}
 
@@ -195,9 +195,11 @@ func TestProcessStreamMessagePayload(t *testing.T) {
 
 	var payload []byte
 
+	session := getSessionMock(t)
+
 	go func() {
 		portSession := PortSession{
-			Session:         getSessionMock(),
+			Session:         session,
 			portParameters:  PortParameters{PortNumber: "22"},
 			portSessionType: ssf,
 		}

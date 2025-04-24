@@ -61,10 +61,12 @@ var (
 	expectedSequenceNumber                      = int64(0)
 )
 
-func TestInitialize(t *testing.T) {
-	datachannel := DataChannel{}
+func TestNewDataChannel(t *testing.T) {
 	isAwsCliUpgradeNeeded := false
-	datachannel.Initialize(mockLogger, clientID, sessionID, instanceID, isAwsCliUpgradeNeeded)
+	mockKMSClient := &kms.Client{}
+
+	datachannel, err := NewDataChannel(mockKMSClient, clientID, sessionID, instanceID, isAwsCliUpgradeNeeded, mockLogger)
+	require.NoError(t, err)
 
 	assert.Equal(t, config.RolePublishSubscribe, datachannel.Role)
 	assert.Equal(t, clientID, datachannel.ClientID)
@@ -77,13 +79,13 @@ func TestInitialize(t *testing.T) {
 	assert.Equal(t, config.DefaultTransmissionTimeout, datachannel.RetransmissionTimeout)
 }
 
-func TestSetWebSocketChannel(t *testing.T) {
-	datachannel := getDataChannel()
+func TestSetWsChannel(t *testing.T) {
+	datachannel := getDataChannel(t)
 
 	mockWsChannel.On("GetStreamURL").Return(streamURL)
 	mockWsChannel.On("GetChannelToken").Return(channelToken)
 
-	datachannel.SetWebSocketChannel(mockWsChannel)
+	datachannel.SetWsChannel(mockWsChannel)
 
 	assert.Equal(t, streamURL, datachannel.wsChannel.GetStreamURL())
 	assert.Equal(t, channelToken, datachannel.wsChannel.GetChannelToken())
@@ -91,7 +93,7 @@ func TestSetWebSocketChannel(t *testing.T) {
 }
 
 func TestReconnect(t *testing.T) {
-	datachannel := getDataChannel()
+	datachannel := getDataChannel(t)
 
 	mockWsChannel.On("Close", mock.Anything).Return(nil)
 	mockWsChannel.On("Open", mock.Anything).Return(nil)
@@ -105,7 +107,7 @@ func TestReconnect(t *testing.T) {
 }
 
 func TestOpen(t *testing.T) {
-	datachannel := getDataChannel()
+	datachannel := getDataChannel(t)
 
 	mockWsChannel.On("Open", mock.Anything).Return(nil)
 
@@ -116,7 +118,7 @@ func TestOpen(t *testing.T) {
 }
 
 func TestClose(t *testing.T) {
-	datachannel := getDataChannel()
+	datachannel := getDataChannel(t)
 
 	mockWsChannel.On("Close", mock.Anything).Return(nil)
 
@@ -128,7 +130,7 @@ func TestClose(t *testing.T) {
 }
 
 func TestFinalizeDataChannelHandshake(t *testing.T) {
-	datachannel := getDataChannel()
+	datachannel := getDataChannel(t)
 
 	mockWsChannel.On("SendMessage", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	mockWsChannel.On("GetStreamURL").Return(streamURL)
@@ -141,7 +143,7 @@ func TestFinalizeDataChannelHandshake(t *testing.T) {
 }
 
 func TestSendMessage(t *testing.T) {
-	datachannel := getDataChannel()
+	datachannel := getDataChannel(t)
 
 	mockWsChannel.On("SendMessage", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
@@ -152,7 +154,7 @@ func TestSendMessage(t *testing.T) {
 }
 
 func TestSendInputDataMessage(t *testing.T) {
-	dataChannel := getDataChannel()
+	dataChannel := getDataChannel(t)
 
 	mockWsChannel.On("SendMessage", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
@@ -165,7 +167,7 @@ func TestSendInputDataMessage(t *testing.T) {
 }
 
 func TestProcessAcknowledgedMessage(t *testing.T) {
-	dataChannel := getDataChannel()
+	dataChannel := getDataChannel(t)
 	dataChannel.AddDataToOutgoingMessageBuffer(streamingMessages[0])
 
 	dataStreamAcknowledgeContent := message.AcknowledgeContent{
@@ -186,7 +188,7 @@ func (s mockStreamingMessage) GetRoundTripTime() time.Duration {
 }
 
 func TestCalculateRetransmissionTimeout(t *testing.T) {
-	dataChannel := getDataChannel()
+	dataChannel := getDataChannel(t)
 
 	streamingMessage := mockStreamingMessage{}
 
@@ -197,7 +199,7 @@ func TestCalculateRetransmissionTimeout(t *testing.T) {
 }
 
 func TestAddDataToOutgoingMessageBuffer(t *testing.T) {
-	dataChannel := getDataChannel()
+	dataChannel := getDataChannel(t)
 	dataChannel.OutgoingMessageBuffer.Capacity = 2
 
 	dataChannel.AddDataToOutgoingMessageBuffer(streamingMessages[0])
@@ -232,7 +234,7 @@ func TestAddDataToOutgoingMessageBuffer(t *testing.T) {
 }
 
 func TestAddDataToIncomingMessageBuffer(t *testing.T) {
-	dataChannel := getDataChannel()
+	dataChannel := getDataChannel(t)
 	dataChannel.IncomingMessageBuffer.Capacity = 2
 
 	dataChannel.AddDataToIncomingMessageBuffer(streamingMessages[0])
@@ -258,7 +260,7 @@ func TestAddDataToIncomingMessageBuffer(t *testing.T) {
 }
 
 func TestRemoveDataFromOutgoingMessageBuffer(t *testing.T) {
-	dataChannel := getDataChannel()
+	dataChannel := getDataChannel(t)
 	for i := range 3 {
 		dataChannel.AddDataToOutgoingMessageBuffer(streamingMessages[i])
 	}
@@ -268,7 +270,7 @@ func TestRemoveDataFromOutgoingMessageBuffer(t *testing.T) {
 }
 
 func TestRemoveDataFromIncomingMessageBuffer(t *testing.T) {
-	dataChannel := getDataChannel()
+	dataChannel := getDataChannel(t)
 	for i := range 3 {
 		dataChannel.AddDataToIncomingMessageBuffer(streamingMessages[i])
 	}
@@ -278,7 +280,7 @@ func TestRemoveDataFromIncomingMessageBuffer(t *testing.T) {
 }
 
 func TestResendStreamDataMessageScheduler(t *testing.T) {
-	dataChannel := getDataChannel()
+	dataChannel := getDataChannel(t)
 	mockChannel := &communicatorMocks.IWebSocketChannel{}
 
 	dataChannel.wsChannel = mockChannel
@@ -312,7 +314,7 @@ func TestResendStreamDataMessageScheduler(t *testing.T) {
 }
 
 func TestDataChannelIncomingMessageHandlerForExpectedInputStreamDataMessage(t *testing.T) {
-	dataChannel := getDataChannel()
+	dataChannel := getDataChannel(t)
 	mockChannel := &communicatorMocks.IWebSocketChannel{}
 	dataChannel.wsChannel = mockChannel
 
@@ -358,7 +360,7 @@ func TestDataChannelIncomingMessageHandlerForExpectedInputStreamDataMessage(t *t
 }
 
 func TestDataChannelIncomingMessageHandlerForUnexpectedInputStreamDataMessage(t *testing.T) {
-	dataChannel := getDataChannel()
+	dataChannel := getDataChannel(t)
 	mockChannel := &communicatorMocks.IWebSocketChannel{}
 	dataChannel.wsChannel = mockChannel
 	dataChannel.IncomingMessageBuffer.Capacity = 2
@@ -397,7 +399,7 @@ func TestDataChannelIncomingMessageHandlerForUnexpectedInputStreamDataMessage(t 
 }
 
 func TestDataChannelIncomingMessageHandlerForAcknowledgeMessage(t *testing.T) {
-	dataChannel := getDataChannel()
+	dataChannel := getDataChannel(t)
 	mockChannel := &communicatorMocks.IWebSocketChannel{}
 	dataChannel.wsChannel = mockChannel
 
@@ -440,7 +442,7 @@ func TestDataChannelIncomingMessageHandlerForAcknowledgeMessage(t *testing.T) {
 }
 
 func TestDataChannelIncomingMessageHandlerForPausePublicationessage(t *testing.T) {
-	dataChannel := getDataChannel()
+	dataChannel := getDataChannel(t)
 	mockChannel := &communicatorMocks.IWebSocketChannel{}
 	dataChannel.wsChannel = mockChannel
 
@@ -473,7 +475,7 @@ func TestDataChannelIncomingMessageHandlerForPausePublicationessage(t *testing.T
 }
 
 func TestHandshakeRequestHandler(t *testing.T) {
-	dataChannel := getDataChannel()
+	dataChannel := getDataChannel(t)
 	mockChannel := &communicatorMocks.IWebSocketChannel{}
 	dataChannel.wsChannel = mockChannel
 	mockEncrypter := &mocks.IEncrypter{}
@@ -544,7 +546,7 @@ func TestHandshakeRequestHandler(t *testing.T) {
 }
 
 func TestHandleOutputMessageForDefaultTypeWithError(t *testing.T) {
-	dataChannel := getDataChannel()
+	dataChannel := getDataChannel(t)
 	mockChannel := &communicatorMocks.IWebSocketChannel{}
 	dataChannel.wsChannel = mockChannel
 	clientMessage := getClientMessage(0, message.OutputStreamMessage,
@@ -562,7 +564,7 @@ func TestHandleOutputMessageForDefaultTypeWithError(t *testing.T) {
 }
 
 func TestHandleOutputMessageForExitCodePayloadTypeWithError(t *testing.T) {
-	dataChannel := getDataChannel()
+	dataChannel := getDataChannel(t)
 	mockChannel := &communicatorMocks.IWebSocketChannel{}
 	dataChannel.wsChannel = mockChannel
 	clientMessage := getClientMessage(0, message.OutputStreamMessage,
@@ -580,7 +582,7 @@ func TestHandleOutputMessageForExitCodePayloadTypeWithError(t *testing.T) {
 }
 
 func TestHandleHandshakeRequestWithMessageDeserializeError(t *testing.T) {
-	dataChannel := getDataChannel()
+	dataChannel := getDataChannel(t)
 
 	handshakeRequestBytes, err := json.Marshal(buildHandshakeRequest(t))
 	if err != nil {
@@ -596,7 +598,7 @@ func TestHandleHandshakeRequestWithMessageDeserializeError(t *testing.T) {
 }
 
 func TestProcessOutputMessageWithHandlers(t *testing.T) {
-	dataChannel := getDataChannel()
+	dataChannel := getDataChannel(t)
 	mockChannel := &communicatorMocks.IWebSocketChannel{}
 	dataChannel.wsChannel = mockChannel
 
@@ -621,7 +623,7 @@ func TestProcessOutputMessageWithHandlers(t *testing.T) {
 
 func TestProcessSessionTypeHandshakeActionForInteractiveCommands(t *testing.T) {
 	actionParams := []byte("{\"SessionType\":\"InteractiveCommands\"}")
-	dataChannel := getDataChannel()
+	dataChannel := getDataChannel(t)
 
 	err := dataChannel.ProcessSessionTypeHandshakeAction(actionParams)
 
@@ -633,7 +635,7 @@ func TestProcessSessionTypeHandshakeActionForInteractiveCommands(t *testing.T) {
 
 func TestProcessSessionTypeHandshakeActionForNonInteractiveCommands(t *testing.T) {
 	actionParams := []byte("{\"SessionType\":\"NonInteractiveCommands\"}")
-	dataChannel := getDataChannel()
+	dataChannel := getDataChannel(t)
 
 	err := dataChannel.ProcessSessionTypeHandshakeAction(actionParams)
 
@@ -669,10 +671,15 @@ func buildHandshakeRequest(t *testing.T) message.HandshakeRequestPayload {
 	return handshakeRquest
 }
 
-func getDataChannel() *DataChannel {
-	dataChannel := &DataChannel{}
-	dataChannel.Initialize(mockLogger, clientID, sessionID, instanceID, false)
-	dataChannel.wsChannel = mockWsChannel
+func getDataChannel(t *testing.T) *DataChannel {
+	t.Helper()
+
+	mockKMSClient := &kms.Client{}
+
+	dataChannel, err := NewDataChannel(mockKMSClient, clientID, sessionID, instanceID, false, mockLogger)
+	require.NoError(t, err)
+
+	dataChannel.SetWsChannel(mockWsChannel)
 
 	return dataChannel
 }

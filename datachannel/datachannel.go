@@ -74,10 +74,14 @@ type DataChannel struct {
 	agentVersion string
 }
 
-// Initialize populates the data channel object with the correct values.
-func (c *DataChannel) Initialize(log log.T, clientID string, sessionID string, targetID string, isAwsCliUpgradeNeeded bool) {
+// NewDataChannel creates a DataChannel.
+func NewDataChannel(kmsClient *kms.Client, clientID string, sessionID string, targetID string, awsCLIUpgradeNeeded bool, log log.T) (*DataChannel, error) {
 	// open data channel as publish_subscribe
-	log.Debug("Calling Initialize Datachannel", "role", config.RolePublishSubscribe)
+	log.Debug("Calling initialize Datachannel", "role", config.RolePublishSubscribe)
+
+	c := &DataChannel{
+		KMSClient: kmsClient,
+	}
 
 	c.Role = config.RolePublishSubscribe
 	c.ClientID = clientID
@@ -102,12 +106,9 @@ func (c *DataChannel) Initialize(log log.T, clientID string, sessionID string, t
 	c.isSessionTypeSet = make(chan bool, 1)
 	c.isStreamMessageResendTimeout = make(chan bool, 1)
 	c.sessionType = ""
-	c.IsAwsCliUpgradeNeeded = isAwsCliUpgradeNeeded
-}
+	c.IsAwsCliUpgradeNeeded = awsCLIUpgradeNeeded
 
-// SetWebSocketChannel sets wsChannel.
-func (c *DataChannel) SetWebSocketChannel(wsChannel communicator.IWebSocketChannel) {
-	c.wsChannel = wsChannel
+	return c, nil
 }
 
 // FinalizeDataChannelHandshake sends the token for service to acknowledge the connection.

@@ -16,7 +16,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/google/uuid"
 	"github.com/steveh/ecstoolkit/config"
-	"github.com/steveh/ecstoolkit/datachannel"
 	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/session"
 	"github.com/steveh/ecstoolkit/session/portsession"
@@ -129,12 +128,7 @@ func (e *Executor) newSession(options *ExecuteSessionOptions, execute *ecs.Execu
 		return nil, fmt.Errorf("generate UUID: %w", err)
 	}
 
-	dc := datachannel.DataChannel{
-		KMSClient: e.kmsClient,
-	}
-
 	sess := session.Session{
-		DataChannel: &dc,
 		SessionID:   *execute.Session.SessionId,
 		StreamURL:   *execute.Session.StreamUrl,
 		TokenValue:  *execute.Session.TokenValue,
@@ -143,6 +137,7 @@ func (e *Executor) newSession(options *ExecuteSessionOptions, execute *ecs.Execu
 		TargetID:    fmt.Sprintf("ecs:%s_%s_%s", options.ClusterName, taskID, options.ContainerRuntimeID),
 		DisplayMode: sessionutil.NewDisplayMode(e.logger),
 		SSMClient:   e.ssmClient,
+		KMSClient:   e.kmsClient,
 	}
 
 	return &sess, nil

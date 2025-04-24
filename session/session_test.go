@@ -19,6 +19,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/service/kms"
 	wsChannelMock "github.com/steveh/ecstoolkit/communicator/mocks"
 	"github.com/steveh/ecstoolkit/config"
 	"github.com/steveh/ecstoolkit/datachannel"
@@ -44,7 +45,7 @@ var (
 
 func SetupMockActions() {
 	mockDataChannel.On("Initialize", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return()
-	mockDataChannel.On("SetWebSocketChannel", mock.Anything)
+	mockDataChannel.On("SetWsChannel", mock.Anything)
 	mockDataChannel.On("GetWsChannel").Return(mockWsChannel)
 	mockDataChannel.On("RegisterOutputStreamHandler", mock.Anything, mock.Anything)
 	mockDataChannel.On("ResendStreamDataMessageScheduler", mock.Anything).Return(nil)
@@ -91,13 +92,16 @@ func TestProcessFirstMessageOutputMessageFirst(t *testing.T) {
 		Payload:     []byte("testing"),
 	}
 
-	dataChannel := &datachannel.DataChannel{}
-	dataChannel.Initialize(logger, clientID, sessionID, instanceID, false)
+	mockKMSClient := &kms.Client{}
+
+	dataChannel, err := datachannel.NewDataChannel(mockKMSClient, clientID, sessionID, instanceID, false, logger)
+	require.NoError(t, err)
+
 	session := Session{
 		DataChannel: dataChannel,
 	}
 
-	_, err := session.ProcessFirstMessage(logger, outputMessage)
+	_, err = session.ProcessFirstMessage(logger, outputMessage)
 	if err != nil {
 		t.Errorf("Failed to process first message: %v", err)
 	}

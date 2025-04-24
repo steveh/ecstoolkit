@@ -21,6 +21,7 @@ import (
 	"math/rand"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/steveh/ecstoolkit/communicator"
 	"github.com/steveh/ecstoolkit/config"
@@ -42,6 +43,7 @@ type Session struct {
 	ClientID              string
 	TargetID              string
 	SSMClient             *ssm.Client
+	KMSClient             *kms.Client
 	retryParams           retry.RepeatableExponentialRetryer
 	SessionType           string
 	SessionProperties     interface{}
@@ -57,14 +59,26 @@ func (s *Session) OpenDataChannel(ctx context.Context, log log.T) error {
 		MaxAttempts:         config.DataChannelNumMaxRetries,
 	}
 
-	s.DataChannel.Initialize(log, s.ClientID, s.SessionID, s.TargetID, s.IsAwsCliUpgradeNeeded)
-
 	wsChannel, err := communicator.NewWebSocketChannel(s.StreamURL, s.TokenValue)
 	if err != nil {
 		return fmt.Errorf("creating websocket channel: %w", err)
 	}
 
-	s.DataChannel.SetWebSocketChannel(wsChannel)
+	dataChannel, err := datachannel.NewDataChannel(
+		s.KMSClient,
+		s.ClientID,
+		s.SessionID,
+		s.TargetID,
+		s.IsAwsCliUpgradeNeeded,
+		log,
+	)
+	if err != nil {
+		return fmt.Errorf("creating data channel: %w", err)
+	}
+
+	s.DataChannel = dataChannel
+
+	s.DataChannel.SetWsChannel(wsChannel)
 
 	s.DataChannel.GetWsChannel().SetOnMessage(
 		func(input []byte) {
@@ -72,6 +86,7 @@ func (s *Session) OpenDataChannel(ctx context.Context, log log.T) error {
 				log.Error("Failed to handle output message", "error", err)
 			}
 		})
+
 	s.DataChannel.RegisterOutputStreamHandler(s.ProcessFirstMessage, false)
 
 	if err := s.DataChannel.Open(log); err != nil {
