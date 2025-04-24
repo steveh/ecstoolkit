@@ -120,15 +120,14 @@ func (s *Session) OpenDataChannel(ctx context.Context, log log.T) error {
 		}
 	}
 
-	s.DataChannel.SetOnError(
-		func(wsErr error) {
-			log.Error("Trying to reconnect session", "url", s.streamURL, "sequenceNumber", s.DataChannel.GetStreamDataSequenceNumber(), "error", wsErr)
+	s.DataChannel.SetOnError(func(wsErr error) {
+		log.Error("Trying to reconnect session", "url", s.streamURL, "sequenceNumber", s.DataChannel.GetStreamDataSequenceNumber(), "error", wsErr)
 
-			s.retryParams.CallableFunc = func() error { return s.ResumeSessionHandler(ctx, log) }
-			if err := s.retryParams.Call(); err != nil {
-				log.Error("Reconnect error", "error", err)
-			}
-		})
+		s.retryParams.CallableFunc = func() error { return s.ResumeSessionHandler(ctx, log) }
+		if err := s.retryParams.Call(); err != nil {
+			log.Error("Reconnect error", "error", err)
+		}
+	})
 
 	// Scheduler for resending of data
 	if err := s.DataChannel.ResendStreamDataMessageScheduler(log); err != nil {

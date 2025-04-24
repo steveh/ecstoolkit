@@ -357,41 +357,6 @@ func (c *DataChannel) SendAcknowledgeMessage(log log.T, streamDataMessage messag
 	return nil
 }
 
-// OutputMessageHandler gets output on the data channel.
-func (c *DataChannel) OutputMessageHandler(ctx context.Context, log log.T, stopHandler Stop, rawMessage []byte) error {
-	outputMessage := &message.ClientMessage{}
-
-	err := outputMessage.DeserializeClientMessage(log, rawMessage)
-	if err != nil {
-		log.Error("Cannot deserialize raw message", "message", string(rawMessage), "error", err)
-
-		return fmt.Errorf("could not deserialize rawMessage, %s : %w", rawMessage, err)
-	}
-
-	if err = outputMessage.Validate(); err != nil {
-		log.Error("Invalid outputMessage", "message", *outputMessage, "error", err)
-
-		return fmt.Errorf("validating output message: %w", err)
-	}
-
-	log.Trace("Processing stream data message", "type", outputMessage.MessageType)
-
-	switch outputMessage.MessageType {
-	case message.OutputStreamMessage:
-		return c.HandleOutputMessage(ctx, log, *outputMessage, rawMessage)
-	case message.AcknowledgeMessage:
-		return c.HandleAcknowledgeMessage(log, *outputMessage)
-	case message.ChannelClosedMessage:
-		c.HandleChannelClosedMessage(log, stopHandler, c.SessionID, *outputMessage)
-	case message.StartPublicationMessage, message.PausePublicationMessage:
-		return nil
-	default:
-		log.Warn("Invalid message type received", "messageType", outputMessage.MessageType)
-	}
-
-	return nil
-}
-
 // RegisterOutputStreamHandler register a handler for messages of type OutputStream. This is usually called by the plugin.
 func (c *DataChannel) RegisterOutputStreamHandler(handler OutputStreamDataMessageHandler, isSessionSpecificHandler bool) {
 	c.isSessionSpecificHandlerSet = isSessionSpecificHandler
@@ -663,7 +628,7 @@ func (c *DataChannel) RegisterOutputMessageHandler(ctx context.Context, log log.
 	c.wsChannel.SetOnMessage(func(input []byte) {
 		onMessageHandler(input)
 
-		if err := c.OutputMessageHandler(ctx, log, stopHandler, input); err != nil {
+		if err := c.outputMessageHandler(ctx, log, stopHandler, input); err != nil {
 			log.Error("Failed to handle output message", "error", err)
 		}
 	})
@@ -682,6 +647,41 @@ func (c *DataChannel) GetAgentVersion() string {
 // SetAgentVersion set agent version of the target instance.
 func (c *DataChannel) SetAgentVersion(agentVersion string) {
 	c.agentVersion = agentVersion
+}
+
+// outputMessageHandler gets output on the data channel.
+func (c *DataChannel) outputMessageHandler(ctx context.Context, log log.T, stopHandler Stop, rawMessage []byte) error {
+	outputMessage := &message.ClientMessage{}
+
+	err := outputMessage.DeserializeClientMessage(log, rawMessage)
+	if err != nil {
+		log.Error("Cannot deserialize raw message", "message", string(rawMessage), "error", err)
+
+		return fmt.Errorf("could not deserialize rawMessage, %s : %w", rawMessage, err)
+	}
+
+	if err = outputMessage.Validate(); err != nil {
+		log.Error("Invalid outputMessage", "message", *outputMessage, "error", err)
+
+		return fmt.Errorf("validating output message: %w", err)
+	}
+
+	log.Trace("Processing stream data message", "type", outputMessage.MessageType)
+
+	switch outputMessage.MessageType {
+	case message.OutputStreamMessage:
+		return c.HandleOutputMessage(ctx, log, *outputMessage, rawMessage)
+	case message.AcknowledgeMessage:
+		return c.HandleAcknowledgeMessage(log, *outputMessage)
+	case message.ChannelClosedMessage:
+		c.HandleChannelClosedMessage(log, stopHandler, c.SessionID, *outputMessage)
+	case message.StartPublicationMessage, message.PausePublicationMessage:
+		return nil
+	default:
+		log.Warn("Invalid message type received", "messageType", outputMessage.MessageType)
+	}
+
+	return nil
 }
 
 // handleHandshakeRequest is the handler for payloads of type HandshakeRequest.
