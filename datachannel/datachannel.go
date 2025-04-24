@@ -358,7 +358,7 @@ func (c *DataChannel) SendAcknowledgeMessage(log log.T, streamDataMessage messag
 }
 
 // OutputMessageHandler gets output on the data channel.
-func (c *DataChannel) OutputMessageHandler(ctx context.Context, log log.T, stopHandler Stop, sessionID string, rawMessage []byte) error {
+func (c *DataChannel) OutputMessageHandler(ctx context.Context, log log.T, stopHandler Stop, rawMessage []byte) error {
 	outputMessage := &message.ClientMessage{}
 
 	err := outputMessage.DeserializeClientMessage(log, rawMessage)
@@ -382,7 +382,7 @@ func (c *DataChannel) OutputMessageHandler(ctx context.Context, log log.T, stopH
 	case message.AcknowledgeMessage:
 		return c.HandleAcknowledgeMessage(log, *outputMessage)
 	case message.ChannelClosedMessage:
-		c.HandleChannelClosedMessage(log, stopHandler, sessionID, *outputMessage)
+		c.HandleChannelClosedMessage(log, stopHandler, c.SessionID, *outputMessage)
 	case message.StartPublicationMessage, message.PausePublicationMessage:
 		return nil
 	default:

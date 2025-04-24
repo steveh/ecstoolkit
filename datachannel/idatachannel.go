@@ -25,7 +25,7 @@ type IDataChannel interface {
 	SendInputDataMessage(log log.T, payloadType message.PayloadType, inputData []byte) error
 	ResendStreamDataMessageScheduler(log log.T) error
 	ProcessAcknowledgedMessage(log log.T, acknowledgeMessageContent message.AcknowledgeContent) error
-	OutputMessageHandler(ctx context.Context, log log.T, stopHandler Stop, sessionID string, rawMessage []byte) error
+	OutputMessageHandler(ctx context.Context, log log.T, stopHandler Stop, rawMessage []byte) error
 	SendAcknowledgeMessage(log log.T, clientMessage message.ClientMessage) error
 	AddDataToOutgoingMessageBuffer(streamMessage StreamingMessage)
 	RemoveDataFromOutgoingMessageBuffer(streamMessageElement *list.Element)

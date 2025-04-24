@@ -109,7 +109,7 @@ func (s *Session) OpenDataChannel(ctx context.Context, log log.T) error {
 
 	s.DataChannel.SetOnMessage(
 		func(input []byte) {
-			if err := s.DataChannel.OutputMessageHandler(ctx, log, s.Stop, s.SessionID, input); err != nil {
+			if err := s.DataChannel.OutputMessageHandler(ctx, log, s.Stop, input); err != nil {
 				log.Error("Failed to handle output message", "error", err)
 			}
 		})

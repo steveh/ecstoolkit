@@ -578,17 +578,17 @@ func (_c *IDataChannel_Open_Call) RunAndReturn(run func(log.T) error) *IDataChan
 	return _c
 }
 
-// OutputMessageHandler provides a mock function with given fields: ctx, _a1, stopHandler, sessionID, rawMessage
-func (_m *IDataChannel) OutputMessageHandler(ctx context.Context, _a1 log.T, stopHandler datachannel.Stop, sessionID string, rawMessage []byte) error {
-	ret := _m.Called(ctx, _a1, stopHandler, sessionID, rawMessage)
+// OutputMessageHandler provides a mock function with given fields: ctx, _a1, stopHandler, rawMessage
+func (_m *IDataChannel) OutputMessageHandler(ctx context.Context, _a1 log.T, stopHandler datachannel.Stop, rawMessage []byte) error {
+	ret := _m.Called(ctx, _a1, stopHandler, rawMessage)
 
 	if len(ret) == 0 {
 		panic("no return value specified for OutputMessageHandler")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, log.T, datachannel.Stop, string, []byte) error); ok {
-		r0 = rf(ctx, _a1, stopHandler, sessionID, rawMessage)
+	if rf, ok := ret.Get(0).(func(context.Context, log.T, datachannel.Stop, []byte) error); ok {
+		r0 = rf(ctx, _a1, stopHandler, rawMessage)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -605,15 +605,14 @@ type IDataChannel_OutputMessageHandler_Call struct {
 //   - ctx context.Context
 //   - _a1 log.T
 //   - stopHandler datachannel.Stop
-//   - sessionID string
 //   - rawMessage []byte
-func (_e *IDataChannel_Expecter) OutputMessageHandler(ctx interface{}, _a1 interface{}, stopHandler interface{}, sessionID interface{}, rawMessage interface{}) *IDataChannel_OutputMessageHandler_Call {
-	return &IDataChannel_OutputMessageHandler_Call{Call: _e.mock.On("OutputMessageHandler", ctx, _a1, stopHandler, sessionID, rawMessage)}
+func (_e *IDataChannel_Expecter) OutputMessageHandler(ctx interface{}, _a1 interface{}, stopHandler interface{}, rawMessage interface{}) *IDataChannel_OutputMessageHandler_Call {
+	return &IDataChannel_OutputMessageHandler_Call{Call: _e.mock.On("OutputMessageHandler", ctx, _a1, stopHandler, rawMessage)}
 }
 
-func (_c *IDataChannel_OutputMessageHandler_Call) Run(run func(ctx context.Context, _a1 log.T, stopHandler datachannel.Stop, sessionID string, rawMessage []byte)) *IDataChannel_OutputMessageHandler_Call {
+func (_c *IDataChannel_OutputMessageHandler_Call) Run(run func(ctx context.Context, _a1 log.T, stopHandler datachannel.Stop, rawMessage []byte)) *IDataChannel_OutputMessageHandler_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(log.T), args[2].(datachannel.Stop), args[3].(string), args[4].([]byte))
+		run(args[0].(context.Context), args[1].(log.T), args[2].(datachannel.Stop), args[3].([]byte))
 	})
 	return _c
 }
@@ -623,7 +622,7 @@ func (_c *IDataChannel_OutputMessageHandler_Call) Return(_a0 error) *IDataChanne
 	return _c
 }
 
-func (_c *IDataChannel_OutputMessageHandler_Call) RunAndReturn(run func(context.Context, log.T, datachannel.Stop, string, []byte) error) *IDataChannel_OutputMessageHandler_Call {
+func (_c *IDataChannel_OutputMessageHandler_Call) RunAndReturn(run func(context.Context, log.T, datachannel.Stop, []byte) error) *IDataChannel_OutputMessageHandler_Call {
 	_c.Call.Return(run)
 	return _c
 }
