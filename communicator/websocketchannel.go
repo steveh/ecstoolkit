@@ -53,48 +53,48 @@ type WebSocketChannel struct {
 }
 
 // GetChannelToken gets the channel token.
-func (webSocketChannel *WebSocketChannel) GetChannelToken() string {
-	return webSocketChannel.ChannelToken
+func (c *WebSocketChannel) GetChannelToken() string {
+	return c.ChannelToken
 }
 
 // SetChannelToken sets the channel token.
-func (webSocketChannel *WebSocketChannel) SetChannelToken(channelToken string) {
-	webSocketChannel.ChannelToken = channelToken
+func (c *WebSocketChannel) SetChannelToken(channelToken string) {
+	c.ChannelToken = channelToken
 }
 
 // GetStreamURL gets stream url.
-func (webSocketChannel *WebSocketChannel) GetStreamURL() string {
-	return webSocketChannel.URL
+func (c *WebSocketChannel) GetStreamURL() string {
+	return c.URL
 }
 
 // SetOnError sets OnError field of websocket channel.
-func (webSocketChannel *WebSocketChannel) SetOnError(onErrorHandler func(error)) {
-	webSocketChannel.OnError = onErrorHandler
+func (c *WebSocketChannel) SetOnError(onErrorHandler func(error)) {
+	c.OnError = onErrorHandler
 }
 
 // SetOnMessage sets OnMessage field of websocket channel.
-func (webSocketChannel *WebSocketChannel) SetOnMessage(onMessageHandler func([]byte)) {
-	webSocketChannel.OnMessage = onMessageHandler
+func (c *WebSocketChannel) SetOnMessage(onMessageHandler func([]byte)) {
+	c.OnMessage = onMessageHandler
 }
 
 // Initialize initializes websocket channel fields.
-func (webSocketChannel *WebSocketChannel) Initialize(_ log.T, channelURL string, channelToken string) {
-	webSocketChannel.ChannelToken = channelToken
-	webSocketChannel.URL = channelURL
+func (c *WebSocketChannel) Initialize(_ log.T, channelURL string, channelToken string) {
+	c.ChannelToken = channelToken
+	c.URL = channelURL
 }
 
 // StartPings starts the pinging process to keep the websocket channel alive.
-func (webSocketChannel *WebSocketChannel) StartPings(log log.T, pingInterval time.Duration) {
+func (c *WebSocketChannel) StartPings(log log.T, pingInterval time.Duration) {
 	go func() {
 		for {
-			if !webSocketChannel.IsOpen {
+			if !c.IsOpen {
 				return
 			}
 
 			log.Debug("WebsocketChannel: Send ping. Message.")
-			webSocketChannel.writeLock.Lock()
-			err := webSocketChannel.Connection.WriteMessage(websocket.PingMessage, []byte("keepalive"))
-			webSocketChannel.writeLock.Unlock()
+			c.writeLock.Lock()
+			err := c.Connection.WriteMessage(websocket.PingMessage, []byte("keepalive"))
+			c.writeLock.Unlock()
 
 			if err != nil {
 				log.Error("Error sending websocket ping", "error", err)
@@ -109,8 +109,8 @@ func (webSocketChannel *WebSocketChannel) StartPings(log log.T, pingInterval tim
 
 // SendMessage sends a byte message through the websocket connection.
 // Examples of message type are websocket.TextMessage or websocket.Binary.
-func (webSocketChannel *WebSocketChannel) SendMessage(input []byte, inputType int) error {
-	if !webSocketChannel.IsOpen {
+func (c *WebSocketChannel) SendMessage(input []byte, inputType int) error {
+	if !c.IsOpen {
 		return errors.New("connection is closed")
 	}
 
@@ -118,9 +118,9 @@ func (webSocketChannel *WebSocketChannel) SendMessage(input []byte, inputType in
 		return errors.New("empty input")
 	}
 
-	webSocketChannel.writeLock.Lock()
-	err := webSocketChannel.Connection.WriteMessage(inputType, input)
-	webSocketChannel.writeLock.Unlock()
+	c.writeLock.Lock()
+	err := c.Connection.WriteMessage(inputType, input)
+	c.writeLock.Unlock()
 
 	if err != nil {
 		return fmt.Errorf("writing websocket message: %w", err)
@@ -130,38 +130,38 @@ func (webSocketChannel *WebSocketChannel) SendMessage(input []byte, inputType in
 }
 
 // Close closes the corresponding connection.
-func (webSocketChannel *WebSocketChannel) Close(log log.T) error {
-	log.Debug("Closing websocket channel connection", "url", webSocketChannel.URL)
+func (c *WebSocketChannel) Close(log log.T) error {
+	log.Debug("Closing websocket channel connection", "url", c.URL)
 
-	if webSocketChannel.IsOpen {
+	if c.IsOpen {
 		// Send signal to stop receiving message
-		webSocketChannel.IsOpen = false
+		c.IsOpen = false
 
-		if err := websocketutil.NewWebsocketUtil(log, nil).CloseConnection(webSocketChannel.Connection); err != nil {
+		if err := websocketutil.NewWebsocketUtil(log, nil).CloseConnection(c.Connection); err != nil {
 			return fmt.Errorf("closing websocket connection: %w", err)
 		}
 
 		return nil
 	}
 
-	log.Warn("Websocket channel connection is already Closed!", "url", webSocketChannel.URL)
+	log.Warn("Websocket channel connection is already Closed!", "url", c.URL)
 
 	return nil
 }
 
 // Open upgrades the http connection to a websocket connection.
-func (webSocketChannel *WebSocketChannel) Open(log log.T) error {
+func (c *WebSocketChannel) Open(log log.T) error {
 	// initialize the write mutex
-	webSocketChannel.writeLock = &sync.Mutex{}
+	c.writeLock = &sync.Mutex{}
 
-	ws, err := websocketutil.NewWebsocketUtil(log, nil).OpenConnection(webSocketChannel.URL)
+	ws, err := websocketutil.NewWebsocketUtil(log, nil).OpenConnection(c.URL)
 	if err != nil {
 		return fmt.Errorf("opening websocket connection: %w", err)
 	}
 
-	webSocketChannel.Connection = ws
-	webSocketChannel.IsOpen = true
-	webSocketChannel.StartPings(log, config.PingTimeInterval)
+	c.Connection = ws
+	c.IsOpen = true
+	c.StartPings(log, config.PingTimeInterval)
 
 	// spin up a different routine to listen to the incoming traffic
 	go func() {
@@ -174,20 +174,20 @@ func (webSocketChannel *WebSocketChannel) Open(log log.T) error {
 		retryCount := 0
 
 		for {
-			if !webSocketChannel.IsOpen {
-				log.Debug("Ending the channel listening routine since the channel is closed", "url", webSocketChannel.URL)
+			if !c.IsOpen {
+				log.Debug("Ending the channel listening routine since the channel is closed", "url", c.URL)
 
 				break
 			}
 
-			messageType, rawMessage, err := webSocketChannel.Connection.ReadMessage()
+			messageType, rawMessage, err := c.Connection.ReadMessage()
 
 			switch {
 			case err != nil:
 				retryCount++
 				if retryCount >= config.RetryAttempt {
 					log.Error("Reached retry limit for receiving messages", "retryLimit", config.RetryAttempt)
-					webSocketChannel.OnError(err)
+					c.OnError(err)
 
 					break
 				}
@@ -199,7 +199,7 @@ func (webSocketChannel *WebSocketChannel) Open(log log.T) error {
 			default:
 				retryCount = 0
 
-				webSocketChannel.OnMessage(rawMessage)
+				c.OnMessage(rawMessage)
 			}
 		}
 	}()

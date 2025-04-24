@@ -54,29 +54,29 @@ type Encrypter struct {
 
 // NewEncrypter creates a new Encrypter instance with the given KMS key and encryption context.
 func NewEncrypter(ctx context.Context, log log.T, kmsKeyID string, encryptionContext map[string]string, kmsService *kms.Client) (*Encrypter, error) {
-	encrypter := Encrypter{kmsKeyID: kmsKeyID, KMSService: kmsService}
-	err := encrypter.generateEncryptionKey(ctx, log, kmsKeyID, encryptionContext)
+	e := Encrypter{kmsKeyID: kmsKeyID, KMSService: kmsService}
+	err := e.generateEncryptionKey(ctx, log, kmsKeyID, encryptionContext)
 
-	return &encrypter, err
+	return &e, err
 }
 
 // GetEncryptedDataKey returns the cipherText that was pulled from KMS.
-func (encrypter *Encrypter) GetEncryptedDataKey() []byte {
-	return encrypter.cipherTextKey
+func (e *Encrypter) GetEncryptedDataKey() []byte {
+	return e.cipherTextKey
 }
 
 // GetKMSKeyID gets the KMS key id that is used to generate the encryption key.
-func (encrypter *Encrypter) GetKMSKeyID() string {
-	return encrypter.kmsKeyID
+func (e *Encrypter) GetKMSKeyID() string {
+	return e.kmsKeyID
 }
 
 // Encrypt encrypts a byte slice and returns the encrypted slice.
-func (encrypter *Encrypter) Encrypt(_ log.T, plainText []byte) ([]byte, error) {
+func (e *Encrypter) Encrypt(_ log.T, plainText []byte) ([]byte, error) {
 	var aesgcm cipher.AEAD
 
 	var err error
 
-	if aesgcm, err = getAEAD(encrypter.encryptionKey); err != nil {
+	if aesgcm, err = getAEAD(e.encryptionKey); err != nil {
 		return nil, fmt.Errorf("%w", err)
 	}
 
@@ -98,12 +98,12 @@ func (encrypter *Encrypter) Encrypt(_ log.T, plainText []byte) ([]byte, error) {
 }
 
 // Decrypt decrypts a byte slice and returns the decrypted slice.
-func (encrypter *Encrypter) Decrypt(_ log.T, cipherText []byte) ([]byte, error) {
+func (e *Encrypter) Decrypt(_ log.T, cipherText []byte) ([]byte, error) {
 	var aesgcm cipher.AEAD
 
 	var err error
 
-	if aesgcm, err = getAEAD(encrypter.decryptionKey); err != nil {
+	if aesgcm, err = getAEAD(e.decryptionKey); err != nil {
 		return nil, fmt.Errorf("%w", err)
 	}
 
@@ -121,8 +121,8 @@ func (encrypter *Encrypter) Decrypt(_ log.T, cipherText []byte) ([]byte, error) 
 }
 
 // generateEncryptionKey calls KMS to generate a new encryption key.
-func (encrypter *Encrypter) generateEncryptionKey(ctx context.Context, log log.T, kmsKeyID string, encryptionContext map[string]string) error {
-	cipherTextKey, plainTextKey, err := KMSGenerateDataKey(ctx, kmsKeyID, encrypter.KMSService, encryptionContext)
+func (e *Encrypter) generateEncryptionKey(ctx context.Context, log log.T, kmsKeyID string, encryptionContext map[string]string) error {
+	cipherTextKey, plainTextKey, err := KMSGenerateDataKey(ctx, kmsKeyID, e.KMSService, encryptionContext)
 	if err != nil {
 		log.Error("Error generating data key from KMS", "error", err)
 
@@ -130,9 +130,9 @@ func (encrypter *Encrypter) generateEncryptionKey(ctx context.Context, log log.T
 	}
 
 	keySize := len(plainTextKey) / 2 //nolint:mnd
-	encrypter.decryptionKey = plainTextKey[:keySize]
-	encrypter.encryptionKey = plainTextKey[keySize:]
-	encrypter.cipherTextKey = cipherTextKey
+	e.decryptionKey = plainTextKey[:keySize]
+	e.encryptionKey = plainTextKey[keySize:]
+	e.cipherTextKey = cipherTextKey
 
 	return nil
 }

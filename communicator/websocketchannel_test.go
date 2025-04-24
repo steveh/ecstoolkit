@@ -44,9 +44,9 @@ type ErrorCallbackWrapper struct {
 	err error
 }
 
-func (mock *ErrorCallbackWrapper) defaultErrorHandler(err error) {
-	mock.Called(err)
-	mock.err = err
+func (m *ErrorCallbackWrapper) defaultErrorHandler(err error) {
+	m.Called(err)
+	m.err = err
 }
 
 type MessageCallbackWrapper struct {
@@ -54,9 +54,9 @@ type MessageCallbackWrapper struct {
 	message []byte
 }
 
-func (mock *MessageCallbackWrapper) defaultMessageHandler(msg []byte) {
-	mock.Called(msg)
-	mock.message = msg
+func (m *MessageCallbackWrapper) defaultMessageHandler(msg []byte) {
+	m.Called(msg)
+	m.message = msg
 }
 
 var upgrader = websocket.Upgrader{

@@ -35,25 +35,25 @@ type RepeatableExponentialRetryer struct {
 }
 
 // NextSleepTime calculates the next delay of retry.
-func (retryer *RepeatableExponentialRetryer) NextSleepTime(attempt int) time.Duration {
-	return time.Duration(float64(retryer.InitialDelayInMilli)*math.Pow(retryer.GeometricRatio, float64(attempt))) * time.Millisecond
+func (r *RepeatableExponentialRetryer) NextSleepTime(attempt int) time.Duration {
+	return time.Duration(float64(r.InitialDelayInMilli)*math.Pow(r.GeometricRatio, float64(attempt))) * time.Millisecond
 }
 
 // Call calls the operation and does exponential retry if error happens.
-func (retryer *RepeatableExponentialRetryer) Call() error {
+func (r *RepeatableExponentialRetryer) Call() error {
 	attempt := 0
 	failedAttemptsSoFar := 0
 
 	for {
-		err := retryer.CallableFunc()
-		if err == nil || failedAttemptsSoFar == retryer.MaxAttempts {
+		err := r.CallableFunc()
+		if err == nil || failedAttemptsSoFar == r.MaxAttempts {
 			return err
 		}
 
-		sleep := retryer.NextSleepTime(attempt)
-		if int(sleep/time.Millisecond) > retryer.MaxDelayInMilli {
+		sleep := r.NextSleepTime(attempt)
+		if int(sleep/time.Millisecond) > r.MaxDelayInMilli {
 			attempt = 0
-			sleep = retryer.NextSleepTime(attempt)
+			sleep = r.NextSleepTime(attempt)
 		}
 
 		time.Sleep(sleep)
