@@ -19,10 +19,13 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"net/url"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	"github.com/google/uuid"
 	"github.com/steveh/ecstoolkit/communicator"
 	"github.com/steveh/ecstoolkit/config"
 	"github.com/steveh/ecstoolkit/datachannel"
@@ -48,6 +51,30 @@ type Session struct {
 	SessionType           string
 	SessionProperties     interface{}
 	DisplayMode           sessionutil.DisplayMode
+}
+
+// NewSession creates a new session instance with the provided parameters.
+func NewSession(ssmClient *ssm.Client, kmsClient *kms.Client, ssmSession *types.Session, region string, targetID string, log log.T) (*Session, error) {
+	endpoint := url.URL{Scheme: "https", Host: fmt.Sprintf("ssm.%s.amazonaws.com", region)}
+
+	clientID, err := uuid.NewRandom()
+	if err != nil {
+		return nil, fmt.Errorf("generate UUID: %w", err)
+	}
+
+	session := &Session{
+		SessionID:   *ssmSession.SessionId,
+		StreamURL:   *ssmSession.StreamUrl,
+		TokenValue:  *ssmSession.TokenValue,
+		Endpoint:    endpoint.String(),
+		ClientID:    clientID.String(),
+		TargetID:    targetID,
+		DisplayMode: sessionutil.NewDisplayMode(log),
+		SSMClient:   ssmClient,
+		KMSClient:   kmsClient,
+	}
+
+	return session, nil
 }
 
 // OpenDataChannel initializes datachannel.

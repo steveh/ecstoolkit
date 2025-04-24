@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/url"
 	"strings"
 	"time"
 
@@ -14,12 +13,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
-	"github.com/google/uuid"
 	"github.com/steveh/ecstoolkit/config"
 	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/session"
 	"github.com/steveh/ecstoolkit/session/portsession"
-	"github.com/steveh/ecstoolkit/session/sessionutil"
 	"github.com/steveh/ecstoolkit/session/shellsession"
 )
 
@@ -121,26 +118,14 @@ func (e *Executor) newSession(options *ExecuteSessionOptions, execute *ecs.Execu
 		return nil, err
 	}
 
-	endpoint := url.URL{Scheme: "https", Host: fmt.Sprintf("ssm.%s.amazonaws.com", region)}
+	targetID := fmt.Sprintf("ecs:%s_%s_%s", options.ClusterName, taskID, options.ContainerRuntimeID)
 
-	clientID, err := uuid.NewRandom()
+	sess, err := session.NewSession(e.ssmClient, e.kmsClient, execute.Session, region, targetID, e.logger)
 	if err != nil {
-		return nil, fmt.Errorf("generate UUID: %w", err)
+		return nil, fmt.Errorf("new session: %w", err)
 	}
 
-	sess := session.Session{
-		SessionID:   *execute.Session.SessionId,
-		StreamURL:   *execute.Session.StreamUrl,
-		TokenValue:  *execute.Session.TokenValue,
-		Endpoint:    endpoint.String(),
-		ClientID:    clientID.String(),
-		TargetID:    fmt.Sprintf("ecs:%s_%s_%s", options.ClusterName, taskID, options.ContainerRuntimeID),
-		DisplayMode: sessionutil.NewDisplayMode(e.logger),
-		SSMClient:   e.ssmClient,
-		KMSClient:   e.kmsClient,
-	}
-
-	return &sess, nil
+	return sess, nil
 }
 
 func (e *Executor) initSession(ctx context.Context, sess *session.Session) error {
