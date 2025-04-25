@@ -31,10 +31,9 @@ import (
 
 // Error messages.
 var (
-	ErrOffsetOutside                 = errors.New("offset outside")
-	ErrNotEnoughSpace                = errors.New("not enough space")
-	ErrOffsetOutsideByteArray        = errors.New("offset outside byte array")
-	ErrOffsetOutsideByteArrayNoPoint = errors.New("offset outside byte array")
+	ErrOffsetOutside          = errors.New("offset outside")
+	ErrNotEnoughSpace         = errors.New("not enough space")
+	ErrOffsetOutsideByteArray = errors.New("offset outside byte array")
 )
 
 // DeserializeClientMessage deserializes the byte array into an ClientMessage message.
@@ -122,7 +121,7 @@ func GetString(log log.T, byteArray []byte, offset int, stringLength int) (strin
 	if offset > byteArrayLength-1 || offset+stringLength-1 > byteArrayLength-1 || offset < 0 {
 		log.Error("GetString failed: Offset is invalid.")
 
-		return "", ErrOffsetOutsideByteArrayNoPoint
+		return "", ErrOffsetOutsideByteArray
 	}
 
 	// remove nulls from the bytes array

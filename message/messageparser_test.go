@@ -510,7 +510,7 @@ func TestGetString(t *testing.T) {
 			-1,
 			0,
 			nil,
-			message.ErrOffsetOutsideByteArrayNoPoint,
+			message.ErrOffsetOutsideByteArray,
 		},
 		{
 			"Offset out of bounds",
@@ -519,7 +519,7 @@ func TestGetString(t *testing.T) {
 			10,
 			2,
 			nil,
-			message.ErrOffsetOutsideByteArrayNoPoint,
+			message.ErrOffsetOutsideByteArray,
 		},
 	}
 	for _, tc := range testCases {
