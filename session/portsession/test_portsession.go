@@ -57,7 +57,7 @@ func getSessionMockWithParams(t *testing.T, properties interface{}, agentVersion
 
 	mockKMSClient := &kms.Client{}
 
-	dataChannel, err := datachannel.NewDataChannel(mockKMSClient, "clientId", "sessionId", "targetId", false, mockLogger)
+	dataChannel, err := datachannel.NewDataChannel(mockKMSClient, "clientId", "sessionId", "targetId", mockLogger)
 	require.NoError(t, err)
 
 	dataChannel.SetAgentVersion(agentVersion)

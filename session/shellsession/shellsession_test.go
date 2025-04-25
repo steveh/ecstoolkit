@@ -209,7 +209,7 @@ func getDataChannel(t *testing.T) *datachannel.DataChannel {
 
 	mockKMSClient := &kms.Client{}
 
-	dataChannel, err := datachannel.NewDataChannel(mockKMSClient, clientID, sessionID, instanceID, false, logger)
+	dataChannel, err := datachannel.NewDataChannel(mockKMSClient, clientID, sessionID, instanceID, logger)
 	require.NoError(t, err)
 
 	dataChannel.SetWsChannel(mockWsChannel)

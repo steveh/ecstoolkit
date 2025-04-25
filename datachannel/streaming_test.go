@@ -62,10 +62,9 @@ var (
 )
 
 func TestNewDataChannel(t *testing.T) {
-	isAwsCliUpgradeNeeded := false
 	mockKMSClient := &kms.Client{}
 
-	datachannel, err := NewDataChannel(mockKMSClient, clientID, sessionID, instanceID, isAwsCliUpgradeNeeded, mockLogger)
+	datachannel, err := NewDataChannel(mockKMSClient, clientID, sessionID, instanceID, mockLogger)
 	require.NoError(t, err)
 
 	assert.Equal(t, config.RolePublishSubscribe, datachannel.role)
@@ -676,7 +675,7 @@ func getDataChannel(t *testing.T) *DataChannel {
 
 	mockKMSClient := &kms.Client{}
 
-	dataChannel, err := NewDataChannel(mockKMSClient, clientID, sessionID, instanceID, false, mockLogger)
+	dataChannel, err := NewDataChannel(mockKMSClient, clientID, sessionID, instanceID, mockLogger)
 	require.NoError(t, err)
 
 	dataChannel.SetWsChannel(mockWsChannel)

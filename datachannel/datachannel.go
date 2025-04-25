@@ -29,12 +29,11 @@ import (
 
 // DataChannel used for communication between the mgs and the cli.
 type DataChannel struct {
-	wsChannel             communicator.IWebSocketChannel
-	role                  string
-	clientID              string
-	sessionID             string
-	targetID              string
-	isAwsCliUpgradeNeeded bool
+	wsChannel communicator.IWebSocketChannel
+	role      string
+	clientID  string
+	sessionID string
+	targetID  string
 	// records sequence number of last acknowledged message received over data channel
 	expectedSequenceNumber int64
 	// records sequence number of last stream data message sent over data channel
@@ -77,7 +76,7 @@ type DataChannel struct {
 }
 
 // NewDataChannel creates a DataChannel.
-func NewDataChannel(kmsClient *kms.Client, clientID string, sessionID string, targetID string, awsCLIUpgradeNeeded bool, log log.T) (*DataChannel, error) {
+func NewDataChannel(kmsClient *kms.Client, clientID string, sessionID string, targetID string, log log.T) (*DataChannel, error) {
 	// open data channel as publish_subscribe
 	log.Debug("Calling initialize Datachannel", "role", config.RolePublishSubscribe)
 
@@ -104,7 +103,6 @@ func NewDataChannel(kmsClient *kms.Client, clientID string, sessionID string, ta
 	c.retransmissionTimeout = config.DefaultTransmissionTimeout
 	c.isSessionTypeSet = make(chan bool, 1)
 	c.isStreamMessageResendTimeout = make(chan bool, 1)
-	c.isAwsCliUpgradeNeeded = awsCLIUpgradeNeeded
 	c.logger = log
 
 	return c, nil
@@ -391,10 +389,6 @@ func (c *DataChannel) HandleChannelClosedMessage(stopHandler Stop, sessionID str
 // ProcessKMSEncryptionHandshakeAction sets up the encrypter and calls KMS to generate a new data key. This is triggered
 // when encryption is specified in HandshakeRequest.
 func (c *DataChannel) ProcessKMSEncryptionHandshakeAction(ctx context.Context, actionParams json.RawMessage) error {
-	if c.isAwsCliUpgradeNeeded {
-		return errors.New("installed version of CLI does not support Session Manager encryption feature. Please upgrade to the latest version of your CLI (e.g., AWS CLI)")
-	}
-
 	kmsEncRequest := message.KMSEncryptionRequest{}
 	if err := json.Unmarshal(actionParams, &kmsEncRequest); err != nil {
 		return fmt.Errorf("failed to unmarshal KMS encryption request: %w", err)

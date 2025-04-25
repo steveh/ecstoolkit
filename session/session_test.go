@@ -96,7 +96,7 @@ func TestProcessFirstMessageOutputMessageFirst(t *testing.T) {
 
 	mockKMSClient := &kms.Client{}
 
-	dataChannel, err := datachannel.NewDataChannel(mockKMSClient, clientID, sessionID, instanceID, false, logger)
+	dataChannel, err := datachannel.NewDataChannel(mockKMSClient, clientID, sessionID, instanceID, logger)
 	require.NoError(t, err)
 
 	session := Session{

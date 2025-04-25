@@ -37,19 +37,18 @@ import (
 
 // Session represents an active session with its configuration and state.
 type Session struct {
-	DataChannel           datachannel.IDataChannel
-	sessionID             string
-	targetID              string
-	DisplayMode           sessionutil.DisplayMode
-	streamURL             string
-	tokenValue            string
-	isAwsCliUpgradeNeeded bool
-	endpoint              string
-	clientID              string
-	ssmClient             *ssm.Client
-	kmsClient             *kms.Client
-	retryParams           retry.RepeatableExponentialRetryer
-	logger                log.T
+	DataChannel datachannel.IDataChannel
+	sessionID   string
+	targetID    string
+	DisplayMode sessionutil.DisplayMode
+	streamURL   string
+	tokenValue  string
+	endpoint    string
+	clientID    string
+	ssmClient   *ssm.Client
+	kmsClient   *kms.Client
+	retryParams retry.RepeatableExponentialRetryer
+	logger      log.T
 }
 
 var _ ISession = (*Session)(nil)
@@ -98,7 +97,6 @@ func (s *Session) OpenDataChannel(ctx context.Context) error {
 		s.clientID,
 		s.sessionID,
 		s.targetID,
-		s.isAwsCliUpgradeNeeded,
 		s.logger,
 	)
 	if err != nil {
