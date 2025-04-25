@@ -15,119 +15,16 @@
 package message
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/json"
+	"errors"
+	"fmt"
+
 	"github.com/google/uuid"
 	"github.com/steveh/ecstoolkit/log"
+	"github.com/steveh/ecstoolkit/util"
 )
-
-const (
-	// InputStreamMessage represents message type for input data.
-	InputStreamMessage = "input_stream_data"
-
-	// OutputStreamMessage represents message type for output data.
-	OutputStreamMessage = "output_stream_data"
-
-	// AcknowledgeMessage represents message type for acknowledge.
-	AcknowledgeMessage = "acknowledge"
-
-	// ChannelClosedMessage represents message type for ChannelClosed.
-	ChannelClosedMessage = "channel_closed"
-
-	// StartPublicationMessage represents the message type that notifies the CLI to start sending stream messages.
-	StartPublicationMessage = "start_publication"
-
-	// PausePublicationMessage represents the message type that notifies the CLI to pause sending stream messages
-	// as the remote data channel is inactive.
-	PausePublicationMessage = "pause_publication"
-)
-
-// AcknowledgeContent is used to inform the sender of an acknowledge message that the message has been received.
-// * MessageType is a 32 byte UTF-8 string containing the message type.
-// * MessageID is a 40 byte UTF-8 string containing the UUID identifying this message being acknowledged.
-// * SequenceNumber is an 8 byte integer containing the message sequence number for serialized message.
-// * IsSequentialMessage is a boolean field representing whether the acknowledged message is part of a sequence.
-type AcknowledgeContent struct {
-	MessageType         string `json:"AcknowledgedMessageType"`
-	MessageID           string `json:"AcknowledgedMessageId"`
-	SequenceNumber      int64  `json:"AcknowledgedMessageSequenceNumber"`
-	IsSequentialMessage bool   `json:"IsSequentialMessage"`
-}
-
-// ChannelClosed is used to inform the client to close the channel
-// * MessageID is a 40 byte UTF-8 string containing the UUID identifying this message.
-// * CreatedDate is a string field containing the message create epoch millis in UTC.
-// * DestinationID is a string field containing the session target.
-// * SessionID is a string field representing which session to close.
-// * MessageType is a 32 byte UTF-8 string containing the message type.
-// * SchemaVersion is a 4 byte integer containing the message schema version number.
-// * Output is a string field containing the error message for channel close.
-type ChannelClosed struct {
-	MessageID     string `json:"MessageId"`
-	CreatedDate   string `json:"CreatedDate"`
-	DestinationID string `json:"DestinationId"`
-	SessionID     string `json:"SessionId"`
-	MessageType   string `json:"MessageType"`
-	SchemaVersion int    `json:"SchemaVersion"`
-	Output        string `json:"Output"`
-}
-
-// PayloadType represents the type of payload in a client message.
-type PayloadType uint32
-
-const (
-	// Output represents a standard output payload type.
-	Output PayloadType = 1
-	// Error represents an error payload type.
-	Error PayloadType = 2
-	// Size represents a size data payload type.
-	Size PayloadType = 3
-	// Parameter represents a parameter payload type.
-	Parameter PayloadType = 4
-	// HandshakeRequestPayloadType represents a handshake request payload type.
-	HandshakeRequestPayloadType PayloadType = 5
-	// HandshakeResponsePayloadType represents a handshake response payload type.
-	HandshakeResponsePayloadType PayloadType = 6
-	// HandshakeCompletePayloadType represents a handshake complete payload type.
-	HandshakeCompletePayloadType PayloadType = 7
-	// EncChallengeRequest is the payload type for encryption challenge requests.
-	EncChallengeRequest PayloadType = 8
-	// EncChallengeResponse is the payload type for encryption challenge responses.
-	EncChallengeResponse PayloadType = 9
-	// Flag is the payload type for flag messages.
-	Flag PayloadType = 10
-	// StdErr is the payload type for standard error messages.
-	StdErr PayloadType = 11
-	// ExitCode is the payload type for exit code messages.
-	ExitCode PayloadType = 12
-)
-
-// PayloadTypeFlag represents flags that can be set in a client message payload.
-type PayloadTypeFlag uint32
-
-const (
-	// DisconnectToPort indicates that the port connection should be disconnected.
-	DisconnectToPort PayloadTypeFlag = 1
-	// TerminateSession indicates that the session should be terminated.
-	TerminateSession PayloadTypeFlag = 2
-	// ConnectToPortError indicates that there was an error connecting to the port.
-	ConnectToPortError PayloadTypeFlag = 3
-)
-
-// SizeData represents the size dimensions for terminal windows.
-type SizeData struct {
-	Cols uint32 `json:"cols"`
-	Rows uint32 `json:"rows"`
-}
-
-// IClientMessage defines the interface for client message operations.
-type IClientMessage interface {
-	Validate() error
-	DeserializeClientMessage(log log.T, input []byte) (err error)
-	SerializeClientMessage(log log.T) (result []byte, err error)
-	DeserializeDataStreamAcknowledgeContent(log log.T) (dataStreamAcknowledge AcknowledgeContent, err error)
-	DeserializeChannelClosedMessage(log log.T) (channelClosed ChannelClosed, err error)
-	DeserializeHandshakeRequest(log log.T) (handshakeRequest HandshakeRequestPayload, err error)
-	DeserializeHandshakeComplete(log log.T) (handshakeComplete HandshakeCompletePayload, err error)
-}
 
 // ClientMessage represents a message for client to send/receive. ClientMessage Message in MGS is equivalent to MDS' InstanceMessage.
 // All client messages are sent in this form to the MGS service.
@@ -145,67 +42,305 @@ type ClientMessage struct {
 	Payload        []byte
 }
 
-// * HL - HeaderLength is a 4 byte integer that represents the header length.
-// * MessageType is a 32 byte UTF-8 string containing the message type.
-// * SchemaVersion is a 4 byte integer containing the message schema version number.
-// * CreatedDate is an 8 byte integer containing the message create epoch millis in UTC.
-// * SequenceNumber is an 8 byte integer containing the message sequence number for serialized message streams.
-// * Flags is an 8 byte unsigned integer containing a packed array of control flags:
-// *   Bit 0 is SYN - SYN is set (1) when the recipient should consider Seq to be the first message number in the stream
-// *   Bit 1 is FIN - FIN is set (1) when this message is the final message in the sequence.
-// * MessageID is a 40 byte UTF-8 string containing a random UUID identifying this message.
-// * Payload digest is a 32 byte containing the SHA-256 hash of the payload.
-// * Payload length is an 4 byte unsigned integer containing the byte length of data in the Payload field.
+// DeserializeClientMessage deserializes the byte array into an ClientMessage message.
 // * Payload is a variable length byte data.
-//
 // * | HL|         MessageType           |Ver|  CD   |  Seq  | Flags |
 // * |         MessageID                     |           Digest              | PayType | PayLen|
-// * |         Payload      			|
+// * |         Payload      			|.
+func (m *ClientMessage) DeserializeClientMessage(log log.T, input []byte) error {
+	var err error
 
-const (
-	// ClientMessageHLLength represents the length of the header length field in bytes.
-	ClientMessageHLLength = 4
-	// ClientMessageMessageTypeLength represents the length of the message type field in bytes.
-	ClientMessageMessageTypeLength = 32
-	// ClientMessageSchemaVersionLength represents the length of the schema version field in bytes.
-	ClientMessageSchemaVersionLength = 4
-	// ClientMessageCreatedDateLength represents the length of the created date field in bytes.
-	ClientMessageCreatedDateLength = 8
-	// ClientMessageSequenceNumberLength represents the length of the sequence number field in bytes.
-	ClientMessageSequenceNumberLength = 8
-	// ClientMessageFlagsLength represents the length of the flags field in bytes.
-	ClientMessageFlagsLength = 8
-	// ClientMessageMessageIDLength represents the length of the message ID field in bytes.
-	ClientMessageMessageIDLength = 16
-	// ClientMessagePayloadDigestLength represents the length of the payload digest field in bytes.
-	ClientMessagePayloadDigestLength = 32
-	// ClientMessagePayloadTypeLength represents the length of the payload type field in bytes.
-	ClientMessagePayloadTypeLength = 4
-	// ClientMessagePayloadLengthLength represents the length of the payload length field in bytes.
-	ClientMessagePayloadLengthLength = 4
-)
+	m.MessageType, err = GetString(log, input, ClientMessageMessageTypeOffset, ClientMessageMessageTypeLength)
+	if err != nil {
+		log.Error("Could not deserialize field MessageType", "error", err)
 
-const (
-	// ClientMessageHLOffset represents the offset of the header length field in the message.
-	ClientMessageHLOffset = 0
-	// ClientMessageMessageTypeOffset represents the offset of the message type field in the message.
-	ClientMessageMessageTypeOffset = ClientMessageHLOffset + ClientMessageHLLength
-	// ClientMessageSchemaVersionOffset represents the offset of the schema version field in the message.
-	ClientMessageSchemaVersionOffset = ClientMessageMessageTypeOffset + ClientMessageMessageTypeLength
-	// ClientMessageCreatedDateOffset represents the offset of the created date field in the message.
-	ClientMessageCreatedDateOffset = ClientMessageSchemaVersionOffset + ClientMessageSchemaVersionLength
-	// ClientMessageSequenceNumberOffset represents the offset of the sequence number field in the message.
-	ClientMessageSequenceNumberOffset = ClientMessageCreatedDateOffset + ClientMessageCreatedDateLength
-	// ClientMessageFlagsOffset represents the offset of the flags field in the message.
-	ClientMessageFlagsOffset = ClientMessageSequenceNumberOffset + ClientMessageSequenceNumberLength
-	// ClientMessageMessageIDOffset represents the offset of the message ID field in the message.
-	ClientMessageMessageIDOffset = ClientMessageFlagsOffset + ClientMessageFlagsLength
-	// ClientMessagePayloadDigestOffset represents the offset of the payload digest field in the message.
-	ClientMessagePayloadDigestOffset = ClientMessageMessageIDOffset + ClientMessageMessageIDLength
-	// ClientMessagePayloadTypeOffset represents the offset of the payload type field in the message.
-	ClientMessagePayloadTypeOffset = ClientMessagePayloadDigestOffset + ClientMessagePayloadDigestLength
-	// ClientMessagePayloadLengthOffset represents the offset of the payload length field in the message.
-	ClientMessagePayloadLengthOffset = ClientMessagePayloadTypeOffset + ClientMessagePayloadTypeLength
-	// ClientMessagePayloadOffset represents the offset of the payload data in the message.
-	ClientMessagePayloadOffset = ClientMessagePayloadLengthOffset + ClientMessagePayloadLengthLength
-)
+		return err
+	}
+
+	m.SchemaVersion, err = GetUInteger(log, input, ClientMessageSchemaVersionOffset)
+	if err != nil {
+		log.Error("Could not deserialize field SchemaVersion", "error", err)
+
+		return err
+	}
+
+	m.CreatedDate, err = GetULong(log, input, ClientMessageCreatedDateOffset)
+	if err != nil {
+		log.Error("Could not deserialize field CreatedDate", "error", err)
+
+		return err
+	}
+
+	m.SequenceNumber, err = GetLong(log, input, ClientMessageSequenceNumberOffset)
+	if err != nil {
+		log.Error("Could not deserialize field SequenceNumber", "error", err)
+
+		return err
+	}
+
+	m.Flags, err = GetULong(log, input, ClientMessageFlagsOffset)
+	if err != nil {
+		log.Error("Could not deserialize field Flags", "error", err)
+
+		return err
+	}
+
+	m.MessageID, err = GetUUID(log, input, ClientMessageMessageIDOffset)
+	if err != nil {
+		log.Error("Could not deserialize field MessageID", "error", err)
+
+		return err
+	}
+
+	m.PayloadDigest, err = GetBytes(log, input, ClientMessagePayloadDigestOffset, ClientMessagePayloadDigestLength)
+	if err != nil {
+		log.Error("Could not deserialize field PayloadDigest", "error", err)
+
+		return err
+	}
+
+	m.PayloadType, err = GetUInteger(log, input, ClientMessagePayloadTypeOffset)
+	if err != nil {
+		log.Error("Could not deserialize field PayloadType", "error", err)
+
+		return err
+	}
+
+	m.PayloadLength, err = GetUInteger(log, input, ClientMessagePayloadLengthOffset)
+
+	headerLength, herr := GetUInteger(log, input, ClientMessageHLOffset)
+	if herr != nil {
+		log.Error("Could not deserialize field HeaderLength", "error", err)
+
+		return err
+	}
+
+	m.HeaderLength = headerLength
+	m.Payload = input[headerLength+ClientMessagePayloadLengthLength:]
+
+	return err
+}
+
+// Validate returns error if the message is invalid.
+func (m *ClientMessage) Validate() error {
+	if StartPublicationMessage == m.MessageType ||
+		PausePublicationMessage == m.MessageType {
+		return nil
+	}
+
+	if m.HeaderLength == 0 {
+		return errors.New("HeaderLength cannot be zero")
+	}
+
+	if m.MessageType == "" {
+		return errors.New("MessageType is missing")
+	}
+
+	if m.CreatedDate == 0 {
+		return errors.New("CreatedDate is missing")
+	}
+
+	if m.PayloadLength != 0 {
+		hasher := sha256.New()
+		hasher.Write(m.Payload)
+
+		if !bytes.Equal(hasher.Sum(nil), m.PayloadDigest) {
+			return errors.New("payload Hash is not valid")
+		}
+	}
+
+	return nil
+}
+
+// SerializeClientMessage serializes ClientMessage message into a byte array.
+// * Payload is a variable length byte data.
+// * | HL|         MessageType           |Ver|  CD   |  Seq  | Flags |
+// * |         MessageID                     |           Digest              |PayType| PayLen|
+// * |         Payload      			|.
+func (m *ClientMessage) SerializeClientMessage(log log.T) ([]byte, error) {
+	payloadLength, err := util.SafeUint32(len(m.Payload))
+	if err != nil {
+		return nil, fmt.Errorf("converting payload length to uint32: %w", err)
+	}
+
+	headerLength := uint32(ClientMessagePayloadLengthOffset)
+
+	// Set payload length
+	m.PayloadLength = payloadLength
+
+	totalMessageLength := headerLength + ClientMessagePayloadLengthLength + payloadLength
+	result := make([]byte, totalMessageLength)
+
+	if err := putUInteger(log, result, ClientMessageHLOffset, headerLength); err != nil {
+		log.Error("Could not serialize HeaderLength", "error", err)
+
+		return make([]byte, 1), fmt.Errorf("serializing header length: %w", err)
+	}
+
+	startPosition := ClientMessageMessageTypeOffset
+	endPosition := ClientMessageMessageTypeOffset + ClientMessageMessageTypeLength - 1
+
+	err = PutString(log, result, startPosition, endPosition, m.MessageType)
+	if err != nil {
+		log.Error("Could not serialize MessageType", "error", err)
+
+		return make([]byte, 1), fmt.Errorf("serializing message type: %w", err)
+	}
+
+	err = putUInteger(log, result, ClientMessageSchemaVersionOffset, m.SchemaVersion)
+	if err != nil {
+		log.Error("Could not serialize SchemaVersion", "error", err)
+
+		return make([]byte, 1), fmt.Errorf("serializing schema version: %w", err)
+	}
+
+	err = putULong(log, result, ClientMessageCreatedDateOffset, m.CreatedDate)
+	if err != nil {
+		log.Error("Could not serialize CreatedDate", "error", err)
+
+		return make([]byte, 1), fmt.Errorf("serializing created date: %w", err)
+	}
+
+	err = PutLong(log, result, ClientMessageSequenceNumberOffset, m.SequenceNumber)
+	if err != nil {
+		log.Error("Could not serialize SequenceNumber", "error", err)
+
+		return make([]byte, 1), fmt.Errorf("serializing sequence number: %w", err)
+	}
+
+	err = putULong(log, result, ClientMessageFlagsOffset, m.Flags)
+	if err != nil {
+		log.Error("Could not serialize Flags", "error", err)
+
+		return make([]byte, 1), fmt.Errorf("serializing flags: %w", err)
+	}
+
+	err = PutUUID(log, result, ClientMessageMessageIDOffset, m.MessageID)
+	if err != nil {
+		log.Error("Could not serialize MessageID", "error", err)
+
+		return make([]byte, 1), fmt.Errorf("serializing message ID: %w", err)
+	}
+
+	hasher := sha256.New()
+	hasher.Write(m.Payload)
+
+	startPosition = ClientMessagePayloadDigestOffset
+	endPosition = ClientMessagePayloadDigestOffset + ClientMessagePayloadDigestLength - 1
+
+	err = PutBytes(log, result, startPosition, endPosition, hasher.Sum(nil))
+	if err != nil {
+		log.Error("Could not serialize PayloadDigest", "error", err)
+
+		return make([]byte, 1), fmt.Errorf("serializing payload digest: %w", err)
+	}
+
+	err = putUInteger(log, result, ClientMessagePayloadTypeOffset, m.PayloadType)
+	if err != nil {
+		log.Error("Could not serialize PayloadType", "error", err)
+
+		return make([]byte, 1), fmt.Errorf("serializing payload type: %w", err)
+	}
+
+	err = putUInteger(log, result, ClientMessagePayloadLengthOffset, m.PayloadLength)
+	if err != nil {
+		log.Error("Could not serialize PayloadLength", "error", err)
+
+		return make([]byte, 1), fmt.Errorf("serializing payload length: %w", err)
+	}
+
+	startPosition = ClientMessagePayloadOffset
+	endPosition = ClientMessagePayloadOffset + int(payloadLength) - 1
+
+	err = PutBytes(log, result, startPosition, endPosition, m.Payload)
+	if err != nil {
+		log.Error("Could not serialize Payload", "error", err)
+
+		return make([]byte, 1), fmt.Errorf("serializing payload: %w", err)
+	}
+
+	return result, nil
+}
+
+// DeserializeDataStreamAcknowledgeContent parses acknowledge content from payload of ClientMessage.
+func (m *ClientMessage) DeserializeDataStreamAcknowledgeContent(log log.T) (AcknowledgeContent, error) {
+	if m.MessageType != AcknowledgeMessage {
+		err := fmt.Errorf("ClientMessage is not of type AcknowledgeMessage. Found message type: %s", m.MessageType)
+
+		return AcknowledgeContent{}, err
+	}
+
+	var dataStreamAcknowledge AcknowledgeContent
+
+	err := json.Unmarshal(m.Payload, &dataStreamAcknowledge)
+	if err != nil {
+		log.Error("Could not deserialize raw message", "error", err)
+
+		return AcknowledgeContent{}, fmt.Errorf("unmarshaling acknowledge content: %w", err)
+	}
+
+	return dataStreamAcknowledge, nil
+}
+
+// DeserializeChannelClosedMessage parses channelClosed message from payload of ClientMessage.
+func (m *ClientMessage) DeserializeChannelClosedMessage(log log.T) (ChannelClosed, error) {
+	if m.MessageType != ChannelClosedMessage {
+		err := fmt.Errorf("ClientMessage is not of type ChannelClosed. Found message type: %s", m.MessageType)
+
+		return ChannelClosed{}, err
+	}
+
+	var channelClosed ChannelClosed
+
+	err := json.Unmarshal(m.Payload, &channelClosed)
+	if err != nil {
+		log.Error("Could not deserialize raw message", "error", err)
+
+		return ChannelClosed{}, fmt.Errorf("unmarshaling channel closed message: %w", err)
+	}
+
+	return channelClosed, nil
+}
+
+// DeserializeHandshakeRequest deserializes the handshake request payload from the client message.
+func (m *ClientMessage) DeserializeHandshakeRequest(log log.T) (HandshakeRequestPayload, error) {
+	if m.PayloadType != uint32(HandshakeRequestPayloadType) {
+		err := fmt.Errorf("ClientMessage PayloadType is not of type HandshakeRequestPayloadType. Found payload type: %d",
+			m.PayloadType)
+		log.Error(err.Error())
+
+		return HandshakeRequestPayload{}, err
+	}
+
+	var handshakeRequest HandshakeRequestPayload
+
+	err := json.Unmarshal(m.Payload, &handshakeRequest)
+	if err != nil {
+		log.Error("Could not deserialize raw message", "error", err)
+
+		return HandshakeRequestPayload{}, fmt.Errorf("unmarshaling handshake request: %w", err)
+	}
+
+	return handshakeRequest, nil
+}
+
+// DeserializeHandshakeComplete deserializes the handshake complete payload from the client message.
+func (m *ClientMessage) DeserializeHandshakeComplete(log log.T) (HandshakeCompletePayload, error) {
+	if m.PayloadType != uint32(HandshakeCompletePayloadType) {
+		err := fmt.Errorf("ClientMessage PayloadType is not of type HandshakeCompletePayloadType. Found payload type: %d",
+			m.PayloadType)
+
+		log.Error(err.Error())
+
+		return HandshakeCompletePayload{}, err
+	}
+
+	var handshakeComplete HandshakeCompletePayload
+	if err := json.Unmarshal(m.Payload, &handshakeComplete); err != nil {
+		log.Error("Could not deserialize raw message", "error", err)
+
+		return HandshakeCompletePayload{}, fmt.Errorf("unmarshaling handshake complete: %w", err)
+	}
+
+	return handshakeComplete, nil
+}

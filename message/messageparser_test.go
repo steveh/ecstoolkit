@@ -1039,7 +1039,7 @@ func TestSerializeAndDeserializeClientMessage(t *testing.T) {
 
 func TestSerializeMessagePayloadNegative(t *testing.T) {
 	functionEx := func() {}
-	_, err := message.SerializeClientMessagePayload(mockLogger, functionEx)
+	_, err := message.SerializeClientMessagePayload(functionEx)
 	require.Error(t, err)
 }
 
