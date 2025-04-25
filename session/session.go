@@ -40,7 +40,6 @@ type Session struct {
 	DataChannel           datachannel.IDataChannel
 	sessionID             string
 	targetID              string
-	SessionType           string
 	DisplayMode           sessionutil.DisplayMode
 	streamURL             string
 	tokenValue            string
@@ -219,6 +218,11 @@ func (s *Session) RegisterOutputStreamHandler(handler datachannel.OutputStreamDa
 	s.DataChannel.RegisterOutputStreamHandler(handler, isSessionSpecificHandler)
 }
 
+// GetSessionType retrieves the session type from the data channel.
+func (s *Session) GetSessionType() string {
+	return s.DataChannel.GetSessionType()
+}
+
 // processFirstMessage only processes messages with PayloadType Output to determine the
 // sessionType of the session to be launched. This is a fallback for agent versions that do not support handshake, they
 // immediately start sending shell output.
@@ -227,7 +231,7 @@ func (s *Session) processFirstMessage(outputMessage message.ClientMessage) (bool
 	s.DataChannel.DeregisterOutputStreamHandler(s.processFirstMessage)
 	// Only set session type if the session type has not already been set. Usually session type will be set
 	// by handshake protocol which would be the first message but older agents may not perform handshake
-	if s.SessionType == "" {
+	if s.DataChannel.GetSessionType() == "" {
 		if outputMessage.PayloadType == uint32(message.Output) {
 			s.logger.Warn("Setting session type to shell based on PayloadType!")
 			s.DataChannel.SetSessionType(config.ShellPluginName)

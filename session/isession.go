@@ -9,4 +9,5 @@ type ISession interface {
 	ISessionSubTypeSupport
 	ISessionTypeSupport
 	OpenDataChannel(ctx context.Context) error
+	GetSessionType() string
 }

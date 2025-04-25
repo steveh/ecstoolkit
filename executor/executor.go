@@ -152,19 +152,17 @@ func (e *Executor) initSession(ctx context.Context, sess *session.Session) error
 		return errors.New("unable to determine session type")
 	}
 
-	sess.SessionType = sess.DataChannel.GetSessionType()
-
 	var sessionSubType session.ISessionPlugin
 
 	var err error
 
-	switch sess.SessionType {
+	switch sess.GetSessionType() {
 	case config.ShellPluginName:
 		sessionSubType, err = shellsession.NewShellSession(ctx, e.logger, sess)
 	case config.PortPluginName:
 		sessionSubType, err = portsession.NewPortSession(ctx, e.logger, sess)
 	default:
-		return fmt.Errorf("unsupported session type: %s", sess.SessionType)
+		return fmt.Errorf("unsupported session type: %s", sess.GetSessionType())
 	}
 
 	if err != nil {
