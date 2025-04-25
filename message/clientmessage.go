@@ -171,7 +171,7 @@ func (m *ClientMessage) SerializeClientMessage(log log.T) ([]byte, error) {
 	totalMessageLength := headerLength + ClientMessagePayloadLengthLength + payloadLength
 	result := make([]byte, totalMessageLength)
 
-	if err := putUInteger(log, result, ClientMessageHLOffset, headerLength); err != nil {
+	if err := PutUInteger(result, ClientMessageHLOffset, headerLength); err != nil {
 		log.Error("Could not serialize HeaderLength", "error", err)
 
 		return make([]byte, 1), fmt.Errorf("serializing header length: %w", err)
@@ -180,42 +180,42 @@ func (m *ClientMessage) SerializeClientMessage(log log.T) ([]byte, error) {
 	startPosition := ClientMessageMessageTypeOffset
 	endPosition := ClientMessageMessageTypeOffset + ClientMessageMessageTypeLength - 1
 
-	err = PutString(log, result, startPosition, endPosition, m.MessageType)
+	err = PutString(result, startPosition, endPosition, m.MessageType)
 	if err != nil {
 		log.Error("Could not serialize MessageType", "error", err)
 
 		return make([]byte, 1), fmt.Errorf("serializing message type: %w", err)
 	}
 
-	err = putUInteger(log, result, ClientMessageSchemaVersionOffset, m.SchemaVersion)
+	err = PutUInteger(result, ClientMessageSchemaVersionOffset, m.SchemaVersion)
 	if err != nil {
 		log.Error("Could not serialize SchemaVersion", "error", err)
 
 		return make([]byte, 1), fmt.Errorf("serializing schema version: %w", err)
 	}
 
-	err = putULong(log, result, ClientMessageCreatedDateOffset, m.CreatedDate)
+	err = PutULong(result, ClientMessageCreatedDateOffset, m.CreatedDate)
 	if err != nil {
 		log.Error("Could not serialize CreatedDate", "error", err)
 
 		return make([]byte, 1), fmt.Errorf("serializing created date: %w", err)
 	}
 
-	err = PutLong(log, result, ClientMessageSequenceNumberOffset, m.SequenceNumber)
+	err = PutLong(result, ClientMessageSequenceNumberOffset, m.SequenceNumber)
 	if err != nil {
 		log.Error("Could not serialize SequenceNumber", "error", err)
 
 		return make([]byte, 1), fmt.Errorf("serializing sequence number: %w", err)
 	}
 
-	err = putULong(log, result, ClientMessageFlagsOffset, m.Flags)
+	err = PutULong(result, ClientMessageFlagsOffset, m.Flags)
 	if err != nil {
 		log.Error("Could not serialize Flags", "error", err)
 
 		return make([]byte, 1), fmt.Errorf("serializing flags: %w", err)
 	}
 
-	err = PutUUID(log, result, ClientMessageMessageIDOffset, m.MessageID)
+	err = PutUUID(result, ClientMessageMessageIDOffset, m.MessageID)
 	if err != nil {
 		log.Error("Could not serialize MessageID", "error", err)
 
@@ -228,21 +228,21 @@ func (m *ClientMessage) SerializeClientMessage(log log.T) ([]byte, error) {
 	startPosition = ClientMessagePayloadDigestOffset
 	endPosition = ClientMessagePayloadDigestOffset + ClientMessagePayloadDigestLength - 1
 
-	err = PutBytes(log, result, startPosition, endPosition, hasher.Sum(nil))
+	err = PutBytes(result, startPosition, endPosition, hasher.Sum(nil))
 	if err != nil {
 		log.Error("Could not serialize PayloadDigest", "error", err)
 
 		return make([]byte, 1), fmt.Errorf("serializing payload digest: %w", err)
 	}
 
-	err = putUInteger(log, result, ClientMessagePayloadTypeOffset, m.PayloadType)
+	err = PutUInteger(result, ClientMessagePayloadTypeOffset, m.PayloadType)
 	if err != nil {
 		log.Error("Could not serialize PayloadType", "error", err)
 
 		return make([]byte, 1), fmt.Errorf("serializing payload type: %w", err)
 	}
 
-	err = putUInteger(log, result, ClientMessagePayloadLengthOffset, m.PayloadLength)
+	err = PutUInteger(result, ClientMessagePayloadLengthOffset, m.PayloadLength)
 	if err != nil {
 		log.Error("Could not serialize PayloadLength", "error", err)
 
@@ -252,7 +252,7 @@ func (m *ClientMessage) SerializeClientMessage(log log.T) ([]byte, error) {
 	startPosition = ClientMessagePayloadOffset
 	endPosition = ClientMessagePayloadOffset + int(payloadLength) - 1
 
-	err = PutBytes(log, result, startPosition, endPosition, m.Payload)
+	err = PutBytes(result, startPosition, endPosition, m.Payload)
 	if err != nil {
 		log.Error("Could not serialize Payload", "error", err)
 

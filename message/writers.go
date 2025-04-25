@@ -6,70 +6,59 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/util"
 )
 
-// putUInteger puts a uint32 into a byte array starting from the specified offset.
-func putUInteger(log log.T, byteArray []byte, offset int, value uint32) error {
+// PutUInteger puts a uint32 into a byte array starting from the specified offset.
+func PutUInteger(byteArray []byte, offset int, value uint32) error {
 	safe, err := util.SafeInt32(value)
 	if err != nil {
 		return fmt.Errorf("getting int32: %w", err)
 	}
 
-	return PutInteger(log, byteArray, offset, safe)
+	return PutInteger(byteArray, offset, safe)
 }
 
 // PutInteger puts an int32 into a byte array starting from the specified offset.
-func PutInteger(log log.T, byteArray []byte, offset int, value int32) error {
+func PutInteger(byteArray []byte, offset int, value int32) error {
 	byteArrayLength := len(byteArray)
-	if offset > byteArrayLength-1 || offset+4 > byteArrayLength || offset < 0 {
-		log.Error("PutInteger failed: Offset is invalid.")
-
-		return ErrOffsetOutside
+	if offset > byteArrayLength-1 || offset+integerLength > byteArrayLength || offset < 0 {
+		return fmt.Errorf("%w: offset %d, integerLength %d, byteArrayLength %d", ErrOffsetOutside, offset, integerLength, byteArrayLength)
 	}
 
-	bytes, err := IntegerToBytes(log, value)
+	bytes, err := IntegerToBytes(value)
 	if err != nil {
-		log.Error("PutInteger failed: IntegerToBytes Failed.")
-
-		return err
+		return fmt.Errorf("converting to bytes: %w", err)
 	}
 
-	copy(byteArray[offset:offset+4], bytes)
+	copy(byteArray[offset:offset+integerLength], bytes)
 
 	return nil
 }
 
 // IntegerToBytes gets bytes array from an integer.
-func IntegerToBytes(log log.T, input int32) ([]byte, error) {
+func IntegerToBytes(input int32) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	if err := binary.Write(buf, binary.BigEndian, input); err != nil {
 		return nil, fmt.Errorf("writing integer to bytes: %w", err)
 	}
 
-	if buf.Len() != 4 { //nolint:mnd
-		log.Error("IntegerToBytes failed: buffer output length is not equal to 4.")
-
-		return make([]byte, 4), ErrOffsetOutside //nolint:mnd
+	if buf.Len() != integerLength {
+		return make([]byte, integerLength), fmt.Errorf("%w: buffer output length %d, integerLength %d", ErrOffsetOutside, buf.Len(), integerLength)
 	}
 
 	return buf.Bytes(), nil
 }
 
 // PutString puts a string value to a byte array starting from the specified offset.
-func PutString(log log.T, byteArray []byte, offsetStart int, offsetEnd int, inputString string) error {
+func PutString(byteArray []byte, offsetStart int, offsetEnd int, inputString string) error {
 	byteArrayLength := len(byteArray)
 	if offsetStart > byteArrayLength-1 || offsetEnd > byteArrayLength-1 || offsetStart > offsetEnd || offsetStart < 0 {
-		log.Error("putString failed: Offset is invalid.")
-
-		return ErrOffsetOutside
+		return fmt.Errorf("%w: offsetStart %d, offsetEnd %d, byteArrayLength %d", ErrOffsetOutside, offsetStart, offsetEnd, byteArrayLength)
 	}
 
 	if offsetEnd-offsetStart+1 < len(inputString) {
-		log.Error("PutString failed: Not enough space to save the string.")
-
-		return ErrNotEnoughSpace
+		return fmt.Errorf("%w: offsetStart %d, offsetEnd %d, stringLength %d", ErrNotEnoughSpace, offsetStart, offsetEnd, len(inputString))
 	}
 
 	// wipe out the array location first and then insert the new value.
@@ -83,18 +72,14 @@ func PutString(log log.T, byteArray []byte, offsetStart int, offsetEnd int, inpu
 }
 
 // PutBytes puts bytes into the array at the correct offset.
-func PutBytes(log log.T, byteArray []byte, offsetStart int, offsetEnd int, inputBytes []byte) error {
+func PutBytes(byteArray []byte, offsetStart int, offsetEnd int, inputBytes []byte) error {
 	byteArrayLength := len(byteArray)
 	if offsetStart > byteArrayLength-1 || offsetEnd > byteArrayLength-1 || offsetStart > offsetEnd || offsetStart < 0 {
-		log.Error("PutBytes failed: Offset is invalid.")
-
-		return ErrOffsetOutside
+		return fmt.Errorf("%w: offsetStart %d, offsetEnd %d, byteArrayLength %d", ErrOffsetOutside, offsetStart, offsetEnd, byteArrayLength)
 	}
 
 	if offsetEnd-offsetStart+1 != len(inputBytes) {
-		log.Error("PutBytes failed: Not enough space to save the bytes.")
-
-		return ErrNotEnoughSpace
+		return fmt.Errorf("%w: offsetStart %d, offsetEnd %d, bytesLength %d", ErrNotEnoughSpace, offsetStart, offsetEnd, len(inputBytes))
 	}
 
 	copy(byteArray[offsetStart:offsetEnd+1], inputBytes)
@@ -103,85 +88,67 @@ func PutBytes(log log.T, byteArray []byte, offsetStart int, offsetEnd int, input
 }
 
 // PutUUID puts the 128 bit uuid to an array of bytes starting from the offset.
-func PutUUID(log log.T, byteArray []byte, offset int, input uuid.UUID) error {
+func PutUUID(byteArray []byte, offset int, input uuid.UUID) error {
 	if input == uuid.Nil {
-		log.Error("PutUUID failed: input is null.")
-
-		return ErrOffsetOutside
+		return ErrNil
 	}
 
 	byteArrayLength := len(byteArray)
-	if offset > byteArrayLength-1 || offset+16-1 > byteArrayLength-1 || offset < 0 {
-		log.Error("PutUUID failed: Offset is invalid.")
-
-		return ErrOffsetOutside
+	if offset > byteArrayLength-1 || offset+uuidLength-1 > byteArrayLength-1 || offset < 0 {
+		return fmt.Errorf("%w: offset %d, uuidLength %d, byteArrayLength %d", ErrOffsetOutside, offset, uuidLength, byteArrayLength)
 	}
 
 	uuidBytes, err := input.MarshalBinary()
 	if err != nil {
-		log.Error("PutUUID failed: marshaling UUID to bytes")
-
 		return fmt.Errorf("marshaling UUID to bytes: %w", err)
 	}
 
-	leastSignificantLong, err := bytesToLong(uuidBytes[8:16])
+	leastSignificantLong, err := bytesToLong(uuidBytes[longLength:(longLength + longLength)])
 	if err != nil {
-		log.Error("PutUUID failed: getting leastSignificant Long value")
-
-		return ErrOffsetOutside
+		return fmt.Errorf("%w: getting LSB long value", err)
 	}
 
-	mostSignificantLong, err := bytesToLong(uuidBytes[0:8])
+	mostSignificantLong, err := bytesToLong(uuidBytes[0:longLength])
 	if err != nil {
-		log.Error("PutUUID failed: getting mostSignificantLong Long value")
-
-		return ErrOffsetOutside
+		return fmt.Errorf("%w: getting MSB long value", err)
 	}
 
-	err = PutLong(log, byteArray, offset, leastSignificantLong)
+	err = PutLong(byteArray, offset, leastSignificantLong)
 	if err != nil {
-		log.Error("PutUUID failed: putting leastSignificantLong Long value")
-
-		return ErrOffsetOutside
+		return fmt.Errorf("%w: putting LSB long value", err)
 	}
 
-	err = PutLong(log, byteArray, offset+8, mostSignificantLong) //nolint:mnd
+	err = PutLong(byteArray, offset+longLength, mostSignificantLong)
 	if err != nil {
-		log.Error("PutUUID failed: putting mostSignificantLong Long value")
-
-		return ErrOffsetOutside
+		return fmt.Errorf("%w: putting MSB long value", err)
 	}
 
 	return nil
 }
 
 // PutLong puts a long integer value to a byte array starting from the specified offset.
-func PutLong(log log.T, byteArray []byte, offset int, value int64) error {
+func PutLong(byteArray []byte, offset int, value int64) error {
 	byteArrayLength := len(byteArray)
-	if offset > byteArrayLength-1 || offset+8 > byteArrayLength || offset < 0 {
-		log.Error("PutLong failed: Offset is invalid.")
-
-		return ErrOffsetOutside
+	if offset > byteArrayLength-1 || offset+longLength > byteArrayLength || offset < 0 {
+		return fmt.Errorf("%w: offset %d, longLength %d, byteArrayLength %d", ErrOffsetOutside, offset, longLength, byteArrayLength)
 	}
 
 	mbytes, err := LongToBytes(value)
 	if err != nil {
-		log.Error("PutLong failed: LongToBytes Failed.")
-
-		return err
+		return fmt.Errorf("converting to bytes: %w", err)
 	}
 
-	copy(byteArray[offset:offset+8], mbytes)
+	copy(byteArray[offset:offset+longLength], mbytes)
 
 	return nil
 }
 
-// putULong puts an unsigned long integer.
-func putULong(log log.T, byteArray []byte, offset int, value uint64) error {
+// PutULong puts an unsigned long integer.
+func PutULong(byteArray []byte, offset int, value uint64) error {
 	safe, err := util.SafeInt64(value)
 	if err != nil {
 		return fmt.Errorf("getting int64: %w", err)
 	}
 
-	return PutLong(log, byteArray, offset, safe)
+	return PutLong(byteArray, offset, safe)
 }

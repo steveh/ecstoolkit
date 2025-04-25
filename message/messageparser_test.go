@@ -175,7 +175,6 @@ func TestPutString(t *testing.T) {
 			assert.True(t, ok, "Type assertion failed in %s:%s", t.Name(), tc.name)
 
 			err := message.PutString(
-				mockLogger,
 				tc.byteArray,
 				tc.offsetStart,
 				tc.offsetEnd,
@@ -246,7 +245,6 @@ func TestPutBytes(t *testing.T) {
 			assert.True(t, ok, "Type assertion failed in %s:%s", t.Name(), tc.name)
 
 			err := message.PutBytes(
-				mockLogger,
 				tc.byteArray,
 				tc.offsetStart,
 				tc.offsetEnd,
@@ -370,7 +368,6 @@ func TestPutLong(t *testing.T) {
 			assert.True(t, ok, "Type assertion failed in %s:%s", t.Name(), tc.name)
 
 			err := message.PutLong(
-				mockLogger,
 				tc.byteArray,
 				tc.offsetStart,
 				int64(longInput))
@@ -459,7 +456,6 @@ func TestPutInteger(t *testing.T) {
 			assert.True(t, ok, "Type assertion failed in %s:%s", t.Name(), tc.name)
 
 			err := message.PutInteger(
-				mockLogger,
 				tc.byteArray,
 				tc.offsetStart,
 				int32(intInput), //nolint:gosec
@@ -882,7 +878,6 @@ func TestPutUuid(t *testing.T) {
 			require.NoError(t, err)
 
 			err = message.PutUUID(
-				mockLogger,
 				tc.byteArray,
 				tc.offsetStart,
 				uuidInput)
@@ -897,7 +892,7 @@ func TestPutUuid(t *testing.T) {
 				require.NoError(t, err)
 
 				expectedBuffer := get16ByteBuffer()
-				err = message.PutUUID(mockLogger, expectedBuffer, 0, uuidOut)
+				err = message.PutUUID(expectedBuffer, 0, uuidOut)
 				require.NoError(t, err, "Error putting UUID")
 				assert.Equal(t, expectedBuffer, tc.byteArray)
 			case ERROR:
@@ -914,7 +909,7 @@ func TestPutUuid(t *testing.T) {
 
 func TestPutGetString(t *testing.T) {
 	input := []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x01}
-	err1 := message.PutString(log.NewMockLog(), input, 1, 8, "hello")
+	err1 := message.PutString(input, 1, 8, "hello")
 	require.NoError(t, err1)
 
 	result, err := message.GetString(input, 1, 8)
@@ -924,7 +919,7 @@ func TestPutGetString(t *testing.T) {
 
 func TestPutGetInteger(t *testing.T) {
 	input := []byte{0x00, 0x00, 0x00, 0x00, 0xFF, 0x00}
-	err := message.PutInteger(log.NewMockLog(), input, 1, 256)
+	err := message.PutInteger(input, 1, 256)
 	require.NoError(t, err)
 	assert.Equal(t, byte(0x00), input[1])
 	assert.Equal(t, byte(0x00), input[2])
@@ -946,7 +941,7 @@ func TestPutGetInteger(t *testing.T) {
 
 func TestPutGetLong(t *testing.T) {
 	input := []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00}
-	err := message.PutLong(log.NewMockLog(), input, 1, 4294967296) // 2 to the 32 + 1
+	err := message.PutLong(input, 1, 4294967296) // 2 to the 32 + 1
 	require.NoError(t, err)
 	assert.Equal(t, byte(0x00), input[1])
 	assert.Equal(t, byte(0x00), input[2])
@@ -964,7 +959,7 @@ func TestPutGetLong(t *testing.T) {
 
 func TestGetBytesFromInteger(t *testing.T) {
 	input := int32(256)
-	result, err := message.IntegerToBytes(log.NewMockLog(), input)
+	result, err := message.IntegerToBytes(input)
 	require.NoError(t, err)
 	assert.Equal(t, byte(0x00), result[0])
 	assert.Equal(t, byte(0x00), result[1])

@@ -29,6 +29,7 @@ var (
 	ErrOffsetOutside  = errors.New("offset outside")
 	ErrNotEnoughSpace = errors.New("not enough space")
 	ErrNegative       = errors.New("cannot convert negative number to unsigned")
+	ErrNil            = errors.New("input is nil")
 )
 
 // SerializeClientMessagePayload marshals payloads for all session specific messages into bytes.
