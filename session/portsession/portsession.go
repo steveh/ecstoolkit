@@ -99,7 +99,7 @@ func NewPortSession(ctx context.Context, logger log.T, sess session.ISessionSupp
 		}
 
 		outputMessage := &message.ClientMessage{}
-		if err := outputMessage.DeserializeClientMessage(logger, input); err != nil {
+		if err := outputMessage.DeserializeClientMessage(input); err != nil {
 			logger.Warn("Ignore message deserialize error while stream connection had not set")
 
 			return

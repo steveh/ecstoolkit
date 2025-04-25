@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/steveh/ecstoolkit/log"
 )
 
 // Error messages.
@@ -30,6 +29,7 @@ var (
 	ErrNotEnoughSpace = errors.New("not enough space")
 	ErrNegative       = errors.New("cannot convert negative number to unsigned")
 	ErrNil            = errors.New("input is nil")
+	ErrInvalid        = errors.New("invalid input")
 )
 
 // SerializeClientMessagePayload marshals payloads for all session specific messages into bytes.
@@ -43,13 +43,14 @@ func SerializeClientMessagePayload(obj any) ([]byte, error) {
 }
 
 // SerializeClientMessageWithAcknowledgeContent marshals client message with payloads of acknowledge contents into bytes.
-func SerializeClientMessageWithAcknowledgeContent(log log.T, acknowledgeContent AcknowledgeContent) ([]byte, error) {
+func SerializeClientMessageWithAcknowledgeContent(acknowledgeContent AcknowledgeContent) ([]byte, error) {
 	acknowledgeContentBytes, err := SerializeClientMessagePayload(acknowledgeContent)
 	if err != nil {
 		return nil, fmt.Errorf("serializing acknowledge content payload: %w: %+v", err, acknowledgeContent)
 	}
 
 	messageID := uuid.New()
+
 	m := ClientMessage{
 		MessageType:    AcknowledgeMessage,
 		SchemaVersion:  1,
@@ -60,7 +61,7 @@ func SerializeClientMessageWithAcknowledgeContent(log log.T, acknowledgeContent 
 		Payload:        acknowledgeContentBytes,
 	}
 
-	reply, err := m.SerializeClientMessage(log)
+	reply, err := m.SerializeClientMessage()
 	if err != nil {
 		return nil, fmt.Errorf("serializing acknowledge content: %w", err)
 	}

@@ -18,11 +18,9 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/util"
 )
 
@@ -47,76 +45,60 @@ type ClientMessage struct {
 // * | HL|         MessageType           |Ver|  CD   |  Seq  | Flags |
 // * |         MessageID                     |           Digest              | PayType | PayLen|
 // * |         Payload      			|.
-func (m *ClientMessage) DeserializeClientMessage(log log.T, input []byte) error {
+func (m *ClientMessage) DeserializeClientMessage(input []byte) error {
 	var err error
 
 	m.MessageType, err = GetString(input, ClientMessageMessageTypeOffset, ClientMessageMessageTypeLength)
 	if err != nil {
-		log.Error("Could not deserialize field MessageType", "error", err)
-
-		return err
+		return fmt.Errorf("deserializing MessageType: %w", err)
 	}
 
 	m.SchemaVersion, err = GetUInteger(input, ClientMessageSchemaVersionOffset)
 	if err != nil {
-		log.Error("Could not deserialize field SchemaVersion", "error", err)
-
-		return err
+		return fmt.Errorf("deserializing SchemaVersion: %w", err)
 	}
 
 	m.CreatedDate, err = GetULong(input, ClientMessageCreatedDateOffset)
 	if err != nil {
-		log.Error("Could not deserialize field CreatedDate", "error", err)
-
-		return err
+		return fmt.Errorf("deserializing CreatedDate: %w", err)
 	}
 
 	m.SequenceNumber, err = GetLong(input, ClientMessageSequenceNumberOffset)
 	if err != nil {
-		log.Error("Could not deserialize field SequenceNumber", "error", err)
-
-		return err
+		return fmt.Errorf("deserializing SequenceNumber: %w", err)
 	}
 
 	m.Flags, err = GetULong(input, ClientMessageFlagsOffset)
 	if err != nil {
-		log.Error("Could not deserialize field Flags", "error", err)
-
-		return err
+		return fmt.Errorf("deserializing Flags: %w", err)
 	}
 
 	m.MessageID, err = GetUUID(input, ClientMessageMessageIDOffset)
 	if err != nil {
-		log.Error("Could not deserialize field MessageID", "error", err)
-
-		return err
+		return fmt.Errorf("deserializing MessageID: %w", err)
 	}
 
 	m.PayloadDigest, err = GetBytes(input, ClientMessagePayloadDigestOffset, ClientMessagePayloadDigestLength)
 	if err != nil {
-		log.Error("Could not deserialize field PayloadDigest", "error", err)
-
-		return err
+		return fmt.Errorf("deserializing PayloadDigest: %w", err)
 	}
 
 	m.PayloadType, err = GetUInteger(input, ClientMessagePayloadTypeOffset)
 	if err != nil {
-		log.Error("Could not deserialize field PayloadType", "error", err)
-
-		return err
+		return fmt.Errorf("deserializing PayloadType: %w", err)
 	}
 
 	m.PayloadLength, err = GetUInteger(input, ClientMessagePayloadLengthOffset)
-
-	headerLength, herr := GetUInteger(input, ClientMessageHLOffset)
-	if herr != nil {
-		log.Error("Could not deserialize field HeaderLength", "error", err)
-
-		return err
+	if err != nil {
+		return fmt.Errorf("deserializing PayloadLength: %w", err)
 	}
 
-	m.HeaderLength = headerLength
-	m.Payload = input[headerLength+ClientMessagePayloadLengthLength:]
+	m.HeaderLength, err = GetUInteger(input, ClientMessageHLOffset)
+	if err != nil {
+		return fmt.Errorf("deserializing HeaderLength: %w", err)
+	}
+
+	m.Payload = input[m.HeaderLength+ClientMessagePayloadLengthLength:]
 
 	return err
 }
@@ -129,15 +111,15 @@ func (m *ClientMessage) Validate() error {
 	}
 
 	if m.HeaderLength == 0 {
-		return errors.New("HeaderLength cannot be zero")
+		return fmt.Errorf("%w: HeaderLength cannot be zero", ErrInvalid)
 	}
 
 	if m.MessageType == "" {
-		return errors.New("MessageType is missing")
+		return fmt.Errorf("%w: MessageType is missing", ErrInvalid)
 	}
 
 	if m.CreatedDate == 0 {
-		return errors.New("CreatedDate is missing")
+		return fmt.Errorf("%w: CreatedDate is missing", ErrInvalid)
 	}
 
 	if m.PayloadLength != 0 {
@@ -145,7 +127,7 @@ func (m *ClientMessage) Validate() error {
 		hasher.Write(m.Payload)
 
 		if !bytes.Equal(hasher.Sum(nil), m.PayloadDigest) {
-			return errors.New("payload Hash is not valid")
+			return fmt.Errorf("%w: PayloadDigest is invalid", ErrInvalid)
 		}
 	}
 
@@ -157,10 +139,10 @@ func (m *ClientMessage) Validate() error {
 // * | HL|         MessageType           |Ver|  CD   |  Seq  | Flags |
 // * |         MessageID                     |           Digest              |PayType| PayLen|
 // * |         Payload      			|.
-func (m *ClientMessage) SerializeClientMessage(log log.T) ([]byte, error) {
+func (m *ClientMessage) SerializeClientMessage() ([]byte, error) {
 	payloadLength, err := util.SafeUint32(len(m.Payload))
 	if err != nil {
-		return nil, fmt.Errorf("converting payload length to uint32: %w", err)
+		return nil, fmt.Errorf("converting PayloadLength to uint32: %w", err)
 	}
 
 	headerLength := uint32(ClientMessagePayloadLengthOffset)
@@ -172,54 +154,34 @@ func (m *ClientMessage) SerializeClientMessage(log log.T) ([]byte, error) {
 	result := make([]byte, totalMessageLength)
 
 	if err := PutUInteger(result, ClientMessageHLOffset, headerLength); err != nil {
-		log.Error("Could not serialize HeaderLength", "error", err)
-
-		return make([]byte, 1), fmt.Errorf("serializing header length: %w", err)
+		return make([]byte, 1), fmt.Errorf("serializing HeaderLength: %w", err)
 	}
 
 	startPosition := ClientMessageMessageTypeOffset
 	endPosition := ClientMessageMessageTypeOffset + ClientMessageMessageTypeLength - 1
 
-	err = PutString(result, startPosition, endPosition, m.MessageType)
-	if err != nil {
-		log.Error("Could not serialize MessageType", "error", err)
-
-		return make([]byte, 1), fmt.Errorf("serializing message type: %w", err)
+	if err := PutString(result, startPosition, endPosition, m.MessageType); err != nil {
+		return make([]byte, 1), fmt.Errorf("serializing MessageType: %w", err)
 	}
 
-	err = PutUInteger(result, ClientMessageSchemaVersionOffset, m.SchemaVersion)
-	if err != nil {
-		log.Error("Could not serialize SchemaVersion", "error", err)
-
-		return make([]byte, 1), fmt.Errorf("serializing schema version: %w", err)
+	if err := PutUInteger(result, ClientMessageSchemaVersionOffset, m.SchemaVersion); err != nil {
+		return make([]byte, 1), fmt.Errorf("serializing SchemaVersion: %w", err)
 	}
 
-	err = PutULong(result, ClientMessageCreatedDateOffset, m.CreatedDate)
-	if err != nil {
-		log.Error("Could not serialize CreatedDate", "error", err)
-
-		return make([]byte, 1), fmt.Errorf("serializing created date: %w", err)
+	if err := PutULong(result, ClientMessageCreatedDateOffset, m.CreatedDate); err != nil {
+		return make([]byte, 1), fmt.Errorf("serializing CreatedDate: %w", err)
 	}
 
-	err = PutLong(result, ClientMessageSequenceNumberOffset, m.SequenceNumber)
-	if err != nil {
-		log.Error("Could not serialize SequenceNumber", "error", err)
-
-		return make([]byte, 1), fmt.Errorf("serializing sequence number: %w", err)
+	if err := PutLong(result, ClientMessageSequenceNumberOffset, m.SequenceNumber); err != nil {
+		return make([]byte, 1), fmt.Errorf("serializing SequenceNumber: %w", err)
 	}
 
-	err = PutULong(result, ClientMessageFlagsOffset, m.Flags)
-	if err != nil {
-		log.Error("Could not serialize Flags", "error", err)
-
-		return make([]byte, 1), fmt.Errorf("serializing flags: %w", err)
+	if err := PutULong(result, ClientMessageFlagsOffset, m.Flags); err != nil {
+		return make([]byte, 1), fmt.Errorf("serializing Flags: %w", err)
 	}
 
-	err = PutUUID(result, ClientMessageMessageIDOffset, m.MessageID)
-	if err != nil {
-		log.Error("Could not serialize MessageID", "error", err)
-
-		return make([]byte, 1), fmt.Errorf("serializing message ID: %w", err)
+	if err := PutUUID(result, ClientMessageMessageIDOffset, m.MessageID); err != nil {
+		return make([]byte, 1), fmt.Errorf("serializing MessageID: %w", err)
 	}
 
 	hasher := sha256.New()
@@ -228,118 +190,79 @@ func (m *ClientMessage) SerializeClientMessage(log log.T) ([]byte, error) {
 	startPosition = ClientMessagePayloadDigestOffset
 	endPosition = ClientMessagePayloadDigestOffset + ClientMessagePayloadDigestLength - 1
 
-	err = PutBytes(result, startPosition, endPosition, hasher.Sum(nil))
-	if err != nil {
-		log.Error("Could not serialize PayloadDigest", "error", err)
-
-		return make([]byte, 1), fmt.Errorf("serializing payload digest: %w", err)
+	if err := PutBytes(result, startPosition, endPosition, hasher.Sum(nil)); err != nil {
+		return make([]byte, 1), fmt.Errorf("serializing PayloadDigest: %w", err)
 	}
 
-	err = PutUInteger(result, ClientMessagePayloadTypeOffset, m.PayloadType)
-	if err != nil {
-		log.Error("Could not serialize PayloadType", "error", err)
-
-		return make([]byte, 1), fmt.Errorf("serializing payload type: %w", err)
+	if err := PutUInteger(result, ClientMessagePayloadTypeOffset, m.PayloadType); err != nil {
+		return make([]byte, 1), fmt.Errorf("serializing PayloadType: %w", err)
 	}
 
-	err = PutUInteger(result, ClientMessagePayloadLengthOffset, m.PayloadLength)
-	if err != nil {
-		log.Error("Could not serialize PayloadLength", "error", err)
-
-		return make([]byte, 1), fmt.Errorf("serializing payload length: %w", err)
+	if err := PutUInteger(result, ClientMessagePayloadLengthOffset, m.PayloadLength); err != nil {
+		return make([]byte, 1), fmt.Errorf("serializing PayloadLength: %w", err)
 	}
 
 	startPosition = ClientMessagePayloadOffset
 	endPosition = ClientMessagePayloadOffset + int(payloadLength) - 1
 
-	err = PutBytes(result, startPosition, endPosition, m.Payload)
-	if err != nil {
-		log.Error("Could not serialize Payload", "error", err)
-
-		return make([]byte, 1), fmt.Errorf("serializing payload: %w", err)
+	if err := PutBytes(result, startPosition, endPosition, m.Payload); err != nil {
+		return make([]byte, 1), fmt.Errorf("serializing Payload: %w", err)
 	}
 
 	return result, nil
 }
 
 // DeserializeDataStreamAcknowledgeContent parses acknowledge content from payload of ClientMessage.
-func (m *ClientMessage) DeserializeDataStreamAcknowledgeContent(log log.T) (AcknowledgeContent, error) {
+func (m *ClientMessage) DeserializeDataStreamAcknowledgeContent() (AcknowledgeContent, error) {
 	if m.MessageType != AcknowledgeMessage {
-		err := fmt.Errorf("ClientMessage is not of type AcknowledgeMessage. Found message type: %s", m.MessageType)
-
-		return AcknowledgeContent{}, err
+		return AcknowledgeContent{}, fmt.Errorf("%w: %s is not of type AcknowledgeMessage", ErrInvalid, m.MessageType)
 	}
 
 	var dataStreamAcknowledge AcknowledgeContent
-
-	err := json.Unmarshal(m.Payload, &dataStreamAcknowledge)
-	if err != nil {
-		log.Error("Could not deserialize raw message", "error", err)
-
-		return AcknowledgeContent{}, fmt.Errorf("unmarshaling acknowledge content: %w", err)
+	if err := json.Unmarshal(m.Payload, &dataStreamAcknowledge); err != nil {
+		return AcknowledgeContent{}, fmt.Errorf("unmarshaling AcknowledgeContent: %w", err)
 	}
 
 	return dataStreamAcknowledge, nil
 }
 
 // DeserializeChannelClosedMessage parses channelClosed message from payload of ClientMessage.
-func (m *ClientMessage) DeserializeChannelClosedMessage(log log.T) (ChannelClosed, error) {
+func (m *ClientMessage) DeserializeChannelClosedMessage() (ChannelClosed, error) {
 	if m.MessageType != ChannelClosedMessage {
-		err := fmt.Errorf("ClientMessage is not of type ChannelClosed. Found message type: %s", m.MessageType)
-
-		return ChannelClosed{}, err
+		return ChannelClosed{}, fmt.Errorf("%w: %s is not of type ChannelClosedMessage", ErrInvalid, m.MessageType)
 	}
 
 	var channelClosed ChannelClosed
-
-	err := json.Unmarshal(m.Payload, &channelClosed)
-	if err != nil {
-		log.Error("Could not deserialize raw message", "error", err)
-
-		return ChannelClosed{}, fmt.Errorf("unmarshaling channel closed message: %w", err)
+	if err := json.Unmarshal(m.Payload, &channelClosed); err != nil {
+		return ChannelClosed{}, fmt.Errorf("unmarshaling ChannelClosed: %w", err)
 	}
 
 	return channelClosed, nil
 }
 
 // DeserializeHandshakeRequest deserializes the handshake request payload from the client message.
-func (m *ClientMessage) DeserializeHandshakeRequest(log log.T) (HandshakeRequestPayload, error) {
+func (m *ClientMessage) DeserializeHandshakeRequest() (HandshakeRequestPayload, error) {
 	if m.PayloadType != uint32(HandshakeRequestPayloadType) {
-		err := fmt.Errorf("ClientMessage PayloadType is not of type HandshakeRequestPayloadType. Found payload type: %d",
-			m.PayloadType)
-		log.Error(err.Error())
-
-		return HandshakeRequestPayload{}, err
+		return HandshakeRequestPayload{}, fmt.Errorf("%w: %d is not of type HandshakeRequestPayloadType", ErrInvalid, m.PayloadType)
 	}
 
 	var handshakeRequest HandshakeRequestPayload
-
-	err := json.Unmarshal(m.Payload, &handshakeRequest)
-	if err != nil {
-		log.Error("Could not deserialize raw message", "error", err)
-
-		return HandshakeRequestPayload{}, fmt.Errorf("unmarshaling handshake request: %w", err)
+	if err := json.Unmarshal(m.Payload, &handshakeRequest); err != nil {
+		return HandshakeRequestPayload{}, fmt.Errorf("unmarshaling HandshakeRequestPayload: %w", err)
 	}
 
 	return handshakeRequest, nil
 }
 
 // DeserializeHandshakeComplete deserializes the handshake complete payload from the client message.
-func (m *ClientMessage) DeserializeHandshakeComplete(log log.T) (HandshakeCompletePayload, error) {
+func (m *ClientMessage) DeserializeHandshakeComplete() (HandshakeCompletePayload, error) {
 	if m.PayloadType != uint32(HandshakeCompletePayloadType) {
-		err := fmt.Errorf("ClientMessage PayloadType is not of type HandshakeCompletePayloadType. Found payload type: %d",
-			m.PayloadType)
-
-		log.Error(err.Error())
-
-		return HandshakeCompletePayload{}, err
+		return HandshakeCompletePayload{}, fmt.Errorf("%w: %d is not of type HandshakeCompletePayloadType", ErrInvalid, m.PayloadType)
 	}
 
 	var handshakeComplete HandshakeCompletePayload
 	if err := json.Unmarshal(m.Payload, &handshakeComplete); err != nil {
-		log.Error("Could not deserialize raw message", "error", err)
-
-		return HandshakeCompletePayload{}, fmt.Errorf("unmarshaling handshake complete: %w", err)
+		return HandshakeCompletePayload{}, fmt.Errorf("unmarshaling HandshakeCompletePayload: %w", err)
 	}
 
 	return handshakeComplete, nil

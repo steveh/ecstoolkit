@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -53,7 +52,6 @@ func get16ByteBuffer() []byte {
 }
 
 var (
-	mockLogger                 = log.NewMockLog()
 	defaultByteBufferGenerator = get8ByteBuffer
 	messageID                  = "dd01e56b-ff48-483e-a508-b5f073f31b16"
 	messageType                = message.InputStreamMessage
@@ -727,7 +725,7 @@ func TestClientMessage_Validate(t *testing.T) {
 	clientMessage.CreatedDate = createdDate
 	err = clientMessage.Validate()
 	require.Error(t, err, "No error was thrown when one was expected.")
-	assert.Contains(t, err.Error(), "payload Hash is not valid")
+	assert.Contains(t, err.Error(), "PayloadDigest is invalid")
 
 	hasher := sha256.New()
 	hasher.Write(payload)
@@ -762,17 +760,17 @@ func TestClientMessage_DeserializeDataStreamAcknowledgeContent(t *testing.T) {
 		Payload: payload,
 	}
 
-	ackMessage, err := testMessage.DeserializeDataStreamAcknowledgeContent(mockLogger)
+	ackMessage, err := testMessage.DeserializeDataStreamAcknowledgeContent()
 	assert.Equal(t, message.AcknowledgeContent{}, ackMessage)
 	require.Error(t, err, "An error was not thrown when one was expected.")
 
 	testMessage.MessageType = message.AcknowledgeMessage
-	ackMessage2, err := testMessage.DeserializeDataStreamAcknowledgeContent(mockLogger)
+	ackMessage2, err := testMessage.DeserializeDataStreamAcknowledgeContent()
 	assert.Equal(t, message.AcknowledgeContent{}, ackMessage2)
 	require.Error(t, err, "An error was not thrown when one was expected.")
 
 	testMessage.Payload = ackMessagePayload
-	ackMessage3, err := testMessage.DeserializeDataStreamAcknowledgeContent(mockLogger)
+	ackMessage3, err := testMessage.DeserializeDataStreamAcknowledgeContent()
 	assert.Equal(t, message.AcknowledgeMessage, ackMessage3.MessageType)
 	assert.Equal(t, messageID, ackMessage3.MessageID)
 	require.NoError(t, err, "An error was thrown when one was not expected.")
@@ -785,17 +783,17 @@ func TestClientMessage_DeserializeChannelClosedMessage(t *testing.T) {
 		Payload: payload,
 	}
 
-	closeMessage, err := testMessage.DeserializeChannelClosedMessage(mockLogger)
+	closeMessage, err := testMessage.DeserializeChannelClosedMessage()
 	assert.Equal(t, message.ChannelClosed{}, closeMessage)
 	require.Error(t, err, "An error was not thrown when one was expected.")
 
 	testMessage.MessageType = message.ChannelClosedMessage
-	closeMessage2, err := testMessage.DeserializeChannelClosedMessage(mockLogger)
+	closeMessage2, err := testMessage.DeserializeChannelClosedMessage()
 	assert.Equal(t, message.ChannelClosed{}, closeMessage2)
 	require.Error(t, err, "An error was not thrown when one was expected.")
 
 	testMessage.Payload = channelClosedPayload
-	closeMessage3, err := testMessage.DeserializeChannelClosedMessage(mockLogger)
+	closeMessage3, err := testMessage.DeserializeChannelClosedMessage()
 	assert.Equal(t, message.ChannelClosedMessage, closeMessage3.MessageType)
 	assert.Equal(t, messageID, closeMessage3.MessageID)
 	assert.Equal(t, strconv.FormatUint(createdDate, 10), closeMessage3.CreatedDate)
@@ -812,17 +810,17 @@ func TestClientMessage_DeserializeHandshakeRequest(t *testing.T) {
 		Payload: payload,
 	}
 
-	handshakeReq, err := testMessage.DeserializeHandshakeRequest(mockLogger)
+	handshakeReq, err := testMessage.DeserializeHandshakeRequest()
 	assert.Equal(t, message.HandshakeRequestPayload{}, handshakeReq)
 	require.Error(t, err, "An error was not thrown when one was expected.")
 
 	testMessage.PayloadType = uint32(message.HandshakeRequestPayloadType)
-	handshakeReq2, err := testMessage.DeserializeHandshakeRequest(mockLogger)
+	handshakeReq2, err := testMessage.DeserializeHandshakeRequest()
 	assert.Equal(t, message.HandshakeRequestPayload{}, handshakeReq2)
 	require.Error(t, err, "An error was not thrown when one was expected.")
 
 	testMessage.Payload = handshakeReqPayload
-	handshakeReq3, err := testMessage.DeserializeHandshakeRequest(mockLogger)
+	handshakeReq3, err := testMessage.DeserializeHandshakeRequest()
 	assert.Equal(t, agentVersion, handshakeReq3.AgentVersion)
 	assert.Equal(t, message.ActionType(actionType), handshakeReq3.RequestedClientActions[0].ActionType)
 	assert.JSONEq(t, sampleParameters, string(handshakeReq3.RequestedClientActions[0].ActionParameters))
@@ -836,17 +834,17 @@ func TestClientMessage_DeserializeHandshakeComplete(t *testing.T) {
 		Payload: payload,
 	}
 
-	handshakeComplete, err := testMessage.DeserializeHandshakeComplete(mockLogger)
+	handshakeComplete, err := testMessage.DeserializeHandshakeComplete()
 	assert.Equal(t, message.HandshakeCompletePayload{}, handshakeComplete)
 	require.Error(t, err, "An error was not thrown when one was expected.")
 
 	testMessage.PayloadType = uint32(message.HandshakeCompletePayloadType)
-	handshakeComplete2, err := testMessage.DeserializeHandshakeComplete(mockLogger)
+	handshakeComplete2, err := testMessage.DeserializeHandshakeComplete()
 	assert.Equal(t, message.HandshakeCompletePayload{}, handshakeComplete2)
 	require.Error(t, err, "An error was not thrown when one was expected.")
 
 	testMessage.Payload = handshakeCompletePayload
-	handshakeComplete3, err := testMessage.DeserializeHandshakeComplete(mockLogger)
+	handshakeComplete3, err := testMessage.DeserializeHandshakeComplete()
 	assert.Equal(t, time.Duration(timeToComplete), handshakeComplete3.HandshakeTimeToComplete)
 	assert.Equal(t, customerMessage, handshakeComplete3.CustomerMessage)
 	require.NoError(t, err, "An error was thrown when one was not expected.")
@@ -982,7 +980,7 @@ func TestSerializeAndDeserializeClientMessage(t *testing.T) {
 	}
 
 	// Test SerializeClientMessage
-	serializedBytes, err := clientMessage.SerializeClientMessage(log.NewMockLog())
+	serializedBytes, err := clientMessage.SerializeClientMessage()
 	require.NoError(t, err, "Error serializing message")
 
 	seralizedMessageType := strings.TrimRight(string(serializedBytes[message.ClientMessageMessageTypeOffset:message.ClientMessageMessageTypeOffset+message.ClientMessageMessageTypeLength-1]), " ")
@@ -1018,7 +1016,7 @@ func TestSerializeAndDeserializeClientMessage(t *testing.T) {
 
 	// Test DeserializeClientMessage
 	deserializedClientMessage := &message.ClientMessage{}
-	err = deserializedClientMessage.DeserializeClientMessage(log.NewMockLog(), serializedBytes)
+	err = deserializedClientMessage.DeserializeClientMessage(serializedBytes)
 	require.NoError(t, err)
 	assert.Equal(t, messageType, deserializedClientMessage.MessageType)
 	assert.Equal(t, schemaVersion, deserializedClientMessage.SchemaVersion)
@@ -1043,11 +1041,11 @@ func TestSerializeAndDeserializeClientMessageWithAcknowledgeContent(t *testing.T
 		IsSequentialMessage: true,
 	}
 
-	serializedClientMsg, _ := message.SerializeClientMessageWithAcknowledgeContent(log.NewMockLog(), acknowledgeContent)
+	serializedClientMsg, _ := message.SerializeClientMessageWithAcknowledgeContent(acknowledgeContent)
 	deserializedClientMsg := &message.ClientMessage{}
-	err := deserializedClientMsg.DeserializeClientMessage(log.NewMockLog(), serializedClientMsg)
+	err := deserializedClientMsg.DeserializeClientMessage(serializedClientMsg)
 	require.NoError(t, err)
-	deserializedAcknowledgeContent, err := deserializedClientMsg.DeserializeDataStreamAcknowledgeContent(log.NewMockLog())
+	deserializedAcknowledgeContent, err := deserializedClientMsg.DeserializeDataStreamAcknowledgeContent()
 
 	require.NoError(t, err)
 	assert.Equal(t, messageType, deserializedAcknowledgeContent.MessageType)
@@ -1084,7 +1082,7 @@ func TestDeserializeAgentMessageWithChannelClosed(t *testing.T) {
 		Payload:        channelClosedJSON,
 	}
 
-	deserializedChannelClosed, err := agentMessage.DeserializeChannelClosedMessage(log.NewMockLog())
+	deserializedChannelClosed, err := agentMessage.DeserializeChannelClosedMessage()
 
 	require.NoError(t, err)
 	assert.Equal(t, message.ChannelClosedMessage, deserializedChannelClosed.MessageType)

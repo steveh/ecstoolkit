@@ -42,7 +42,6 @@ import (
 var (
 	outputMessageType                           = message.OutputStreamMessage
 	serializedClientMessages, streamingMessages = getClientAndStreamingMessageList(7)
-	logger                                      = log.NewMockLog()
 	mockWsChannel                               = &communicatorMocks.IWebSocketChannel{}
 	streamURL                                   = "stream-url"
 	channelToken                                = "channel-token"
@@ -420,7 +419,9 @@ func TestDataChannelIncomingMessageHandlerForAcknowledgeMessage(t *testing.T) {
 
 	clientMessage := getClientMessage(0, message.AcknowledgeMessage, uint32(message.Output), payload)
 
-	serializedClientMessage, _ := clientMessage.SerializeClientMessage(logger)
+	serializedClientMessage, err := clientMessage.SerializeClientMessage()
+	require.NoError(t, err)
+
 	if err := dataChannel.outputMessageHandler(context.TODO(), stopHandler, serializedClientMessage); err != nil {
 		t.Fatal(err)
 	}
@@ -440,7 +441,8 @@ func TestDataChannelIncomingMessageHandlerForPausePublicationessage(t *testing.T
 
 	for i := range size {
 		clientMessage := getClientMessage(int64(i), message.PausePublicationMessage, uint32(message.Output), []byte(""))
-		serializedClientMessage[i], _ = clientMessage.SerializeClientMessage(mockLogger)
+		serializedClientMessage[i], _ = clientMessage.SerializeClientMessage()
+
 		streamingMessages[i] = StreamingMessage{
 			serializedClientMessage[i],
 			int64(i),
@@ -475,7 +477,8 @@ func TestHandshakeRequestHandler(t *testing.T) {
 
 	clientMessage := getClientMessage(0, message.OutputStreamMessage,
 		uint32(message.HandshakeRequestPayloadType), handshakeRequestBytes)
-	handshakeRequestMessageBytes, _ := clientMessage.SerializeClientMessage(mockLogger)
+	handshakeRequestMessageBytes, err := clientMessage.SerializeClientMessage()
+	require.NoError(t, err)
 
 	newEncrypter = func(_ context.Context, _ log.T, kmsKeyIDInput string, context map[string]string, _ *kms.Client) (encryption.IEncrypter, error) {
 		expectedContext := map[string]string{"aws:ssm:SessionId": sessionID, "aws:ssm:TargetId": instanceID}
@@ -489,7 +492,7 @@ func TestHandshakeRequestHandler(t *testing.T) {
 	// Mock sending of encryption challenge
 	handshakeResponseMatcher := func(sentData []byte) bool {
 		clientMessage := &message.ClientMessage{}
-		if err := clientMessage.DeserializeClientMessage(mockLogger, sentData); err != nil {
+		if err := clientMessage.DeserializeClientMessage(sentData); err != nil {
 			t.Errorf("Failed to deserialize client message: %v", err)
 
 			return false
@@ -582,7 +585,7 @@ func TestHandleHandshakeRequestWithMessageDeserializeError(t *testing.T) {
 
 	err = dataChannel.handleHandshakeRequest(context.TODO(), clientMessage)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "ClientMessage PayloadType is not of type HandshakeRequestPayloadType")
+	assert.Contains(t, err.Error(), "is not of type HandshakeRequestPayloadType")
 }
 
 func TestProcessOutputMessageWithHandlers(t *testing.T) {
@@ -697,10 +700,17 @@ func getClientAndStreamingMessageList(size int) ([][]byte, []StreamingMessage) {
 	streamingMessages := make([]StreamingMessage, size)
 	serializedClientMessage := make([][]byte, size)
 
+	var err error
+
 	for i := range size {
 		payload = "testPayload" + strconv.Itoa(i)
 		clientMessage := getClientMessage(int64(i), messageType, uint32(message.Output), []byte(payload))
-		serializedClientMessage[i], _ = clientMessage.SerializeClientMessage(mockLogger)
+
+		serializedClientMessage[i], err = clientMessage.SerializeClientMessage()
+		if err != nil {
+			panic(err)
+		}
+
 		streamingMessages[i] = StreamingMessage{
 			serializedClientMessage[i],
 			int64(i),

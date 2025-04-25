@@ -199,7 +199,7 @@ func (c *DataChannel) SendInputDataMessage(payloadType message.PayloadType, inpu
 		SequenceNumber: c.streamDataSequenceNumber,
 	}
 
-	if msg, err = clientMessage.SerializeClientMessage(c.logger); err != nil {
+	if msg, err = clientMessage.SerializeClientMessage(); err != nil {
 		c.logger.Error("Cannot serialize StreamData message", "error", err)
 
 		return fmt.Errorf("serializing client message: %w", err)
@@ -350,7 +350,7 @@ func (c *DataChannel) ProcessIncomingMessageBufferItems(
 func (c *DataChannel) HandleAcknowledgeMessage(
 	outputMessage message.ClientMessage,
 ) error {
-	acknowledgeMessage, err := outputMessage.DeserializeDataStreamAcknowledgeContent(c.logger)
+	acknowledgeMessage, err := outputMessage.DeserializeDataStreamAcknowledgeContent()
 	if err != nil {
 		c.logger.Error("Cannot deserialize payload to AcknowledgeMessage", "error", err)
 
@@ -372,7 +372,7 @@ func (c *DataChannel) HandleChannelClosedMessage(stopHandler Stop, sessionID str
 		err                  error
 	)
 
-	if channelClosedMessage, err = outputMessage.DeserializeChannelClosedMessage(c.logger); err != nil {
+	if channelClosedMessage, err = outputMessage.DeserializeChannelClosedMessage(); err != nil {
 		c.logger.Error("Cannot deserialize payload to ChannelClosedMessage", "error", err)
 	}
 
@@ -564,7 +564,7 @@ func (c *DataChannel) sendAcknowledgeMessage(streamDataMessage message.ClientMes
 
 	var err error
 
-	if msg, err = message.SerializeClientMessageWithAcknowledgeContent(c.logger, dataStreamAcknowledgeContent); err != nil {
+	if msg, err = message.SerializeClientMessageWithAcknowledgeContent(dataStreamAcknowledgeContent); err != nil {
 		c.logger.Error("Cannot serialize Acknowledge message", "error", err)
 
 		return fmt.Errorf("serializing acknowledge message: %w", err)
@@ -638,7 +638,7 @@ func (c *DataChannel) calculateRetransmissionTimeout(streamingMessage RoundTripT
 func (c *DataChannel) outputMessageHandler(ctx context.Context, stopHandler Stop, rawMessage []byte) error {
 	outputMessage := &message.ClientMessage{}
 
-	err := outputMessage.DeserializeClientMessage(c.logger, rawMessage)
+	err := outputMessage.DeserializeClientMessage(rawMessage)
 	if err != nil {
 		c.logger.Error("Cannot deserialize raw message", "message", string(rawMessage), "error", err)
 
@@ -671,7 +671,7 @@ func (c *DataChannel) outputMessageHandler(ctx context.Context, stopHandler Stop
 
 // handleHandshakeRequest is the handler for payloads of type HandshakeRequest.
 func (c *DataChannel) handleHandshakeRequest(ctx context.Context, clientMessage message.ClientMessage) error {
-	handshakeRequest, err := clientMessage.DeserializeHandshakeRequest(c.logger)
+	handshakeRequest, err := clientMessage.DeserializeHandshakeRequest()
 	if err != nil {
 		c.logger.Error("Deserialize Handshake Request failed", "error", err)
 
@@ -743,7 +743,7 @@ func (c *DataChannel) handleHandshakeRequest(ctx context.Context, clientMessage 
 // handleHandshakeComplete is the handler for when the payload type is HandshakeComplete. This will trigger
 // the plugin to start.
 func (c *DataChannel) handleHandshakeComplete(clientMessage message.ClientMessage) error {
-	handshakeComplete, err := clientMessage.DeserializeHandshakeComplete(c.logger)
+	handshakeComplete, err := clientMessage.DeserializeHandshakeComplete()
 	if err != nil {
 		return fmt.Errorf("handling handshake complete: %w", err)
 	}
@@ -977,7 +977,7 @@ func (c *DataChannel) handleUnexpectedSequenceMessage(outputMessage message.Clie
 func (c *DataChannel) processBufferedMessage(outputMessage message.ClientMessage, bufferedStreamMessage StreamingMessage) error {
 	c.logger.Trace("Processing stream data message from incomingMessageBuffer", "sequenceNumber", bufferedStreamMessage.SequenceNumber)
 
-	if err := outputMessage.DeserializeClientMessage(c.logger, bufferedStreamMessage.Content); err != nil {
+	if err := outputMessage.DeserializeClientMessage(bufferedStreamMessage.Content); err != nil {
 		c.logger.Error("Cannot deserialize raw message", "error", err)
 
 		return fmt.Errorf("deserializing raw message: %w", err)

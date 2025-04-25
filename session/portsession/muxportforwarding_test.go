@@ -77,7 +77,7 @@ func TestReadStream(t *testing.T) {
 	time.Sleep(time.Second)
 
 	deserializedMsg := &message.ClientMessage{}
-	err := deserializedMsg.DeserializeClientMessage(mockLog, actualPayload)
+	err := deserializedMsg.DeserializeClientMessage(actualPayload)
 	require.NoError(t, err)
 	assert.Equal(t, outputMessage.Payload, deserializedMsg.Payload)
 }
