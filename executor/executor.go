@@ -3,17 +3,17 @@ package executor
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	"github.com/google/uuid"
 	"github.com/steveh/ecstoolkit/config"
+	"github.com/steveh/ecstoolkit/datachannel"
 	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/session"
 	"github.com/steveh/ecstoolkit/session/portsession"
@@ -113,9 +113,25 @@ func (e *Executor) newSession(options *ExecuteSessionOptions, execute *ecs.Execu
 		return nil, err
 	}
 
+	clientID, err := uuid.NewRandom()
+	if err != nil {
+		return nil, fmt.Errorf("generate UUID: %w", err)
+	}
+
 	targetID := fmt.Sprintf("ecs:%s_%s_%s", options.ClusterName, taskID, options.ContainerRuntimeID)
 
-	sess, err := session.NewSession(e.ssmClient, e.kmsClient, execute.Session, targetID, e.logger)
+	dataChannel, err := datachannel.NewDataChannel(
+		e.kmsClient,
+		clientID.String(),
+		*execute.Session.SessionId,
+		targetID,
+		e.logger,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("creating data channel: %w", err)
+	}
+
+	sess, err := session.NewSession(e.ssmClient, dataChannel, execute.Session, e.logger)
 	if err != nil {
 		return nil, fmt.Errorf("new session: %w", err)
 	}
@@ -125,31 +141,11 @@ func (e *Executor) newSession(options *ExecuteSessionOptions, execute *ecs.Execu
 
 func (e *Executor) initSession(ctx context.Context, sess *session.Session) error {
 	if err := sess.OpenDataChannel(ctx); err != nil {
-		return fmt.Errorf("open data channel: %w", err)
+		return fmt.Errorf("opening data channel: %w", err)
 	}
 
-	sess.DataChannel.SetSessionType(config.ShellPluginName)
-
-	go func() {
-		for {
-			// Repeat this loop for every 200ms
-			time.Sleep(config.ResendSleepInterval)
-
-			if <-sess.DataChannel.IsStreamMessageResendTimeout() {
-				e.logger.Error("Stream data timeout", "sessionID", sess.GetSessionID())
-
-				if err := sess.TerminateSession(ctx); err != nil {
-					e.logger.Error("Unable to terminate session upon stream data timeout", "error", err)
-				}
-
-				return
-			}
-		}
-	}()
-
-	// The session type is set either by handshake or the first packet received.
-	if !<-sess.DataChannel.IsSessionTypeSet() {
-		return errors.New("unable to determine session type")
+	if err := sess.Establish(ctx, config.ShellPluginName, config.ResendSleepInterval); err != nil {
+		return fmt.Errorf("establishing session: %w", err)
 	}
 
 	var sessionSubType session.ISessionPlugin

@@ -58,8 +58,14 @@ func TestName(t *testing.T) {
 }
 
 func TestInitialize(t *testing.T) {
-	session := &session.Session{}
-	session.DataChannel = mockDataChannel
+	ssmSession := types.Session{
+		SessionId:  aws.String(""),
+		StreamUrl:  aws.String(""),
+		TokenValue: aws.String(""),
+	}
+
+	session, err := session.NewSession(nil, mockDataChannel, &ssmSession, logger)
+	require.NoError(t, err)
 
 	mockDataChannel.On("RegisterOutputStreamHandler", mock.Anything, true).Times(1)
 	mockDataChannel.On("RegisterOutputMessageHandler", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
@@ -72,12 +78,19 @@ func TestInitialize(t *testing.T) {
 }
 
 func TestHandleControlSignals(t *testing.T) {
-	session := session.Session{}
-	session.DataChannel = mockDataChannel
-	shellSession := ShellSession{
-		logger: logger,
+	ssmSession := types.Session{
+		SessionId:  aws.String(""),
+		StreamUrl:  aws.String(""),
+		TokenValue: aws.String(""),
 	}
-	shellSession.session = &session
+
+	sess, err := session.NewSession(nil, mockDataChannel, &ssmSession, logger)
+	require.NoError(t, err)
+
+	shellSession := ShellSession{
+		logger:  logger,
+		session: sess,
+	}
 
 	waitCh := make(chan int, 1)
 	counter := 0
@@ -146,9 +159,14 @@ func TestSendInputDataMessageWithPayloadTypeSize(t *testing.T) {
 func TestTerminalResizeWhenSessionSizeDataIsNotEqualToActualSize(t *testing.T) {
 	dataChannel := getDataChannel(t)
 
-	session := session.Session{
-		DataChannel: dataChannel,
+	ssmSession := types.Session{
+		SessionId:  aws.String(""),
+		StreamUrl:  aws.String(""),
+		TokenValue: aws.String(""),
 	}
+
+	sess, err := session.NewSession(nil, dataChannel, &ssmSession, logger)
+	require.NoError(t, err)
 
 	sizeData := message.SizeData{
 		Cols: 100,
@@ -156,7 +174,7 @@ func TestTerminalResizeWhenSessionSizeDataIsNotEqualToActualSize(t *testing.T) {
 	}
 
 	shellSession := ShellSession{
-		session:  &session,
+		session:  sess,
 		SizeData: sizeData,
 		logger:   logger,
 	}
@@ -188,13 +206,13 @@ func TestTerminalResizeWhenSessionSizeDataIsNotEqualToActualSize(t *testing.T) {
 }
 
 func TestProcessStreamMessagePayload(t *testing.T) {
-	ssmSession := &types.Session{
+	ssmSession := types.Session{
 		SessionId:  aws.String(""),
 		StreamUrl:  aws.String(""),
 		TokenValue: aws.String(""),
 	}
 
-	sess, err := session.NewSession(nil, nil, ssmSession, "", logger)
+	sess, err := session.NewSession(nil, mockDataChannel, &ssmSession, logger)
 	require.NoError(t, err)
 
 	shellSession := ShellSession{

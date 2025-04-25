@@ -72,16 +72,14 @@ func getSessionMockWithParams(t *testing.T, properties interface{}, agentVersion
 	err = dataChannel.ProcessSessionTypeHandshakeAction(b)
 	require.NoError(t, err)
 
-	ssmSession := &types.Session{
+	ssmSession := types.Session{
 		SessionId:  aws.String(""),
 		StreamUrl:  aws.String(""),
 		TokenValue: aws.String(""),
 	}
 
-	mockSession, err := session.NewSession(nil, nil, ssmSession, "", mockLogger)
+	mockSession, err := session.NewSession(nil, dataChannel, &ssmSession, mockLogger)
 	require.NoError(t, err)
-
-	mockSession.DataChannel = dataChannel
 
 	return mockSession
 }

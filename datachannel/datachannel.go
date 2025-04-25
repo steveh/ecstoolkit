@@ -506,6 +506,11 @@ func (c *DataChannel) GetExpectedSequenceNumber() int64 {
 	return c.expectedSequenceNumber
 }
 
+// GetTargetID returns the channel target ID.
+func (c *DataChannel) GetTargetID() string {
+	return c.targetID
+}
+
 // finalizeDataChannelHandshake sends the token for service to acknowledge the connection.
 func (c *DataChannel) finalizeDataChannelHandshake(tokenValue string) error {
 	uid := uuid.New().String()

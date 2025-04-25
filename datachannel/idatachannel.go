@@ -35,4 +35,5 @@ type IDataChannel interface {
 	RegisterOutputMessageHandler(ctx context.Context, stopHandler Stop, onMessageHandler func(input []byte))
 	GetStreamDataSequenceNumber() int64
 	GetAgentVersion() string
+	GetTargetID() string
 }

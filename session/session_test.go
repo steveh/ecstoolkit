@@ -49,6 +49,7 @@ func SetupMockActions() {
 	mockDataChannel.On("SetOnMessage", mock.Anything)
 	mockDataChannel.On("SetOnError", mock.Anything)
 	mockDataChannel.On("RegisterOutputStreamHandler", mock.Anything, mock.Anything)
+	mockDataChannel.On("RegisterOutputMessageHandler", mock.Anything, mock.Anything, mock.Anything)
 	mockDataChannel.On("ResendStreamDataMessageScheduler", mock.Anything).Return(nil)
 }
 
@@ -59,7 +60,7 @@ func TestOpenDataChannel(t *testing.T) {
 	sessionMock := &Session{
 		logger: logger,
 	}
-	sessionMock.DataChannel = mockDataChannel
+	sessionMock.dataChannel = mockDataChannel
 
 	SetupMockActions()
 	mockDataChannel.On("Open", mock.Anything).Return(nil)
@@ -75,7 +76,7 @@ func TestOpenDataChannelWithError(t *testing.T) {
 	sessionMock := &Session{
 		logger: logger,
 	}
-	sessionMock.DataChannel = mockDataChannel
+	sessionMock.dataChannel = mockDataChannel
 
 	SetupMockActions()
 
@@ -100,7 +101,7 @@ func TestProcessFirstMessageOutputMessageFirst(t *testing.T) {
 	require.NoError(t, err)
 
 	session := Session{
-		DataChannel: dataChannel,
+		dataChannel: dataChannel,
 		logger:      logger,
 	}
 
@@ -109,6 +110,6 @@ func TestProcessFirstMessageOutputMessageFirst(t *testing.T) {
 		t.Errorf("Failed to process first message: %v", err)
 	}
 
-	assert.Equal(t, config.ShellPluginName, session.DataChannel.GetSessionType())
-	assert.True(t, <-session.DataChannel.IsSessionTypeSet())
+	assert.Equal(t, config.ShellPluginName, session.dataChannel.GetSessionType())
+	assert.True(t, <-session.dataChannel.IsSessionTypeSet())
 }
