@@ -25,6 +25,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/steveh/ecstoolkit/communicator/mocks"
 	"github.com/steveh/ecstoolkit/datachannel"
@@ -32,7 +34,6 @@ import (
 	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
 	"github.com/steveh/ecstoolkit/session"
-	"github.com/steveh/ecstoolkit/session/sessionutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -187,12 +188,17 @@ func TestTerminalResizeWhenSessionSizeDataIsNotEqualToActualSize(t *testing.T) {
 }
 
 func TestProcessStreamMessagePayload(t *testing.T) {
-	sess := session.Session{
-		DisplayMode: sessionutil.NewDisplayMode(logger),
+	ssmSession := &types.Session{
+		SessionId:  aws.String(""),
+		StreamUrl:  aws.String(""),
+		TokenValue: aws.String(""),
 	}
 
+	sess, err := session.NewSession(nil, nil, ssmSession, "", logger)
+	require.NoError(t, err)
+
 	shellSession := ShellSession{
-		session: &sess,
+		session: sess,
 		logger:  logger,
 	}
 

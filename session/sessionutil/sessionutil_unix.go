@@ -28,23 +28,21 @@ import (
 )
 
 // DisplayMode represents a display mode for Unix-like systems.
-type DisplayMode struct{}
-
-// InitDisplayMode initializes the display mode for Unix-like systems.
-func (d *DisplayMode) InitDisplayMode(_ log.T) {
+type DisplayMode struct {
+	logger log.T
 }
 
 // DisplayMessage function displays the output on the screen.
-func (d *DisplayMode) DisplayMessage(log log.T, message message.ClientMessage) {
+func (d *DisplayMode) DisplayMessage(message message.ClientMessage) {
 	var out io.Writer = os.Stdout
 
 	if _, err := fmt.Fprint(out, string(message.Payload)); err != nil {
-		log.Error("Failed to write message to output", "error", err)
+		d.logger.Error("Failed to write message to output", "error", err)
 	}
 }
 
 // NewListener starts a new socket listener on the address.
-func NewListener(_ log.T, address string) (net.Listener, error) {
+func NewListener(address string) (net.Listener, error) {
 	listener, err := net.Listen("unix", address)
 	if err != nil {
 		return nil, fmt.Errorf("creating unix socket listener: %w", err)

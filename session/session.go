@@ -39,7 +39,7 @@ type Session struct {
 	DataChannel datachannel.IDataChannel
 	sessionID   string
 	targetID    string
-	DisplayMode sessionutil.DisplayMode
+	displayMode sessionutil.DisplayMode
 	streamURL   string
 	tokenValue  string
 	clientID    string
@@ -61,7 +61,7 @@ func NewSession(ssmClient *ssm.Client, kmsClient *kms.Client, ssmSession *types.
 	session := &Session{
 		sessionID:   *ssmSession.SessionId,
 		targetID:    targetID,
-		DisplayMode: sessionutil.NewDisplayMode(logger),
+		displayMode: sessionutil.NewDisplayMode(logger),
 		streamURL:   *ssmSession.StreamUrl,
 		tokenValue:  *ssmSession.TokenValue,
 		clientID:    clientID.String(),
@@ -188,7 +188,7 @@ func (s *Session) Close() error {
 
 // DisplayMessage displays a message to the user.
 func (s *Session) DisplayMessage(message message.ClientMessage) {
-	s.DisplayMode.DisplayMessage(s.logger, message)
+	s.displayMode.DisplayMessage(message)
 }
 
 // GetSessionID retrieves the session ID from the session.
@@ -228,7 +228,7 @@ func (s *Session) processFirstMessage(outputMessage message.ClientMessage) (bool
 		if outputMessage.PayloadType == uint32(message.Output) {
 			s.logger.Warn("Setting session type to shell based on PayloadType!")
 			s.DataChannel.SetSessionType(config.ShellPluginName)
-			s.DisplayMode.DisplayMessage(s.logger, outputMessage)
+			s.displayMode.DisplayMessage(outputMessage)
 		}
 	}
 

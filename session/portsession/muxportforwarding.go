@@ -215,7 +215,7 @@ func (p *MuxPortForwarding) cleanUp() error {
 // initialize opens a network connection that acts as smux client.
 func (p *MuxPortForwarding) initialize(agentVersion string) error {
 	// open a network listener
-	listener, err := sessionutil.NewListener(p.logger, p.socketFile)
+	listener, err := sessionutil.NewListener(p.socketFile)
 	if err != nil {
 		return fmt.Errorf("creating new listener: %w", err)
 	}
