@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/google/uuid"
+	"github.com/steveh/ecstoolkit/communicator"
 	"github.com/steveh/ecstoolkit/config"
 	"github.com/steveh/ecstoolkit/datachannel"
 	"github.com/steveh/ecstoolkit/log"
@@ -120,10 +121,20 @@ func (e *Executor) newSession(options *ExecuteSessionOptions, execute *ecs.Execu
 
 	targetID := fmt.Sprintf("ecs:%s_%s_%s", options.ClusterName, taskID, options.ContainerRuntimeID)
 
+	sessionID := *execute.Session.SessionId
+	streamURL := *execute.Session.StreamUrl
+	tokenValue := *execute.Session.TokenValue
+
+	wsChannel, err := communicator.NewWebSocketChannel(streamURL, tokenValue, e.logger)
+	if err != nil {
+		return nil, fmt.Errorf("creating websocket channel: %w", err)
+	}
+
 	dataChannel, err := datachannel.NewDataChannel(
 		e.kmsClient,
+		wsChannel,
 		clientID.String(),
-		*execute.Session.SessionId,
+		sessionID,
 		targetID,
 		e.logger,
 	)
@@ -131,7 +142,7 @@ func (e *Executor) newSession(options *ExecuteSessionOptions, execute *ecs.Execu
 		return nil, fmt.Errorf("creating data channel: %w", err)
 	}
 
-	sess, err := session.NewSession(e.ssmClient, dataChannel, execute.Session, e.logger)
+	sess, err := session.NewSession(e.ssmClient, dataChannel, sessionID, e.logger)
 	if err != nil {
 		return nil, fmt.Errorf("new session: %w", err)
 	}

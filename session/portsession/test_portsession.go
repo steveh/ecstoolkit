@@ -18,8 +18,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/steveh/ecstoolkit/communicator/mocks"
 	"github.com/steveh/ecstoolkit/config"
@@ -57,11 +55,10 @@ func getSessionMockWithParams(t *testing.T, properties interface{}, agentVersion
 
 	mockKMSClient := &kms.Client{}
 
-	dataChannel, err := datachannel.NewDataChannel(mockKMSClient, "clientId", "sessionId", "targetId", mockLogger)
+	dataChannel, err := datachannel.NewDataChannel(mockKMSClient, &mockWebSocketChannel, "clientId", "sessionId", "targetId", mockLogger)
 	require.NoError(t, err)
 
 	dataChannel.SetAgentVersion(agentVersion)
-	dataChannel.SetWsChannel(&mockWebSocketChannel)
 
 	actionParams := message.SessionTypeRequest{
 		SessionType: config.PortPluginName,
@@ -72,13 +69,7 @@ func getSessionMockWithParams(t *testing.T, properties interface{}, agentVersion
 	err = dataChannel.ProcessSessionTypeHandshakeAction(b)
 	require.NoError(t, err)
 
-	ssmSession := types.Session{
-		SessionId:  aws.String(""),
-		StreamUrl:  aws.String(""),
-		TokenValue: aws.String(""),
-	}
-
-	mockSession, err := session.NewSession(nil, dataChannel, &ssmSession, mockLogger)
+	mockSession, err := session.NewSession(nil, dataChannel, "", mockLogger)
 	require.NoError(t, err)
 
 	return mockSession

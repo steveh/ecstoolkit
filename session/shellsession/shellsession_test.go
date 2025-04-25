@@ -25,8 +25,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/steveh/ecstoolkit/communicator/mocks"
 	"github.com/steveh/ecstoolkit/datachannel"
@@ -58,13 +56,7 @@ func TestName(t *testing.T) {
 }
 
 func TestInitialize(t *testing.T) {
-	ssmSession := types.Session{
-		SessionId:  aws.String(""),
-		StreamUrl:  aws.String(""),
-		TokenValue: aws.String(""),
-	}
-
-	session, err := session.NewSession(nil, mockDataChannel, &ssmSession, logger)
+	session, err := session.NewSession(nil, mockDataChannel, "", logger)
 	require.NoError(t, err)
 
 	mockDataChannel.On("RegisterOutputStreamHandler", mock.Anything, true).Times(1)
@@ -78,13 +70,7 @@ func TestInitialize(t *testing.T) {
 }
 
 func TestHandleControlSignals(t *testing.T) {
-	ssmSession := types.Session{
-		SessionId:  aws.String(""),
-		StreamUrl:  aws.String(""),
-		TokenValue: aws.String(""),
-	}
-
-	sess, err := session.NewSession(nil, mockDataChannel, &ssmSession, logger)
+	sess, err := session.NewSession(nil, mockDataChannel, "", logger)
 	require.NoError(t, err)
 
 	shellSession := ShellSession{
@@ -140,8 +126,6 @@ func TestSendInputDataMessageWithPayloadTypeSize(t *testing.T) {
 	}
 
 	dataChannel := getDataChannel(t)
-	mockChannel := &mocks.IWebSocketChannel{}
-	dataChannel.SetWsChannel(mockChannel)
 
 	SendMessageCallCount := 0
 	datachannel.SendMessageCall = func(_ *datachannel.DataChannel, _ []byte, _ int) error {
@@ -159,13 +143,7 @@ func TestSendInputDataMessageWithPayloadTypeSize(t *testing.T) {
 func TestTerminalResizeWhenSessionSizeDataIsNotEqualToActualSize(t *testing.T) {
 	dataChannel := getDataChannel(t)
 
-	ssmSession := types.Session{
-		SessionId:  aws.String(""),
-		StreamUrl:  aws.String(""),
-		TokenValue: aws.String(""),
-	}
-
-	sess, err := session.NewSession(nil, dataChannel, &ssmSession, logger)
+	sess, err := session.NewSession(nil, dataChannel, "", logger)
 	require.NoError(t, err)
 
 	sizeData := message.SizeData{
@@ -206,13 +184,7 @@ func TestTerminalResizeWhenSessionSizeDataIsNotEqualToActualSize(t *testing.T) {
 }
 
 func TestProcessStreamMessagePayload(t *testing.T) {
-	ssmSession := types.Session{
-		SessionId:  aws.String(""),
-		StreamUrl:  aws.String(""),
-		TokenValue: aws.String(""),
-	}
-
-	sess, err := session.NewSession(nil, mockDataChannel, &ssmSession, logger)
+	sess, err := session.NewSession(nil, mockDataChannel, "", logger)
 	require.NoError(t, err)
 
 	shellSession := ShellSession{
@@ -233,10 +205,8 @@ func getDataChannel(t *testing.T) *datachannel.DataChannel {
 
 	mockKMSClient := &kms.Client{}
 
-	dataChannel, err := datachannel.NewDataChannel(mockKMSClient, clientID, sessionID, instanceID, logger)
+	dataChannel, err := datachannel.NewDataChannel(mockKMSClient, mockWsChannel, clientID, sessionID, instanceID, logger)
 	require.NoError(t, err)
-
-	dataChannel.SetWsChannel(mockWsChannel)
 
 	return dataChannel
 }

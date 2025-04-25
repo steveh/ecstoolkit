@@ -64,7 +64,7 @@ var (
 func TestNewDataChannel(t *testing.T) {
 	mockKMSClient := &kms.Client{}
 
-	datachannel, err := NewDataChannel(mockKMSClient, clientID, sessionID, instanceID, mockLogger)
+	datachannel, err := NewDataChannel(mockKMSClient, mockWsChannel, clientID, sessionID, instanceID, mockLogger)
 	require.NoError(t, err)
 
 	assert.Equal(t, config.RolePublishSubscribe, datachannel.role)
@@ -78,25 +78,14 @@ func TestNewDataChannel(t *testing.T) {
 	assert.Equal(t, config.DefaultTransmissionTimeout, datachannel.retransmissionTimeout)
 }
 
-func TestSetWsChannel(t *testing.T) {
-	datachannel := getDataChannel(t)
-
-	mockWsChannel.On("GetStreamURL").Return(streamURL)
-	mockWsChannel.On("GetChannelToken").Return(channelToken)
-
-	datachannel.SetWsChannel(mockWsChannel)
-
-	assert.Equal(t, streamURL, datachannel.wsChannel.GetStreamURL())
-	assert.Equal(t, channelToken, datachannel.wsChannel.GetChannelToken())
-	mockWsChannel.AssertExpectations(t)
-}
-
 func TestReconnect(t *testing.T) {
 	datachannel := getDataChannel(t)
 
 	mockWsChannel.On("Close", mock.Anything).Return(nil)
 	mockWsChannel.On("Open", mock.Anything).Return(nil)
 	mockWsChannel.On("SendMessage", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	mockWsChannel.On("GetStreamURL").Return("stream-url")
+	mockWsChannel.On("GetChannelToken").Return("")
 
 	// test reconnect
 	err := datachannel.Reconnect()
@@ -675,10 +664,8 @@ func getDataChannel(t *testing.T) *DataChannel {
 
 	mockKMSClient := &kms.Client{}
 
-	dataChannel, err := NewDataChannel(mockKMSClient, clientID, sessionID, instanceID, mockLogger)
+	dataChannel, err := NewDataChannel(mockKMSClient, mockWsChannel, clientID, sessionID, instanceID, mockLogger)
 	require.NoError(t, err)
-
-	dataChannel.SetWsChannel(mockWsChannel)
 
 	return dataChannel
 }

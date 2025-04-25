@@ -22,9 +22,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
-	"github.com/steveh/ecstoolkit/communicator"
 	"github.com/steveh/ecstoolkit/config"
 	"github.com/steveh/ecstoolkit/datachannel"
 	"github.com/steveh/ecstoolkit/log"
@@ -41,19 +39,15 @@ type Session struct {
 	retryParams retry.RepeatableExponentialRetryer
 	logger      log.T
 	sessionID   string
-	streamURL   string
-	tokenValue  string
 }
 
 var _ ISession = (*Session)(nil)
 
 // NewSession creates a new session instance with the provided parameters.
-func NewSession(ssmClient *ssm.Client, dataChannel datachannel.IDataChannel, ssmSession *types.Session, logger log.T) (*Session, error) {
+func NewSession(ssmClient *ssm.Client, dataChannel datachannel.IDataChannel, sessionID string, logger log.T) (*Session, error) {
 	session := &Session{
 		dataChannel: dataChannel,
-		sessionID:   *ssmSession.SessionId,
-		streamURL:   *ssmSession.StreamUrl,
-		tokenValue:  *ssmSession.TokenValue,
+		sessionID:   sessionID,
 		displayMode: sessionutil.NewDisplayMode(logger),
 		ssmClient:   ssmClient,
 		logger:      logger,
@@ -71,13 +65,6 @@ func (s *Session) OpenDataChannel(ctx context.Context) error {
 		MaxAttempts:         config.DataChannelNumMaxRetries,
 	}
 
-	wsChannel, err := communicator.NewWebSocketChannel(s.streamURL, s.tokenValue, s.logger)
-	if err != nil {
-		return fmt.Errorf("creating websocket channel: %w", err)
-	}
-
-	s.dataChannel.SetWsChannel(wsChannel)
-
 	s.dataChannel.RegisterOutputMessageHandler(ctx, func() error { return nil }, func(_ []byte) {})
 
 	s.dataChannel.RegisterOutputStreamHandler(s.processFirstMessage, false)
@@ -85,16 +72,22 @@ func (s *Session) OpenDataChannel(ctx context.Context) error {
 	if err := s.dataChannel.Open(); err != nil {
 		s.logger.Error("Retrying connection failed", "sessionID", s.sessionID, "error", err)
 
-		s.retryParams.CallableFunc = func() error { return s.dataChannel.Reconnect() }
+		s.retryParams.CallableFunc = func() error {
+			return s.dataChannel.Reconnect()
+		}
+
 		if err := s.retryParams.Call(); err != nil {
 			s.logger.Error("Failed to call retry parameters", "error", err)
 		}
 	}
 
 	s.dataChannel.SetOnError(func(wsErr error) {
-		s.logger.Error("Trying to reconnect session", "url", s.streamURL, "sequenceNumber", s.dataChannel.GetStreamDataSequenceNumber(), "error", wsErr)
+		s.logger.Error("Trying to reconnect session", "sequenceNumber", s.dataChannel.GetStreamDataSequenceNumber(), "error", wsErr)
 
-		s.retryParams.CallableFunc = func() error { return s.resumeSessionHandler(ctx) }
+		s.retryParams.CallableFunc = func() error {
+			return s.resumeSessionHandler(ctx)
+		}
+
 		if err := s.retryParams.Call(); err != nil {
 			s.logger.Error("Reconnect error", "error", err)
 		}
@@ -259,23 +252,22 @@ func (s *Session) getResumeSessionParams(ctx context.Context) (string, error) {
 
 // resumeSessionHandler gets token value and tries to Reconnect to datachannel.
 func (s *Session) resumeSessionHandler(ctx context.Context) error {
-	var err error
-
-	s.tokenValue, err = s.getResumeSessionParams(ctx)
+	tokenValue, err := s.getResumeSessionParams(ctx)
 	if err != nil {
 		s.logger.Error("getting token", "error", err)
 
 		return fmt.Errorf("resume session: %w", err)
-	} else if s.tokenValue == "" {
+	}
+
+	if tokenValue == "" {
 		s.logger.Debug("Session timed out", "sessionID", s.sessionID)
 
 		return errors.New("session timed out")
 	}
 
-	s.dataChannel.SetChannelToken(s.tokenValue)
+	s.dataChannel.SetChannelToken(tokenValue)
 
-	err = s.dataChannel.Reconnect()
-	if err != nil {
+	if err := s.dataChannel.Reconnect(); err != nil {
 		return fmt.Errorf("reconnecting data channel: %w", err)
 	}
 

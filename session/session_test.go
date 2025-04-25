@@ -45,7 +45,6 @@ var (
 
 func SetupMockActions() {
 	mockDataChannel.On("Initialize", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return()
-	mockDataChannel.On("SetWsChannel", mock.Anything)
 	mockDataChannel.On("SetOnMessage", mock.Anything)
 	mockDataChannel.On("SetOnError", mock.Anything)
 	mockDataChannel.On("RegisterOutputStreamHandler", mock.Anything, mock.Anything)
@@ -97,7 +96,7 @@ func TestProcessFirstMessageOutputMessageFirst(t *testing.T) {
 
 	mockKMSClient := &kms.Client{}
 
-	dataChannel, err := datachannel.NewDataChannel(mockKMSClient, clientID, sessionID, instanceID, logger)
+	dataChannel, err := datachannel.NewDataChannel(mockKMSClient, mockWsChannel, clientID, sessionID, instanceID, logger)
 	require.NoError(t, err)
 
 	session := Session{

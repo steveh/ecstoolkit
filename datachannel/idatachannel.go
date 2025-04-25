@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/steveh/ecstoolkit/communicator"
 	"github.com/steveh/ecstoolkit/message"
 )
 
@@ -29,7 +28,6 @@ type IDataChannel interface {
 	GetSessionType() string
 	SetSessionType(sessionType string)
 	GetSessionProperties() interface{}
-	SetWsChannel(wsChannel communicator.IWebSocketChannel)
 	SetChannelToken(channelToken string)
 	SetOnError(onErrorHandler func(error))
 	RegisterOutputMessageHandler(ctx context.Context, stopHandler Stop, onMessageHandler func(input []byte))

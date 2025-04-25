@@ -5,10 +5,7 @@ package mocks
 import (
 	context "context"
 
-	communicator "github.com/steveh/ecstoolkit/communicator"
-
 	datachannel "github.com/steveh/ecstoolkit/datachannel"
-
 	message "github.com/steveh/ecstoolkit/message"
 
 	mock "github.com/stretchr/testify/mock"
@@ -865,39 +862,6 @@ func (_c *IDataChannel_SetSessionType_Call) Return() *IDataChannel_SetSessionTyp
 }
 
 func (_c *IDataChannel_SetSessionType_Call) RunAndReturn(run func(string)) *IDataChannel_SetSessionType_Call {
-	_c.Run(run)
-	return _c
-}
-
-// SetWsChannel provides a mock function with given fields: wsChannel
-func (_m *IDataChannel) SetWsChannel(wsChannel communicator.IWebSocketChannel) {
-	_m.Called(wsChannel)
-}
-
-// IDataChannel_SetWsChannel_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetWsChannel'
-type IDataChannel_SetWsChannel_Call struct {
-	*mock.Call
-}
-
-// SetWsChannel is a helper method to define mock.On call
-//   - wsChannel communicator.IWebSocketChannel
-func (_e *IDataChannel_Expecter) SetWsChannel(wsChannel interface{}) *IDataChannel_SetWsChannel_Call {
-	return &IDataChannel_SetWsChannel_Call{Call: _e.mock.On("SetWsChannel", wsChannel)}
-}
-
-func (_c *IDataChannel_SetWsChannel_Call) Run(run func(wsChannel communicator.IWebSocketChannel)) *IDataChannel_SetWsChannel_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(communicator.IWebSocketChannel))
-	})
-	return _c
-}
-
-func (_c *IDataChannel_SetWsChannel_Call) Return() *IDataChannel_SetWsChannel_Call {
-	_c.Call.Return()
-	return _c
-}
-
-func (_c *IDataChannel_SetWsChannel_Call) RunAndReturn(run func(communicator.IWebSocketChannel)) *IDataChannel_SetWsChannel_Call {
 	_c.Run(run)
 	return _c
 }

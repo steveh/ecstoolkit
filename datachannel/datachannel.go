@@ -76,34 +76,31 @@ type DataChannel struct {
 }
 
 // NewDataChannel creates a DataChannel.
-func NewDataChannel(kmsClient *kms.Client, clientID string, sessionID string, targetID string, log log.T) (*DataChannel, error) {
-	// open data channel as publish_subscribe
-	log.Debug("Calling initialize Datachannel", "role", config.RolePublishSubscribe)
-
+func NewDataChannel(kmsClient *kms.Client, wsChannel communicator.IWebSocketChannel, clientID string, sessionID string, targetID string, logger log.T) (*DataChannel, error) {
 	c := &DataChannel{
 		kmsClient: kmsClient,
+		wsChannel: wsChannel,
+		role:      config.RolePublishSubscribe,
+		clientID:  clientID,
+		sessionID: sessionID,
+		targetID:  targetID,
+		outgoingMessageBuffer: ListMessageBuffer{
+			list.New(),
+			config.OutgoingMessageBufferCapacity,
+			&sync.Mutex{},
+		},
+		incomingMessageBuffer: MapMessageBuffer{
+			make(map[int64]StreamingMessage),
+			config.IncomingMessageBufferCapacity,
+			&sync.Mutex{},
+		},
+		roundTripTime:                float64(config.DefaultRoundTripTime),
+		roundTripTimeVariation:       config.DefaultRoundTripTimeVariation,
+		retransmissionTimeout:        config.DefaultTransmissionTimeout,
+		isSessionTypeSet:             make(chan bool, 1),
+		isStreamMessageResendTimeout: make(chan bool, 1),
+		logger:                       logger,
 	}
-
-	c.role = config.RolePublishSubscribe
-	c.clientID = clientID
-	c.sessionID = sessionID
-	c.targetID = targetID
-	c.outgoingMessageBuffer = ListMessageBuffer{
-		list.New(),
-		config.OutgoingMessageBufferCapacity,
-		&sync.Mutex{},
-	}
-	c.incomingMessageBuffer = MapMessageBuffer{
-		make(map[int64]StreamingMessage),
-		config.IncomingMessageBufferCapacity,
-		&sync.Mutex{},
-	}
-	c.roundTripTime = float64(config.DefaultRoundTripTime)
-	c.roundTripTimeVariation = config.DefaultRoundTripTimeVariation
-	c.retransmissionTimeout = config.DefaultTransmissionTimeout
-	c.isSessionTypeSet = make(chan bool, 1)
-	c.isStreamMessageResendTimeout = make(chan bool, 1)
-	c.logger = log
 
 	return c, nil
 }
@@ -458,11 +455,6 @@ func (c *DataChannel) GetSessionType() string {
 // GetSessionProperties returns SessionProperties of the DataChannel.
 func (c *DataChannel) GetSessionProperties() interface{} {
 	return c.sessionProperties
-}
-
-// SetWsChannel set WsChannel of the DataChannel.
-func (c *DataChannel) SetWsChannel(wsChannel communicator.IWebSocketChannel) {
-	c.wsChannel = wsChannel
 }
 
 // SetChannelToken set channel token of the DataChannel.
