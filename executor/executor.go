@@ -144,21 +144,20 @@ func (e *Executor) initSession(ctx context.Context, sess *session.Session) error
 		return fmt.Errorf("opening data channel: %w", err)
 	}
 
-	if err := sess.Establish(ctx, config.ShellPluginName, config.ResendSleepInterval); err != nil {
-		return fmt.Errorf("establishing session: %w", err)
+	sessionType, err := sess.EstablishSessionType(ctx, config.ShellPluginName, config.ResendSleepInterval)
+	if err != nil {
+		return fmt.Errorf("establishing session type: %w", err)
 	}
 
 	var sessionSubType session.ISessionPlugin
 
-	var err error
-
-	switch sess.GetSessionType() {
+	switch sessionType {
 	case config.ShellPluginName:
 		sessionSubType, err = shellsession.NewShellSession(ctx, e.logger, sess)
 	case config.PortPluginName:
 		sessionSubType, err = portsession.NewPortSession(ctx, e.logger, sess)
 	default:
-		return fmt.Errorf("unsupported session type: %s", sess.GetSessionType())
+		return fmt.Errorf("unsupported session type: %s", sessionType)
 	}
 
 	if err != nil {

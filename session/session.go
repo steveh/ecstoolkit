@@ -108,8 +108,8 @@ func (s *Session) OpenDataChannel(ctx context.Context) error {
 	return nil
 }
 
-// Establish ensures the channel session type is set.
-func (s *Session) Establish(ctx context.Context, sessionType string, sleepInterval time.Duration) error {
+// EstablishSessionType ensures the channel session type is set.
+func (s *Session) EstablishSessionType(ctx context.Context, sessionType string, sleepInterval time.Duration) (string, error) {
 	s.dataChannel.SetSessionType(sessionType)
 
 	go func() {
@@ -131,10 +131,10 @@ func (s *Session) Establish(ctx context.Context, sessionType string, sleepInterv
 
 	// The session type is set either by handshake or the first packet received.
 	if !<-s.dataChannel.IsSessionTypeSet() {
-		return errors.New("unable to determine session type")
+		return "", errors.New("unable to determine session type")
 	}
 
-	return nil
+	return s.dataChannel.GetSessionType(), nil
 }
 
 // TerminateSession calls TerminateSession API.
@@ -214,11 +214,6 @@ func (s *Session) RegisterOutputMessageHandler(ctx context.Context, stopHandler 
 // RegisterOutputStreamHandler registers a handler for output stream messages.
 func (s *Session) RegisterOutputStreamHandler(handler datachannel.OutputStreamDataMessageHandler, isSessionSpecificHandler bool) {
 	s.dataChannel.RegisterOutputStreamHandler(handler, isSessionSpecificHandler)
-}
-
-// GetSessionType retrieves the session type from the data channel.
-func (s *Session) GetSessionType() string {
-	return s.dataChannel.GetSessionType()
 }
 
 // processFirstMessage only processes messages with PayloadType Output to determine the

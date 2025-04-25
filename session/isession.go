@@ -10,6 +10,5 @@ type ISession interface {
 	ISessionSubTypeSupport
 	ISessionTypeSupport
 	OpenDataChannel(ctx context.Context) error
-	GetSessionType() string
-	Establish(ctx context.Context, sessionType string, sleepInterval time.Duration) error
+	EstablishSessionType(ctx context.Context, sessionType string, sleepInterval time.Duration) (string, error)
 }
