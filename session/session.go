@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"net/url"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
@@ -43,7 +42,6 @@ type Session struct {
 	DisplayMode sessionutil.DisplayMode
 	streamURL   string
 	tokenValue  string
-	endpoint    string
 	clientID    string
 	ssmClient   *ssm.Client
 	kmsClient   *kms.Client
@@ -54,9 +52,7 @@ type Session struct {
 var _ ISession = (*Session)(nil)
 
 // NewSession creates a new session instance with the provided parameters.
-func NewSession(ssmClient *ssm.Client, kmsClient *kms.Client, ssmSession *types.Session, region string, targetID string, logger log.T) (*Session, error) {
-	endpoint := url.URL{Scheme: "https", Host: fmt.Sprintf("ssm.%s.amazonaws.com", region)}
-
+func NewSession(ssmClient *ssm.Client, kmsClient *kms.Client, ssmSession *types.Session, targetID string, logger log.T) (*Session, error) {
 	clientID, err := uuid.NewRandom()
 	if err != nil {
 		return nil, fmt.Errorf("generate UUID: %w", err)
@@ -68,7 +64,6 @@ func NewSession(ssmClient *ssm.Client, kmsClient *kms.Client, ssmSession *types.
 		DisplayMode: sessionutil.NewDisplayMode(logger),
 		streamURL:   *ssmSession.StreamUrl,
 		tokenValue:  *ssmSession.TokenValue,
-		endpoint:    endpoint.String(),
 		clientID:    clientID.String(),
 		ssmClient:   ssmClient,
 		kmsClient:   kmsClient,

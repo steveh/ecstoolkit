@@ -108,14 +108,14 @@ func (e *Executor) executeCommand(ctx context.Context, options *ExecuteSessionOp
 }
 
 func (e *Executor) newSession(options *ExecuteSessionOptions, execute *ecs.ExecuteCommandOutput) (*session.Session, error) {
-	region, taskID, err := e.parseARN(options.TaskARN)
+	_, taskID, err := e.parseARN(options.TaskARN)
 	if err != nil {
 		return nil, err
 	}
 
 	targetID := fmt.Sprintf("ecs:%s_%s_%s", options.ClusterName, taskID, options.ContainerRuntimeID)
 
-	sess, err := session.NewSession(e.ssmClient, e.kmsClient, execute.Session, region, targetID, e.logger)
+	sess, err := session.NewSession(e.ssmClient, e.kmsClient, execute.Session, targetID, e.logger)
 	if err != nil {
 		return nil, fmt.Errorf("new session: %w", err)
 	}

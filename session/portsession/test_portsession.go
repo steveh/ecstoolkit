@@ -78,7 +78,7 @@ func getSessionMockWithParams(t *testing.T, properties interface{}, agentVersion
 		TokenValue: aws.String(""),
 	}
 
-	mockSession, err := session.NewSession(nil, nil, ssmSession, "", "", mockLogger)
+	mockSession, err := session.NewSession(nil, nil, ssmSession, "", mockLogger)
 	require.NoError(t, err)
 
 	mockSession.DataChannel = dataChannel
