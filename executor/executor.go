@@ -75,21 +75,21 @@ func (e *Executor) ExecuteSession(ctx context.Context, options *ExecuteSessionOp
 	return nil
 }
 
-func (e *Executor) parseARN(taskARN string) (string, string, error) {
+func (e *Executor) parseTaskID(taskARN string) (string, error) {
 	parsedARN, err := arn.Parse(taskARN)
 	if err != nil {
-		return "", "", fmt.Errorf("invalid ARN: %w", err)
+		return "", fmt.Errorf("invalid ARN: %w", err)
 	}
 
 	// if we could guarantee the task ARN was in the newer long format we could extract the cluster name from there
 	taskResourceParts := strings.Split(parsedARN.Resource, "/")
 	if len(taskResourceParts) < 3 { //nolint:mnd
-		return "", "", fmt.Errorf("invalid resource ID: %s", parsedARN.Resource)
+		return "", fmt.Errorf("invalid resource ID: %s", parsedARN.Resource)
 	}
 
 	taskID := taskResourceParts[2]
 
-	return parsedARN.Region, taskID, nil
+	return taskID, nil
 }
 
 func (e *Executor) executeCommand(ctx context.Context, options *ExecuteSessionOptions) (*ecs.ExecuteCommandOutput, error) {
@@ -108,7 +108,7 @@ func (e *Executor) executeCommand(ctx context.Context, options *ExecuteSessionOp
 }
 
 func (e *Executor) newSession(options *ExecuteSessionOptions, execute *ecs.ExecuteCommandOutput) (*session.Session, error) {
-	_, taskID, err := e.parseARN(options.TaskARN)
+	taskID, err := e.parseTaskID(options.TaskARN)
 	if err != nil {
 		return nil, err
 	}
