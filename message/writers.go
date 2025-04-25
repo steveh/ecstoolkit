@@ -88,7 +88,7 @@ func PutBytes(log log.T, byteArray []byte, offsetStart int, offsetEnd int, input
 	if offsetStart > byteArrayLength-1 || offsetEnd > byteArrayLength-1 || offsetStart > offsetEnd || offsetStart < 0 {
 		log.Error("PutBytes failed: Offset is invalid.")
 
-		return ErrOffsetOutsideByteArray
+		return ErrOffsetOutside
 	}
 
 	if offsetEnd-offsetStart+1 != len(inputBytes) {
@@ -114,7 +114,7 @@ func PutUUID(log log.T, byteArray []byte, offset int, input uuid.UUID) error {
 	if offset > byteArrayLength-1 || offset+16-1 > byteArrayLength-1 || offset < 0 {
 		log.Error("PutUUID failed: Offset is invalid.")
 
-		return ErrOffsetOutsideByteArray
+		return ErrOffsetOutside
 	}
 
 	uuidBytes, err := input.MarshalBinary()
@@ -124,14 +124,14 @@ func PutUUID(log log.T, byteArray []byte, offset int, input uuid.UUID) error {
 		return fmt.Errorf("marshaling UUID to bytes: %w", err)
 	}
 
-	leastSignificantLong, err := bytesToLong(log, uuidBytes[8:16])
+	leastSignificantLong, err := bytesToLong(uuidBytes[8:16])
 	if err != nil {
 		log.Error("PutUUID failed: getting leastSignificant Long value")
 
 		return ErrOffsetOutside
 	}
 
-	mostSignificantLong, err := bytesToLong(log, uuidBytes[0:8])
+	mostSignificantLong, err := bytesToLong(uuidBytes[0:8])
 	if err != nil {
 		log.Error("PutUUID failed: getting mostSignificantLong Long value")
 
@@ -164,7 +164,7 @@ func PutLong(log log.T, byteArray []byte, offset int, value int64) error {
 		return ErrOffsetOutside
 	}
 
-	mbytes, err := LongToBytes(log, value)
+	mbytes, err := LongToBytes(value)
 	if err != nil {
 		log.Error("PutLong failed: LongToBytes Failed.")
 

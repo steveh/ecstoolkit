@@ -50,65 +50,65 @@ type ClientMessage struct {
 func (m *ClientMessage) DeserializeClientMessage(log log.T, input []byte) error {
 	var err error
 
-	m.MessageType, err = GetString(log, input, ClientMessageMessageTypeOffset, ClientMessageMessageTypeLength)
+	m.MessageType, err = GetString(input, ClientMessageMessageTypeOffset, ClientMessageMessageTypeLength)
 	if err != nil {
 		log.Error("Could not deserialize field MessageType", "error", err)
 
 		return err
 	}
 
-	m.SchemaVersion, err = GetUInteger(log, input, ClientMessageSchemaVersionOffset)
+	m.SchemaVersion, err = GetUInteger(input, ClientMessageSchemaVersionOffset)
 	if err != nil {
 		log.Error("Could not deserialize field SchemaVersion", "error", err)
 
 		return err
 	}
 
-	m.CreatedDate, err = GetULong(log, input, ClientMessageCreatedDateOffset)
+	m.CreatedDate, err = GetULong(input, ClientMessageCreatedDateOffset)
 	if err != nil {
 		log.Error("Could not deserialize field CreatedDate", "error", err)
 
 		return err
 	}
 
-	m.SequenceNumber, err = GetLong(log, input, ClientMessageSequenceNumberOffset)
+	m.SequenceNumber, err = GetLong(input, ClientMessageSequenceNumberOffset)
 	if err != nil {
 		log.Error("Could not deserialize field SequenceNumber", "error", err)
 
 		return err
 	}
 
-	m.Flags, err = GetULong(log, input, ClientMessageFlagsOffset)
+	m.Flags, err = GetULong(input, ClientMessageFlagsOffset)
 	if err != nil {
 		log.Error("Could not deserialize field Flags", "error", err)
 
 		return err
 	}
 
-	m.MessageID, err = GetUUID(log, input, ClientMessageMessageIDOffset)
+	m.MessageID, err = GetUUID(input, ClientMessageMessageIDOffset)
 	if err != nil {
 		log.Error("Could not deserialize field MessageID", "error", err)
 
 		return err
 	}
 
-	m.PayloadDigest, err = GetBytes(log, input, ClientMessagePayloadDigestOffset, ClientMessagePayloadDigestLength)
+	m.PayloadDigest, err = GetBytes(input, ClientMessagePayloadDigestOffset, ClientMessagePayloadDigestLength)
 	if err != nil {
 		log.Error("Could not deserialize field PayloadDigest", "error", err)
 
 		return err
 	}
 
-	m.PayloadType, err = GetUInteger(log, input, ClientMessagePayloadTypeOffset)
+	m.PayloadType, err = GetUInteger(input, ClientMessagePayloadTypeOffset)
 	if err != nil {
 		log.Error("Could not deserialize field PayloadType", "error", err)
 
 		return err
 	}
 
-	m.PayloadLength, err = GetUInteger(log, input, ClientMessagePayloadLengthOffset)
+	m.PayloadLength, err = GetUInteger(input, ClientMessagePayloadLengthOffset)
 
-	headerLength, herr := GetUInteger(log, input, ClientMessageHLOffset)
+	headerLength, herr := GetUInteger(input, ClientMessageHLOffset)
 	if herr != nil {
 		log.Error("Could not deserialize field HeaderLength", "error", err)
 

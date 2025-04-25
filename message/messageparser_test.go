@@ -226,7 +226,7 @@ func TestPutBytes(t *testing.T) {
 			-1,
 			7,
 			[]byte{0x22, 0x55, 0x00, 0x22},
-			message.ErrOffsetOutsideByteArray,
+			message.ErrOffsetOutside,
 		},
 		{
 			"Data too long for buffer",
@@ -288,7 +288,7 @@ func TestLongToBytes(t *testing.T) {
 	for _, tc := range testcases {
 		testString := "Running test case: " + tc.name
 		t.Run(testString, func(t *testing.T) {
-			bytes, err := message.LongToBytes(mockLogger, tc.input)
+			bytes, err := message.LongToBytes(tc.input)
 
 			switch tc.expectation {
 			case SUCCESS:
@@ -510,7 +510,7 @@ func TestGetString(t *testing.T) {
 			-1,
 			0,
 			nil,
-			message.ErrOffsetOutsideByteArray,
+			message.ErrOffsetOutside,
 		},
 		{
 			"Offset out of bounds",
@@ -519,14 +519,13 @@ func TestGetString(t *testing.T) {
 			10,
 			2,
 			nil,
-			message.ErrOffsetOutsideByteArray,
+			message.ErrOffsetOutside,
 		},
 	}
 	for _, tc := range testCases {
 		testString := "Running test case: " + tc.name
 		t.Run(testString, func(t *testing.T) {
 			strOut, err := message.GetString(
-				mockLogger,
 				tc.byteArray,
 				tc.offsetStart,
 				tc.offsetEnd)
@@ -578,7 +577,7 @@ func TestGetBytes(t *testing.T) {
 			-1,
 			0,
 			nil,
-			message.ErrOffsetOutsideByteArray,
+			message.ErrOffsetOutside,
 		},
 		{
 			"Offset out of bounds",
@@ -587,14 +586,13 @@ func TestGetBytes(t *testing.T) {
 			10,
 			2,
 			nil,
-			message.ErrOffsetOutsideByteArray,
+			message.ErrOffsetOutside,
 		},
 	}
 	for _, tc := range testCases {
 		testString := "Running test case: " + tc.name
 		t.Run(testString, func(t *testing.T) {
 			byteOut, err := message.GetBytes(
-				mockLogger,
 				tc.byteArray,
 				tc.offsetStart,
 				tc.offsetEnd)
@@ -653,7 +651,7 @@ func TestGetLong(t *testing.T) {
 			1,
 			0,
 			nil,
-			message.ErrOffsetOutsideByteArray,
+			message.ErrOffsetOutside,
 		},
 		{
 			"Negative offset",
@@ -662,7 +660,7 @@ func TestGetLong(t *testing.T) {
 			-1,
 			0,
 			nil,
-			message.ErrOffsetOutsideByteArray,
+			message.ErrOffsetOutside,
 		},
 		{
 			"Offset out of bounds",
@@ -671,14 +669,13 @@ func TestGetLong(t *testing.T) {
 			10,
 			2,
 			nil,
-			message.ErrOffsetOutsideByteArray,
+			message.ErrOffsetOutside,
 		},
 	}
 	for _, tc := range testCases {
 		testString := "Running test case: " + tc.name
 		t.Run(testString, func(t *testing.T) {
 			longOut, err := message.GetLong(
-				mockLogger,
 				tc.byteArray,
 				tc.offsetStart)
 			assert.IsType(t, int64(1), longOut, "Returned value is not the correct type.")
@@ -920,7 +917,7 @@ func TestPutGetString(t *testing.T) {
 	err1 := message.PutString(log.NewMockLog(), input, 1, 8, "hello")
 	require.NoError(t, err1)
 
-	result, err := message.GetString(log.NewMockLog(), input, 1, 8)
+	result, err := message.GetString(input, 1, 8)
 	require.NoError(t, err)
 	assert.Equal(t, "hello", result)
 }
@@ -934,15 +931,15 @@ func TestPutGetInteger(t *testing.T) {
 	assert.Equal(t, byte(0x01), input[3])
 	assert.Equal(t, byte(0x00), input[4])
 
-	result, err2 := message.GetInteger(log.NewMockLog(), input, 1)
+	result, err2 := message.GetInteger(input, 1)
 	require.NoError(t, err2)
 	assert.Equal(t, int32(256), result)
 
-	result2, err3 := message.GetInteger(log.NewMockLog(), input, 2)
+	result2, err3 := message.GetInteger(input, 2)
 	assert.Equal(t, int32(65536), result2)
 	require.NoError(t, err3)
 
-	result3, err4 := message.GetInteger(mockLogger, input, 3)
+	result3, err4 := message.GetInteger(input, 3)
 	assert.Equal(t, int32(0), result3)
 	require.Error(t, err4)
 }
@@ -960,7 +957,7 @@ func TestPutGetLong(t *testing.T) {
 	assert.Equal(t, byte(0x00), input[7])
 	assert.Equal(t, byte(0x00), input[8])
 
-	testLong, err2 := message.GetLong(log.NewMockLog(), input, 1)
+	testLong, err2 := message.GetLong(input, 1)
 	require.NoError(t, err2)
 	assert.Equal(t, int64(4294967296), testLong)
 }
@@ -996,27 +993,27 @@ func TestSerializeAndDeserializeClientMessage(t *testing.T) {
 	seralizedMessageType := strings.TrimRight(string(serializedBytes[message.ClientMessageMessageTypeOffset:message.ClientMessageMessageTypeOffset+message.ClientMessageMessageTypeLength-1]), " ")
 	assert.Equal(t, seralizedMessageType, messageType)
 
-	serializedVersion, err := message.GetUInteger(log.NewMockLog(), serializedBytes, message.ClientMessageSchemaVersionOffset)
+	serializedVersion, err := message.GetUInteger(serializedBytes, message.ClientMessageSchemaVersionOffset)
 	require.NoError(t, err)
 	assert.Equal(t, serializedVersion, schemaVersion)
 
-	serializedCD, err := message.GetULong(log.NewMockLog(), serializedBytes, message.ClientMessageCreatedDateOffset)
+	serializedCD, err := message.GetULong(serializedBytes, message.ClientMessageCreatedDateOffset)
 	require.NoError(t, err)
 	assert.Equal(t, serializedCD, createdDate)
 
-	serializedSequence, err := message.GetLong(log.NewMockLog(), serializedBytes, message.ClientMessageSequenceNumberOffset)
+	serializedSequence, err := message.GetLong(serializedBytes, message.ClientMessageSequenceNumberOffset)
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), serializedSequence)
 
-	serializedFlags, err := message.GetULong(log.NewMockLog(), serializedBytes, message.ClientMessageFlagsOffset)
+	serializedFlags, err := message.GetULong(serializedBytes, message.ClientMessageFlagsOffset)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(2), serializedFlags)
 
-	seralizedMessageID, err := message.GetUUID(log.NewMockLog(), serializedBytes, message.ClientMessageMessageIDOffset)
+	seralizedMessageID, err := message.GetUUID(serializedBytes, message.ClientMessageMessageIDOffset)
 	require.NoError(t, err)
 	assert.Equal(t, seralizedMessageID.String(), messageID)
 
-	serializedDigest, err := message.GetBytes(log.NewMockLog(), serializedBytes, message.ClientMessagePayloadDigestOffset, message.ClientMessagePayloadDigestLength)
+	serializedDigest, err := message.GetBytes(serializedBytes, message.ClientMessagePayloadDigestOffset, message.ClientMessagePayloadDigestLength)
 	require.NoError(t, err)
 
 	hasher := sha256.New()

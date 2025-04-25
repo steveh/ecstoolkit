@@ -7,16 +7,19 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/steveh/ecstoolkit/log"
+)
+
+const (
+	integerLength = 4
+	longLength    = 8
+	uuidLength    = 16
 )
 
 // GetString gets a string value from the byte array starting from the specified offset to the defined length.
-func GetString(log log.T, byteArray []byte, offset int, stringLength int) (string, error) {
+func GetString(byteArray []byte, offset int, stringLength int) (string, error) {
 	byteArrayLength := len(byteArray)
 	if offset > byteArrayLength-1 || offset+stringLength-1 > byteArrayLength-1 || offset < 0 {
-		log.Error("GetString failed: Offset is invalid.")
-
-		return "", ErrOffsetOutsideByteArray
+		return "", fmt.Errorf("%w: offset %d, stringLength %d, byteArrayLength %d", ErrOffsetOutside, offset, stringLength, byteArrayLength)
 	}
 
 	// remove nulls from the bytes array
@@ -26,88 +29,79 @@ func GetString(log log.T, byteArray []byte, offset int, stringLength int) (strin
 }
 
 // GetUInteger gets an unsigned integer.
-func GetUInteger(log log.T, byteArray []byte, offset int) (uint32, error) {
-	temp, err := GetInteger(log, byteArray, offset)
+func GetUInteger(byteArray []byte, offset int) (uint32, error) {
+	temp, err := GetInteger(byteArray, offset)
 	if err != nil {
 		return 0, err
 	}
 
 	if temp < 0 {
-		return 0, fmt.Errorf("cannot convert negative value %d to uint32", temp)
+		return 0, fmt.Errorf("%w: cannot convert negative value %d to uint", ErrNegative, temp)
 	}
 
 	return uint32(temp), err
 }
 
 // GetInteger gets an integer value from a byte array starting from the specified offset.
-func GetInteger(log log.T, byteArray []byte, offset int) (int32, error) {
+func GetInteger(byteArray []byte, offset int) (int32, error) {
 	byteArrayLength := len(byteArray)
-	if offset > byteArrayLength-1 || offset+4 > byteArrayLength || offset < 0 {
-		log.Error("GetInteger failed: Offset is invalid.")
-
-		return 0, ErrOffsetOutside
+	if offset > byteArrayLength-1 || offset+integerLength > byteArrayLength || offset < 0 {
+		return 0, fmt.Errorf("%w: offset %d, integerLength %d, byteArrayLength %d", ErrOffsetOutside, offset, integerLength, byteArrayLength)
 	}
 
-	return bytesToInteger(log, byteArray[offset:offset+4])
+	return bytesToInteger(byteArray[offset : offset+integerLength])
 }
 
-// bytesToInteger gets an integer from a byte array.
-func bytesToInteger(log log.T, input []byte) (int32, error) {
-	var res int32
-
+func bytesToInteger(input []byte) (int32, error) {
 	inputLength := len(input)
-	if inputLength != 4 { //nolint:mnd
-		log.Error("bytesToInteger failed: input array size is not equal to 4.")
-
-		return 0, ErrOffsetOutside
+	if inputLength != integerLength {
+		return 0, fmt.Errorf("%w: input slice not %d items", ErrOffsetOutside, integerLength)
 	}
 
 	buf := bytes.NewBuffer(input)
+
+	var res int32
 	if err := binary.Read(buf, binary.BigEndian, &res); err != nil {
-		return 0, fmt.Errorf("reading integer from bytes: %w", err)
+		return 0, fmt.Errorf("reading int from bytes: %w", err)
 	}
 
 	return res, nil
 }
 
 // GetULong gets an unsigned long integer.
-func GetULong(log log.T, byteArray []byte, offset int) (uint64, error) {
-	temp, err := GetLong(log, byteArray, offset)
+func GetULong(byteArray []byte, offset int) (uint64, error) {
+	temp, err := GetLong(byteArray, offset)
 	if err != nil {
 		return 0, err
 	}
 
 	if temp < 0 {
-		return 0, fmt.Errorf("cannot convert negative value %d to uint64", temp)
+		return 0, fmt.Errorf("cannot convert negative value %d to ulong", temp)
 	}
 
 	return uint64(temp), err
 }
 
 // GetLong gets a long integer value from a byte array starting from the specified offset. 64 bit.
-func GetLong(log log.T, byteArray []byte, offset int) (int64, error) {
+func GetLong(byteArray []byte, offset int) (int64, error) {
 	byteArrayLength := len(byteArray)
-	if offset > byteArrayLength-1 || offset+8 > byteArrayLength || offset < 0 {
-		log.Error("GetLong failed: Offset is invalid.")
-
-		return 0, ErrOffsetOutsideByteArray
+	if offset > byteArrayLength-1 || offset+longLength > byteArrayLength || offset < 0 {
+		return 0, fmt.Errorf("%w: offset %d, longLength %d, byteArrayLength %d", ErrOffsetOutside, offset, longLength, byteArrayLength)
 	}
 
-	return bytesToLong(log, byteArray[offset:offset+8])
+	return bytesToLong(byteArray[offset : offset+longLength])
 }
 
 // bytesToLong gets a Long integer from a byte array.
-func bytesToLong(log log.T, input []byte) (int64, error) {
-	var res int64
-
+func bytesToLong(input []byte) (int64, error) {
 	inputLength := len(input)
-	if inputLength != 8 { //nolint:mnd
-		log.Error("bytesToLong failed: input array size is not equal to 8.")
-
-		return 0, ErrOffsetOutside
+	if inputLength != longLength {
+		return 0, fmt.Errorf("%w: input slice not %d items", ErrOffsetOutside, longLength)
 	}
 
 	buf := bytes.NewBuffer(input)
+
+	var res int64
 	if err := binary.Read(buf, binary.BigEndian, &res); err != nil {
 		return 0, fmt.Errorf("reading long from bytes: %w", err)
 	}
@@ -116,40 +110,30 @@ func bytesToLong(log log.T, input []byte) (int64, error) {
 }
 
 // GetUUID gets the 128bit uuid from an array of bytes starting from the offset.
-func GetUUID(log log.T, byteArray []byte, offset int) (uuid.UUID, error) {
+func GetUUID(byteArray []byte, offset int) (uuid.UUID, error) {
 	byteArrayLength := len(byteArray)
-	if offset > byteArrayLength-1 || offset+16-1 > byteArrayLength-1 || offset < 0 {
-		log.Error("getUUID failed: Offset is invalid.")
-
-		return uuid.Nil, ErrOffsetOutsideByteArray
+	if offset > byteArrayLength-1 || offset+uuidLength-1 > byteArrayLength-1 || offset < 0 {
+		return uuid.Nil, fmt.Errorf("%w: offset %d, uuidLength %d, byteArrayLength %d", ErrOffsetOutside, offset, uuidLength, byteArrayLength)
 	}
 
-	leastSignificantLong, err := GetLong(log, byteArray, offset)
+	leastSignificantLong, err := GetLong(byteArray, offset)
 	if err != nil {
-		log.Error("getUUID failed: getting uuid LSBs Long value")
-
-		return uuid.Nil, ErrOffsetOutside
+		return uuid.Nil, fmt.Errorf("%w: getting LSB long value", ErrOffsetOutside)
 	}
 
-	leastSignificantBytes, err := LongToBytes(log, leastSignificantLong)
+	leastSignificantBytes, err := LongToBytes(leastSignificantLong)
 	if err != nil {
-		log.Error("getUUID failed: getting uuid LSBs bytes value")
-
-		return uuid.Nil, ErrOffsetOutside
+		return uuid.Nil, fmt.Errorf("%w: getting LSB bytes value", ErrOffsetOutside)
 	}
 
-	mostSignificantLong, err := GetLong(log, byteArray, offset+8) //nolint:mnd
+	mostSignificantLong, err := GetLong(byteArray, offset+longLength)
 	if err != nil {
-		log.Error("getUUID failed: getting uuid MSBs Long value")
-
-		return uuid.Nil, ErrOffsetOutside
+		return uuid.Nil, fmt.Errorf("%w: getting MSB long value", ErrOffsetOutside)
 	}
 
-	mostSignificantBytes, err := LongToBytes(log, mostSignificantLong)
+	mostSignificantBytes, err := LongToBytes(mostSignificantLong)
 	if err != nil {
-		log.Error("getUUID failed: getting uuid MSBs bytes value")
-
-		return uuid.Nil, ErrOffsetOutside
+		return uuid.Nil, fmt.Errorf("%w: getting MSB bytes value", ErrOffsetOutside)
 	}
 
 	mostSignificantBytes = append(mostSignificantBytes, leastSignificantBytes...)
@@ -163,28 +147,24 @@ func GetUUID(log log.T, byteArray []byte, offset int) (uuid.UUID, error) {
 }
 
 // LongToBytes gets bytes array from a long integer.
-func LongToBytes(log log.T, input int64) ([]byte, error) {
+func LongToBytes(input int64) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	if err := binary.Write(buf, binary.BigEndian, input); err != nil {
 		return nil, fmt.Errorf("writing long to bytes: %w", err)
 	}
 
-	if buf.Len() != 8 { //nolint:mnd
-		log.Error("LongToBytes failed: buffer output length is not equal to 8.")
-
-		return make([]byte, 8), ErrOffsetOutside //nolint:mnd
+	if buf.Len() != longLength {
+		return make([]byte, longLength), fmt.Errorf("%w: buffer output length not equal to %d", ErrOffsetOutside, longLength)
 	}
 
 	return buf.Bytes(), nil
 }
 
 // GetBytes gets an array of bytes starting from the offset.
-func GetBytes(log log.T, byteArray []byte, offset int, byteLength int) ([]byte, error) {
+func GetBytes(byteArray []byte, offset int, byteLength int) ([]byte, error) {
 	byteArrayLength := len(byteArray)
 	if offset > byteArrayLength-1 || offset+byteLength-1 > byteArrayLength-1 || offset < 0 {
-		log.Error("GetBytes failed: Offset is invalid.")
-
-		return make([]byte, byteLength), ErrOffsetOutsideByteArray
+		return make([]byte, byteLength), fmt.Errorf("%w: offset %d, byteLength %d, byteArrayLength %d", ErrOffsetOutside, offset, byteLength, byteArrayLength)
 	}
 
 	return byteArray[offset : offset+byteLength], nil

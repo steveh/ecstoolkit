@@ -26,9 +26,9 @@ import (
 
 // Error messages.
 var (
-	ErrOffsetOutside          = errors.New("offset outside")
-	ErrNotEnoughSpace         = errors.New("not enough space")
-	ErrOffsetOutsideByteArray = errors.New("offset outside byte array")
+	ErrOffsetOutside  = errors.New("offset outside")
+	ErrNotEnoughSpace = errors.New("not enough space")
+	ErrNegative       = errors.New("cannot convert negative number to unsigned")
 )
 
 // SerializeClientMessagePayload marshals payloads for all session specific messages into bytes.
