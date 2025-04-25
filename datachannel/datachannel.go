@@ -182,7 +182,7 @@ func (c *DataChannel) SendInputDataMessage(payloadType message.PayloadType, inpu
 
 	// Encrypt if encryption is enabled and payload type is Output
 	if c.encryptionEnabled && payloadType == message.Output {
-		inputData, err = c.encryption.Encrypt(c.logger, inputData)
+		inputData, err = c.encryption.Encrypt(inputData)
 		if err != nil {
 			return fmt.Errorf("encrypting input data: %w", err)
 		}
@@ -777,12 +777,12 @@ func (c *DataChannel) handleEncryptionChallengeRequest(clientMessage message.Cli
 
 	challenge := encChallengeReq.Challenge
 
-	challenge, err = c.encryption.Decrypt(c.logger, challenge)
+	challenge, err = c.encryption.Decrypt(challenge)
 	if err != nil {
 		return fmt.Errorf("decrypting challenge: %w", err)
 	}
 
-	challenge, err = c.encryption.Encrypt(c.logger, challenge)
+	challenge, err = c.encryption.Encrypt(challenge)
 	if err != nil {
 		return fmt.Errorf("encrypting challenge: %w", err)
 	}
@@ -915,7 +915,7 @@ func (c *DataChannel) handleDefaultOutputMessage(outputMessage message.ClientMes
 			outputMessage.PayloadType == uint32(message.ExitCode)) {
 		var err error
 
-		outputMessage.Payload, err = c.encryption.Decrypt(c.logger, outputMessage.Payload)
+		outputMessage.Payload, err = c.encryption.Decrypt(outputMessage.Payload)
 		if err != nil {
 			c.logger.Error("Unable to decrypt incoming data payload", "messageType", outputMessage.MessageType, "payloadType", outputMessage.PayloadType, "error", err)
 
@@ -990,7 +990,7 @@ func (c *DataChannel) processBufferedMessage(outputMessage message.ClientMessage
 			outputMessage.PayloadType == uint32(message.ExitCode)) {
 		var err error
 
-		outputMessage.Payload, err = c.encryption.Decrypt(c.logger, outputMessage.Payload)
+		outputMessage.Payload, err = c.encryption.Decrypt(outputMessage.Payload)
 		if err != nil {
 			c.logger.Error("Unable to decrypt buffered message data payload", "messageType", outputMessage.MessageType, "payloadType", outputMessage.PayloadType, "error", err)
 

@@ -37,14 +37,15 @@ type KMSKeyProvider interface {
 
 // IEncrypter defines the interface for encryption and decryption operations.
 type IEncrypter interface {
-	Encrypt(log log.T, plainText []byte) (cipherText []byte, err error)
-	Decrypt(log log.T, cipherText []byte) (plainText []byte, err error)
+	Encrypt(plainText []byte) (cipherText []byte, err error)
+	Decrypt(cipherText []byte) (plainText []byte, err error)
 	GetEncryptedDataKey() (ciptherTextBlob []byte)
 }
 
 // Encrypter implements the IEncrypter interface using AWS KMS for key management.
 type Encrypter struct {
 	KMSService *kms.Client
+	logger     log.T
 
 	kmsKeyID      string
 	cipherTextKey []byte
@@ -53,9 +54,14 @@ type Encrypter struct {
 }
 
 // NewEncrypter creates a new Encrypter instance with the given KMS key and encryption context.
-func NewEncrypter(ctx context.Context, log log.T, kmsKeyID string, encryptionContext map[string]string, kmsService *kms.Client) (*Encrypter, error) {
-	e := Encrypter{kmsKeyID: kmsKeyID, KMSService: kmsService}
-	err := e.generateEncryptionKey(ctx, log, kmsKeyID, encryptionContext)
+func NewEncrypter(ctx context.Context, logger log.T, kmsKeyID string, encryptionContext map[string]string, kmsService *kms.Client) (*Encrypter, error) {
+	e := Encrypter{
+		kmsKeyID:   kmsKeyID,
+		KMSService: kmsService,
+		logger:     logger,
+	}
+
+	err := e.generateEncryptionKey(ctx, kmsKeyID, encryptionContext)
 
 	return &e, err
 }
@@ -71,13 +77,10 @@ func (e *Encrypter) GetKMSKeyID() string {
 }
 
 // Encrypt encrypts a byte slice and returns the encrypted slice.
-func (e *Encrypter) Encrypt(_ log.T, plainText []byte) ([]byte, error) {
-	var aesgcm cipher.AEAD
-
-	var err error
-
-	if aesgcm, err = getAEAD(e.encryptionKey); err != nil {
-		return nil, fmt.Errorf("%w", err)
+func (e *Encrypter) Encrypt(plainText []byte) ([]byte, error) {
+	aesgcm, err := getAEAD(e.encryptionKey)
+	if err != nil {
+		return nil, fmt.Errorf("getAEAD: %w", err)
 	}
 
 	cipherText := make([]byte, nonceSize+len(plainText))
@@ -98,13 +101,10 @@ func (e *Encrypter) Encrypt(_ log.T, plainText []byte) ([]byte, error) {
 }
 
 // Decrypt decrypts a byte slice and returns the decrypted slice.
-func (e *Encrypter) Decrypt(_ log.T, cipherText []byte) ([]byte, error) {
-	var aesgcm cipher.AEAD
-
-	var err error
-
-	if aesgcm, err = getAEAD(e.decryptionKey); err != nil {
-		return nil, fmt.Errorf("%w", err)
+func (e *Encrypter) Decrypt(cipherText []byte) ([]byte, error) {
+	aesgcm, err := getAEAD(e.decryptionKey)
+	if err != nil {
+		return nil, fmt.Errorf("getAEAD: %w", err)
 	}
 
 	// Pull the nonce out of the cipherText
@@ -121,10 +121,10 @@ func (e *Encrypter) Decrypt(_ log.T, cipherText []byte) ([]byte, error) {
 }
 
 // generateEncryptionKey calls KMS to generate a new encryption key.
-func (e *Encrypter) generateEncryptionKey(ctx context.Context, log log.T, kmsKeyID string, encryptionContext map[string]string) error {
+func (e *Encrypter) generateEncryptionKey(ctx context.Context, kmsKeyID string, encryptionContext map[string]string) error {
 	cipherTextKey, plainTextKey, err := KMSGenerateDataKey(ctx, kmsKeyID, e.KMSService, encryptionContext)
 	if err != nil {
-		log.Error("Error generating data key from KMS", "error", err)
+		e.logger.Error("Error generating data key from KMS", "error", err)
 
 		return err
 	}
@@ -139,17 +139,13 @@ func (e *Encrypter) generateEncryptionKey(ctx context.Context, log log.T, kmsKey
 
 // getAEAD gets AEAD which is a GCM cipher mode providing authenticated encryption with associated data.
 func getAEAD(plainTextKey []byte) (cipher.AEAD, error) {
-	var block cipher.Block
-
-	var aesgcm cipher.AEAD
-
-	var err error
-
-	if block, err = aes.NewCipher(plainTextKey); err != nil {
+	block, err := aes.NewCipher(plainTextKey)
+	if err != nil {
 		return nil, fmt.Errorf("error creating NewCipher, %w", err)
 	}
 
-	if aesgcm, err = cipher.NewGCM(block); err != nil {
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
 		return nil, fmt.Errorf("error creating NewGCM, %w", err)
 	}
 
