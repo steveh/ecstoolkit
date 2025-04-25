@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math/rand"
 	"reflect"
 	"strconv"
 	"sync"
@@ -33,6 +34,7 @@ import (
 	"github.com/steveh/ecstoolkit/encryption/mocks"
 	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
+	"github.com/steveh/ecstoolkit/retry"
 	"github.com/steveh/ecstoolkit/version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -98,7 +100,7 @@ func TestOpen(t *testing.T) {
 
 	mockWsChannel.On("Open", mock.Anything).Return(nil)
 
-	err := datachannel.Open()
+	err := datachannel.open()
 
 	require.NoError(t, err)
 	mockWsChannel.AssertExpectations(t)
@@ -292,9 +294,7 @@ func TestResendStreamDataMessageScheduler(t *testing.T) {
 		return nil
 	}
 
-	if err := dataChannel.ResendStreamDataMessageScheduler(); err != nil {
-		t.Errorf("Failed to resend stream data message scheduler: %v", err)
-	}
+	dataChannel.resendStreamDataMessageScheduler()
 
 	wg.Wait()
 	assert.Greater(t, SendMessageCallCount, 1)
@@ -634,6 +634,51 @@ func TestProcessSessionTypeHandshakeActionForNonInteractiveCommands(t *testing.T
 	require.NoError(t, err)
 	// Test that NonInteractiveCommands is translated to Standard_Stream in data channel
 	assert.Equal(t, config.ShellPluginName, dataChannel.sessionType)
+}
+
+func TestProcessFirstMessageOutputMessageFirst(t *testing.T) {
+	outputMessage := message.ClientMessage{
+		PayloadType: uint32(message.Output),
+		Payload:     []byte("testing"),
+	}
+
+	mockKMSClient := &kms.Client{}
+
+	dataChannel, err := NewDataChannel(mockKMSClient, mockWsChannel, clientID, sessionID, instanceID, mockLogger)
+	require.NoError(t, err)
+
+	dataChannel.displayHandler = func(_ message.ClientMessage) {}
+
+	_, err = dataChannel.firstMessageHandler(outputMessage)
+	if err != nil {
+		t.Errorf("Failed to process first message: %v", err)
+	}
+
+	assert.Equal(t, config.ShellPluginName, dataChannel.sessionType)
+	assert.True(t, <-dataChannel.isSessionTypeSet)
+}
+
+func TestOpenWithRetryWithError(t *testing.T) {
+	mockKMSClient := &kms.Client{}
+
+	dataChannel, err := NewDataChannel(mockKMSClient, mockWsChannel, clientID, sessionID, instanceID, mockLogger)
+	require.NoError(t, err)
+
+	// First reconnection failed when open datachannel, success after retry
+	mockWsChannel.On("Open").Return(errors.New("error")).Once()
+	mockWsChannel.On("Open").Return(nil).Once()
+	mockWsChannel.On("SetOnMessage", mock.Anything)
+	mockWsChannel.On("SetOnError", mock.Anything)
+
+	retryParams := retry.RepeatableExponentialRetryer{
+		GeometricRatio:      config.RetryBase,
+		InitialDelayInMilli: rand.Intn(config.DataChannelRetryInitialDelayMillis) + config.DataChannelRetryInitialDelayMillis, //nolint:gosec
+		MaxDelayInMilli:     config.DataChannelRetryMaxIntervalMillis,
+		MaxAttempts:         config.DataChannelNumMaxRetries,
+	}
+
+	err = dataChannel.OpenWithRetry(context.TODO(), retryParams, func(_ message.ClientMessage) {}, func(_ context.Context) error { return nil })
+	require.NoError(t, err)
 }
 
 func buildHandshakeRequest(t *testing.T) message.HandshakeRequestPayload {

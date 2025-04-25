@@ -36,7 +36,6 @@ type Session struct {
 	ssmClient   *ssm.Client
 	dataChannel datachannel.IDataChannel
 	displayMode sessionutil.DisplayMode
-	retryParams retry.RepeatableExponentialRetryer
 	logger      log.T
 	sessionID   string
 }
@@ -58,44 +57,15 @@ func NewSession(ssmClient *ssm.Client, dataChannel datachannel.IDataChannel, ses
 
 // OpenDataChannel initializes datachannel.
 func (s *Session) OpenDataChannel(ctx context.Context) error {
-	s.retryParams = retry.RepeatableExponentialRetryer{
+	retryParams := retry.RepeatableExponentialRetryer{
 		GeometricRatio:      config.RetryBase,
 		InitialDelayInMilli: rand.Intn(config.DataChannelRetryInitialDelayMillis) + config.DataChannelRetryInitialDelayMillis, //nolint:gosec
 		MaxDelayInMilli:     config.DataChannelRetryMaxIntervalMillis,
 		MaxAttempts:         config.DataChannelNumMaxRetries,
 	}
 
-	s.dataChannel.RegisterOutputMessageHandler(ctx, func() error { return nil }, func(_ []byte) {})
-
-	s.dataChannel.RegisterOutputStreamHandler(s.processFirstMessage, false)
-
-	if err := s.dataChannel.Open(); err != nil {
-		s.logger.Error("Retrying connection failed", "sessionID", s.sessionID, "error", err)
-
-		s.retryParams.CallableFunc = func() error {
-			return s.dataChannel.Reconnect()
-		}
-
-		if err := s.retryParams.Call(); err != nil {
-			s.logger.Error("Failed to call retry parameters", "error", err)
-		}
-	}
-
-	s.dataChannel.SetOnError(func(wsErr error) {
-		s.logger.Error("Trying to reconnect session", "sequenceNumber", s.dataChannel.GetStreamDataSequenceNumber(), "error", wsErr)
-
-		s.retryParams.CallableFunc = func() error {
-			return s.resumeSessionHandler(ctx)
-		}
-
-		if err := s.retryParams.Call(); err != nil {
-			s.logger.Error("Reconnect error", "error", err)
-		}
-	})
-
-	// Scheduler for resending of data
-	if err := s.dataChannel.ResendStreamDataMessageScheduler(); err != nil {
-		s.logger.Error("Failed to schedule resend of stream data messages", "error", err)
+	if err := s.dataChannel.OpenWithRetry(ctx, retryParams, s.DisplayMessage, s.resumeSessionHandler); err != nil {
+		return fmt.Errorf("opening data channel: %w", err)
 	}
 
 	return nil
@@ -103,31 +73,12 @@ func (s *Session) OpenDataChannel(ctx context.Context) error {
 
 // EstablishSessionType ensures the channel session type is set.
 func (s *Session) EstablishSessionType(ctx context.Context, sessionType string, sleepInterval time.Duration) (string, error) {
-	s.dataChannel.SetSessionType(sessionType)
-
-	go func() {
-		for {
-			// Repeat this loop for every 200ms
-			time.Sleep(sleepInterval)
-
-			if <-s.dataChannel.IsStreamMessageResendTimeout() {
-				s.logger.Error("Stream data timeout", "sessionID", s.GetSessionID())
-
-				if err := s.TerminateSession(ctx); err != nil {
-					s.logger.Error("Unable to terminate session upon stream data timeout", "error", err)
-				}
-
-				return
-			}
-		}
-	}()
-
-	// The session type is set either by handshake or the first packet received.
-	if !<-s.dataChannel.IsSessionTypeSet() {
-		return "", errors.New("unable to determine session type")
+	sessionType, err := s.dataChannel.EstablishSessionType(ctx, sessionType, sleepInterval, s.TerminateSession)
+	if err != nil {
+		return "", fmt.Errorf("establishing session type: %w", err)
 	}
 
-	return s.dataChannel.GetSessionType(), nil
+	return sessionType, nil
 }
 
 // TerminateSession calls TerminateSession API.
@@ -205,25 +156,6 @@ func (s *Session) RegisterOutputMessageHandler(ctx context.Context, stopHandler 
 // RegisterOutputStreamHandler registers a handler for output stream messages.
 func (s *Session) RegisterOutputStreamHandler(handler datachannel.OutputStreamDataMessageHandler, isSessionSpecificHandler bool) {
 	s.dataChannel.RegisterOutputStreamHandler(handler, isSessionSpecificHandler)
-}
-
-// processFirstMessage only processes messages with PayloadType Output to determine the
-// sessionType of the session to be launched. This is a fallback for agent versions that do not support handshake, they
-// immediately start sending shell output.
-func (s *Session) processFirstMessage(outputMessage message.ClientMessage) (bool, error) {
-	// Immediately deregister self so that this handler is only called once, for the first message
-	s.dataChannel.DeregisterOutputStreamHandler(s.processFirstMessage)
-	// Only set session type if the session type has not already been set. Usually session type will be set
-	// by handshake protocol which would be the first message but older agents may not perform handshake
-	if s.dataChannel.GetSessionType() == "" {
-		if outputMessage.PayloadType == uint32(message.Output) {
-			s.logger.Warn("Setting session type to shell based on PayloadType!")
-			s.dataChannel.SetSessionType(config.ShellPluginName)
-			s.displayMode.DisplayMessage(outputMessage)
-		}
-	}
-
-	return true, nil
 }
 
 // getResumeSessionParams calls ResumeSession API and gets tokenvalue for reconnecting.

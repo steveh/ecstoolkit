@@ -14,7 +14,6 @@ linters:
 
     - err113
     - gochecknoglobals
-    - gochecknoinits
     - interfacebloat
     - paralleltest
     - testpackage

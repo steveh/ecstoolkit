@@ -23,6 +23,7 @@ import (
 	"github.com/steveh/ecstoolkit/encryption"
 	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
+	"github.com/steveh/ecstoolkit/retry"
 	"github.com/steveh/ecstoolkit/service"
 	"github.com/steveh/ecstoolkit/version"
 )
@@ -73,6 +74,8 @@ type DataChannel struct {
 	agentVersion string
 
 	logger log.T
+
+	displayHandler func(message.ClientMessage)
 }
 
 // NewDataChannel creates a DataChannel.
@@ -115,15 +118,40 @@ func (c *DataChannel) SendMessage(input []byte, inputType int) error {
 	return nil
 }
 
-// Open opens websocket connects and does final handshake to acknowledge connection.
-func (c *DataChannel) Open() error {
-	if err := c.wsChannel.Open(); err != nil {
-		return fmt.Errorf("opening data channel: %w", err)
+// OpenWithRetry opens the data channel and registers the message handler.
+func (c *DataChannel) OpenWithRetry(ctx context.Context, retryParams retry.RepeatableExponentialRetryer, messageHandler func(message.ClientMessage), resumeSessionHandler func(context.Context) error) error {
+	c.RegisterOutputMessageHandler(ctx, func() error { return nil }, func(_ []byte) {})
+
+	c.displayHandler = messageHandler
+
+	c.RegisterOutputStreamHandler(c.firstMessageHandler, false)
+
+	if err := c.open(); err != nil {
+		c.logger.Error("Retrying connection failed", "sessionID", c.sessionID, "error", err)
+
+		retryParams.CallableFunc = func() error {
+			return c.Reconnect()
+		}
+
+		if err := retryParams.Call(); err != nil {
+			c.logger.Error("Failed to call retry parameters", "error", err)
+		}
 	}
 
-	if err := c.finalizeDataChannelHandshake(c.wsChannel.GetChannelToken()); err != nil {
-		return fmt.Errorf("error sending token for handshake: %w", err)
-	}
+	c.setOnError(func(wsErr error) {
+		c.logger.Error("Trying to reconnect session", "sequenceNumber", c.streamDataSequenceNumber, "error", wsErr)
+
+		retryParams.CallableFunc = func() error {
+			return resumeSessionHandler(ctx)
+		}
+
+		if err := retryParams.Call(); err != nil {
+			c.logger.Error("Reconnect error", "error", err)
+		}
+	})
+
+	// Scheduler for resending of data
+	c.resendStreamDataMessageScheduler()
 
 	return nil
 }
@@ -146,7 +174,7 @@ func (c *DataChannel) Reconnect() error {
 		c.logger.Warn("Closing datachannel failed", "error", err)
 	}
 
-	if err = c.Open(); err != nil {
+	if err = c.open(); err != nil {
 		return fmt.Errorf("reconnecting data channel %s: %w", c.wsChannel.GetStreamURL(), err)
 	}
 
@@ -222,64 +250,10 @@ func (c *DataChannel) SendInputDataMessage(payloadType message.PayloadType, inpu
 	return err
 }
 
-// ResendStreamDataMessageScheduler spawns a separate go thread which keeps checking outgoingMessageBuffer at fixed interval
-// and resends first message if time elapsed since lastSentTime of the message is more than acknowledge wait time.
-func (c *DataChannel) ResendStreamDataMessageScheduler() error {
-	go func() {
-		for {
-			time.Sleep(config.ResendSleepInterval)
-			c.outgoingMessageBuffer.Mutex.Lock()
-			streamMessageElement := c.outgoingMessageBuffer.Messages.Front()
-			c.outgoingMessageBuffer.Mutex.Unlock()
-
-			if streamMessageElement == nil {
-				continue
-			}
-
-			streamMessage, ok := streamMessageElement.Value.(StreamingMessage)
-			if !ok {
-				c.logger.Error("Failed to type assert streamMessageElement.Value to StreamingMessage")
-
-				continue
-			}
-
-			if time.Since(streamMessage.LastSentTime) > c.retransmissionTimeout {
-				c.logger.Debug("Resend stream data message", "sequenceNumber", streamMessage.SequenceNumber, "attempt", *streamMessage.ResendAttempt)
-
-				if *streamMessage.ResendAttempt >= config.ResendMaxAttempt {
-					c.logger.Warn("Message resent too many times", "sequenceNumber", streamMessage.SequenceNumber, "maxAttempts", config.ResendMaxAttempt)
-					c.isStreamMessageResendTimeout <- true
-				}
-
-				*streamMessage.ResendAttempt++
-				if err := SendMessageCall(c, streamMessage.Content, websocket.BinaryMessage); err != nil {
-					c.logger.Error("Unable to send stream data message", "error", err)
-				}
-
-				streamMessage.LastSentTime = time.Now()
-			}
-		}
-	}()
-
-	return nil
-}
-
 // RegisterOutputStreamHandler register a handler for messages of type OutputStream. This is usually called by the plugin.
 func (c *DataChannel) RegisterOutputStreamHandler(handler OutputStreamDataMessageHandler, isSessionSpecificHandler bool) {
 	c.isSessionSpecificHandlerSet = isSessionSpecificHandler
 	c.outputStreamHandlers = append(c.outputStreamHandlers, handler)
-}
-
-// DeregisterOutputStreamHandler deregisters a handler previously registered using RegisterOutputStreamHandler.
-func (c *DataChannel) DeregisterOutputStreamHandler(handler OutputStreamDataMessageHandler) {
-	// Find and remove "handler"
-	for i, v := range c.outputStreamHandlers {
-		if reflect.ValueOf(v).Pointer() == reflect.ValueOf(handler).Pointer() {
-			c.outputStreamHandlers = append(c.outputStreamHandlers[:i], c.outputStreamHandlers[i+1:]...)
-
-			break
-		}
-	}
 }
 
 // HandleOutputMessage handles incoming stream data message by processing the payload and updating expectedSequenceNumber.
@@ -424,27 +398,6 @@ func (c *DataChannel) ProcessSessionTypeHandshakeAction(actionParams json.RawMes
 	}
 }
 
-// IsSessionTypeSet check has data channel sessionType been set.
-func (c *DataChannel) IsSessionTypeSet() chan bool {
-	return c.isSessionTypeSet
-}
-
-// IsStreamMessageResendTimeout checks if resending a streaming message reaches timeout.
-func (c *DataChannel) IsStreamMessageResendTimeout() chan bool {
-	return c.isStreamMessageResendTimeout
-}
-
-// SetSessionType set session type.
-func (c *DataChannel) SetSessionType(sessionType string) {
-	c.sessionType = sessionType
-	c.isSessionTypeSet <- true
-}
-
-// GetSessionType returns SessionType of the DataChannel.
-func (c *DataChannel) GetSessionType() string {
-	return c.sessionType
-}
-
 // GetSessionProperties returns SessionProperties of the DataChannel.
 func (c *DataChannel) GetSessionProperties() interface{} {
 	return c.sessionProperties
@@ -453,11 +406,6 @@ func (c *DataChannel) GetSessionProperties() interface{} {
 // SetChannelToken set channel token of the DataChannel.
 func (c *DataChannel) SetChannelToken(channelToken string) {
 	c.wsChannel.SetChannelToken(channelToken)
-}
-
-// SetOnError sets the error handler for the DataChannel.
-func (c *DataChannel) SetOnError(onErrorHandler func(error)) {
-	c.wsChannel.SetOnError(onErrorHandler)
 }
 
 // RegisterOutputMessageHandler sets the message handler for the DataChannel.
@@ -469,11 +417,6 @@ func (c *DataChannel) RegisterOutputMessageHandler(ctx context.Context, stopHand
 			c.logger.Error("Failed to handle output message", "error", err)
 		}
 	})
-}
-
-// GetStreamDataSequenceNumber returns StreamDataSequenceNumber of the DataChannel.
-func (c *DataChannel) GetStreamDataSequenceNumber() int64 {
-	return c.streamDataSequenceNumber
 }
 
 // GetAgentVersion returns agent version of the target instance.
@@ -494,6 +437,129 @@ func (c *DataChannel) GetExpectedSequenceNumber() int64 {
 // GetTargetID returns the channel target ID.
 func (c *DataChannel) GetTargetID() string {
 	return c.targetID
+}
+
+// EstablishSessionType establishes the session type for the DataChannel.
+func (c *DataChannel) EstablishSessionType(ctx context.Context, sessionType string, sleepInterval time.Duration, timeoutHandler func(context.Context) error) (string, error) {
+	c.setSessionType(sessionType)
+
+	go func() {
+		for {
+			// Repeat this loop for every 200ms
+			time.Sleep(sleepInterval)
+
+			if <-c.isStreamMessageResendTimeout {
+				c.logger.Error("Stream data timeout", "sessionID", c.sessionID)
+
+				if err := timeoutHandler(ctx); err != nil {
+					c.logger.Error("Unable to terminate session upon stream data timeout", "error", err)
+				}
+
+				return
+			}
+		}
+	}()
+
+	// The session type is set either by handshake or the first packet received.
+	if !<-c.isSessionTypeSet {
+		return "", errors.New("unable to determine session type")
+	}
+
+	return c.sessionType, nil
+}
+
+// setOnError sets the error handler for the DataChannel.
+func (c *DataChannel) setOnError(onErrorHandler func(error)) {
+	c.wsChannel.SetOnError(onErrorHandler)
+}
+
+// open opens websocket connects and does final handshake to acknowledge connection.
+func (c *DataChannel) open() error {
+	if err := c.wsChannel.Open(); err != nil {
+		return fmt.Errorf("opening data channel: %w", err)
+	}
+
+	if err := c.finalizeDataChannelHandshake(c.wsChannel.GetChannelToken()); err != nil {
+		return fmt.Errorf("error sending token for handshake: %w", err)
+	}
+
+	return nil
+}
+
+func (c *DataChannel) firstMessageHandler(outputMessage message.ClientMessage) (bool, error) {
+	// Immediately deregister self so that this handler is only called once, for the first message
+	c.deregisterOutputStreamHandler(c.firstMessageHandler)
+
+	// Only set session type if the session type has not already been set. Usually session type will be set
+	// by handshake protocol which would be the first message but older agents may not perform handshake
+	if c.sessionType == "" {
+		if outputMessage.PayloadType == uint32(message.Output) {
+			c.logger.Warn("Setting session type to shell based on PayloadType!")
+
+			c.setSessionType(config.ShellPluginName)
+
+			c.displayHandler(outputMessage)
+		}
+	}
+
+	return true, nil
+}
+
+// resendStreamDataMessageScheduler spawns a separate go thread which keeps checking outgoingMessageBuffer at fixed interval
+// and resends first message if time elapsed since lastSentTime of the message is more than acknowledge wait time.
+func (c *DataChannel) resendStreamDataMessageScheduler() {
+	go func() {
+		for {
+			time.Sleep(config.ResendSleepInterval)
+			c.outgoingMessageBuffer.Mutex.Lock()
+			streamMessageElement := c.outgoingMessageBuffer.Messages.Front()
+			c.outgoingMessageBuffer.Mutex.Unlock()
+
+			if streamMessageElement == nil {
+				continue
+			}
+
+			streamMessage, ok := streamMessageElement.Value.(StreamingMessage)
+			if !ok {
+				c.logger.Error("Failed to type assert streamMessageElement.Value to StreamingMessage")
+
+				continue
+			}
+
+			if time.Since(streamMessage.LastSentTime) > c.retransmissionTimeout {
+				c.logger.Debug("Resend stream data message", "sequenceNumber", streamMessage.SequenceNumber, "attempt", *streamMessage.ResendAttempt)
+
+				if *streamMessage.ResendAttempt >= config.ResendMaxAttempt {
+					c.logger.Warn("Message resent too many times", "sequenceNumber", streamMessage.SequenceNumber, "maxAttempts", config.ResendMaxAttempt)
+					c.isStreamMessageResendTimeout <- true
+				}
+
+				*streamMessage.ResendAttempt++
+				if err := SendMessageCall(c, streamMessage.Content, websocket.BinaryMessage); err != nil {
+					c.logger.Error("Unable to send stream data message", "error", err)
+				}
+
+				streamMessage.LastSentTime = time.Now()
+			}
+		}
+	}()
+}
+
+// deregisterOutputStreamHandler deregisters a handler previously registered using RegisterOutputStreamHandler.
+func (c *DataChannel) deregisterOutputStreamHandler(handler OutputStreamDataMessageHandler) {
+	// Find and remove "handler"
+	for i, v := range c.outputStreamHandlers {
+		if reflect.ValueOf(v).Pointer() == reflect.ValueOf(handler).Pointer() {
+			c.outputStreamHandlers = append(c.outputStreamHandlers[:i], c.outputStreamHandlers[i+1:]...)
+
+			break
+		}
+	}
+}
+
+func (c *DataChannel) setSessionType(sessionType string) {
+	c.sessionType = sessionType
+	c.isSessionTypeSet <- true
 }
 
 // finalizeDataChannelHandshake sends the token for service to acknowledge the connection.
