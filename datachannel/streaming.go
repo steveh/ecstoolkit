@@ -74,6 +74,6 @@ var SendMessageCall = func(dataChannel *DataChannel, input []byte, inputType int
 	return dataChannel.SendMessage(input, inputType)
 }
 
-var newEncrypter = func(ctx context.Context, log log.T, kmsKeyID string, encryptionConext map[string]string, kmsService *kms.Client) (encryption.IEncrypter, error) {
-	return encryption.NewEncrypter(ctx, log, kmsKeyID, encryptionConext, kmsService)
+var newEncrypter = func(ctx context.Context, logger log.T, kmsKeyID string, encryptionConext map[string]string, kmsService *kms.Client) (encryption.IEncrypter, error) {
+	return encryption.NewEncrypter(ctx, logger, kmsKeyID, encryptionConext, kmsService)
 }

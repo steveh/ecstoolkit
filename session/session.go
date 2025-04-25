@@ -139,9 +139,7 @@ func (s *Session) TerminateSession(ctx context.Context) error {
 	s.logger.Debug("Terminate Session input parameters", "input", terminateSessionInput)
 
 	if _, err := s.ssmClient.TerminateSession(ctx, &terminateSessionInput); err != nil {
-		s.logger.Error("Terminate Session failed", "error", err)
-
-		return fmt.Errorf("terminate session: %w", err)
+		return fmt.Errorf("terminating session: %w", err)
 	}
 
 	return nil
@@ -238,9 +236,7 @@ func (s *Session) getResumeSessionParams(ctx context.Context) (string, error) {
 
 	resumeSessionOutput, err := s.ssmClient.ResumeSession(ctx, &resumeSessionInput)
 	if err != nil {
-		s.logger.Error("Resume Session failed", "error", err)
-
-		return "", fmt.Errorf("resume session: %w", err)
+		return "", fmt.Errorf("resuming session: %w", err)
 	}
 
 	if resumeSessionOutput.TokenValue == nil {
@@ -254,9 +250,7 @@ func (s *Session) getResumeSessionParams(ctx context.Context) (string, error) {
 func (s *Session) resumeSessionHandler(ctx context.Context) error {
 	tokenValue, err := s.getResumeSessionParams(ctx)
 	if err != nil {
-		s.logger.Error("getting token", "error", err)
-
-		return fmt.Errorf("resume session: %w", err)
+		return fmt.Errorf("getting token: %w", err)
 	}
 
 	if tokenValue == "" {

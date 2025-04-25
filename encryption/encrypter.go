@@ -124,9 +124,7 @@ func (e *Encrypter) Decrypt(cipherText []byte) ([]byte, error) {
 func (e *Encrypter) generateEncryptionKey(ctx context.Context, kmsKeyID string, encryptionContext map[string]string) error {
 	cipherTextKey, plainTextKey, err := KMSGenerateDataKey(ctx, kmsKeyID, e.KMSService, encryptionContext)
 	if err != nil {
-		e.logger.Error("Error generating data key from KMS", "error", err)
-
-		return err
+		return fmt.Errorf("generating data key from KMS: %w", err)
 	}
 
 	keySize := len(plainTextKey) / 2 //nolint:mnd

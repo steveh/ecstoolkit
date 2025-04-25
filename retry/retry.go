@@ -23,8 +23,8 @@ import (
 const sleepConstant = 2
 
 // Retry implements back off retry strategy for reconnect web socket connection.
-func Retry(log log.T, attempts int, sleep time.Duration, fn func() error) error {
-	log.Debug("Retrying connection to channel")
+func Retry(logger log.T, attempts int, sleep time.Duration, fn func() error) error {
+	logger.Debug("Retrying connection to channel")
 
 	var lastErr error
 
@@ -35,7 +35,7 @@ func Retry(log log.T, attempts int, sleep time.Duration, fn func() error) error 
 			time.Sleep(sleep)
 			sleep *= sleepConstant
 
-			log.Debug("Attempts remaining to connect web socket connection", "attempts", attempts)
+			logger.Debug("Attempts remaining to connect web socket connection", "attempts", attempts)
 
 			continue
 		}

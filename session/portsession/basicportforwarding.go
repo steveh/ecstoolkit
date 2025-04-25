@@ -92,8 +92,6 @@ func (p *BasicPortForwarding) ReadStream(_ context.Context) error {
 
 			// Send DisconnectToPort flag to agent when client tcp connection drops to ensure agent closes tcp connection too with server port
 			if err = p.session.SendFlag(message.DisconnectToPort); err != nil {
-				p.logger.Error("sending packet", "error", err)
-
 				return fmt.Errorf("sending disconnect flag: %w", err)
 			}
 

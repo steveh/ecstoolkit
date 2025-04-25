@@ -200,16 +200,12 @@ func (c *DataChannel) SendInputDataMessage(payloadType message.PayloadType, inpu
 	}
 
 	if msg, err = clientMessage.SerializeClientMessage(); err != nil {
-		c.logger.Error("Cannot serialize StreamData message", "error", err)
-
 		return fmt.Errorf("serializing client message: %w", err)
 	}
 
 	c.logger.Trace("Sending message", "sequenceNumber", c.streamDataSequenceNumber)
 
 	if err = SendMessageCall(c, msg, websocket.BinaryMessage); err != nil {
-		c.logger.Error("Error sending stream data message", "error", err)
-
 		return fmt.Errorf("sending message: %w", err)
 	}
 
@@ -352,13 +348,10 @@ func (c *DataChannel) HandleAcknowledgeMessage(
 ) error {
 	acknowledgeMessage, err := outputMessage.DeserializeDataStreamAcknowledgeContent()
 	if err != nil {
-		c.logger.Error("Cannot deserialize payload to AcknowledgeMessage", "error", err)
-
 		return fmt.Errorf("deserializing data stream acknowledge content: %w", err)
 	}
 
-	err = processAcknowledgedMessageCall(c, acknowledgeMessage)
-	if err != nil {
+	if err := processAcknowledgedMessageCall(c, acknowledgeMessage); err != nil {
 		return fmt.Errorf("processing acknowledged message: %w", err)
 	}
 
@@ -518,8 +511,6 @@ func (c *DataChannel) finalizeDataChannelHandshake(tokenValue string) error {
 
 	openDataChannelInputBytes, err := json.Marshal(openDataChannelInput)
 	if err != nil {
-		c.logger.Error("Error serializing openDataChannelInput", "error", err)
-
 		return fmt.Errorf("serializing open data channel input: %w", err)
 	}
 
@@ -565,14 +556,10 @@ func (c *DataChannel) sendAcknowledgeMessage(streamDataMessage message.ClientMes
 	var err error
 
 	if msg, err = message.SerializeClientMessageWithAcknowledgeContent(dataStreamAcknowledgeContent); err != nil {
-		c.logger.Error("Cannot serialize Acknowledge message", "error", err)
-
 		return fmt.Errorf("serializing acknowledge message: %w", err)
 	}
 
 	if err = SendMessageCall(c, msg, websocket.BinaryMessage); err != nil {
-		c.logger.Error("Error sending acknowledge message", "error", err)
-
 		return fmt.Errorf("sending acknowledge message: %w", err)
 	}
 
@@ -640,14 +627,10 @@ func (c *DataChannel) outputMessageHandler(ctx context.Context, stopHandler Stop
 
 	err := outputMessage.DeserializeClientMessage(rawMessage)
 	if err != nil {
-		c.logger.Error("Cannot deserialize raw message", "message", string(rawMessage), "error", err)
-
 		return fmt.Errorf("could not deserialize rawMessage, %s : %w", rawMessage, err)
 	}
 
 	if err = outputMessage.Validate(); err != nil {
-		c.logger.Error("Invalid outputMessage", "message", *outputMessage, "error", err)
-
 		return fmt.Errorf("validating output message: %w", err)
 	}
 
@@ -673,8 +656,6 @@ func (c *DataChannel) outputMessageHandler(ctx context.Context, stopHandler Stop
 func (c *DataChannel) handleHandshakeRequest(ctx context.Context, clientMessage message.ClientMessage) error {
 	handshakeRequest, err := clientMessage.DeserializeHandshakeRequest()
 	if err != nil {
-		c.logger.Error("Deserialize Handshake Request failed", "error", err)
-
 		return fmt.Errorf("deserializing handshake request: %w", err)
 	}
 
@@ -866,9 +847,7 @@ func (c *DataChannel) handleHandshakeRequestOutputMessage(ctx context.Context, o
 		"payload", hex.EncodeToString(outputMessage.Payload))
 
 	if err := c.handleHandshakeRequest(ctx, outputMessage); err != nil {
-		c.logger.Error("processing stream data message", "error", err.Error())
-
-		return err
+		return fmt.Errorf("handling handshake request output message: %w", err)
 	}
 
 	return nil
@@ -881,9 +860,7 @@ func (c *DataChannel) handleHandshakeCompleteOutputMessage(outputMessage message
 	}
 
 	if err := c.handleHandshakeComplete(outputMessage); err != nil {
-		c.logger.Error("processing stream data message", "error", err.Error())
-
-		return err
+		return fmt.Errorf("handling handshake complete output message: %w", err)
 	}
 
 	return nil
@@ -896,9 +873,7 @@ func (c *DataChannel) handleEncryptionChallengeRequestOutputMessage(outputMessag
 	}
 
 	if err := c.handleEncryptionChallengeRequest(outputMessage); err != nil {
-		c.logger.Error("processing stream data message", "error", err.Error())
-
-		return err
+		return fmt.Errorf("handling encryption challenge request output message: %w", err)
 	}
 
 	return nil
@@ -917,17 +892,13 @@ func (c *DataChannel) handleDefaultOutputMessage(outputMessage message.ClientMes
 
 		outputMessage.Payload, err = c.encryption.Decrypt(outputMessage.Payload)
 		if err != nil {
-			c.logger.Error("Unable to decrypt incoming data payload", "messageType", outputMessage.MessageType, "payloadType", outputMessage.PayloadType, "error", err)
-
 			return fmt.Errorf("decrypting incoming data payload: %w", err)
 		}
 	}
 
 	isHandlerReady, err := c.processOutputMessageWithHandlers(outputMessage)
 	if err != nil {
-		c.logger.Error("processing stream data message", "error", err.Error())
-
-		return fmt.Errorf("processing stream data message: %w", err)
+		return fmt.Errorf("handling default output message: %w", err)
 	}
 
 	if !isHandlerReady {
@@ -978,8 +949,6 @@ func (c *DataChannel) processBufferedMessage(outputMessage message.ClientMessage
 	c.logger.Trace("Processing stream data message from incomingMessageBuffer", "sequenceNumber", bufferedStreamMessage.SequenceNumber)
 
 	if err := outputMessage.DeserializeClientMessage(bufferedStreamMessage.Content); err != nil {
-		c.logger.Error("Cannot deserialize raw message", "error", err)
-
 		return fmt.Errorf("deserializing raw message: %w", err)
 	}
 
@@ -992,14 +961,11 @@ func (c *DataChannel) processBufferedMessage(outputMessage message.ClientMessage
 
 		outputMessage.Payload, err = c.encryption.Decrypt(outputMessage.Payload)
 		if err != nil {
-			c.logger.Error("Unable to decrypt buffered message data payload", "messageType", outputMessage.MessageType, "payloadType", outputMessage.PayloadType, "error", err)
-
 			return fmt.Errorf("decrypting buffered message data payload: %w", err)
 		}
 	}
 
-	_, err := c.processOutputMessageWithHandlers(outputMessage)
-	if err != nil {
+	if _, err := c.processOutputMessageWithHandlers(outputMessage); err != nil {
 		return fmt.Errorf("processing output message with handlers: %w", err)
 	}
 

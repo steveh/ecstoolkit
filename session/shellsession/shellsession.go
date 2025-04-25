@@ -139,7 +139,7 @@ func (s *ShellSession) handleTerminalResize() {
 }
 
 // If running from IDE GetTerminalSizeCall will not work. Supply a fixed width and height value.
-func terminalSize(log log.T) (uint32, uint32) {
+func terminalSize(logger log.T) (uint32, uint32) {
 	const (
 		defaultWidth  = 300
 		defaultHeight = 100
@@ -147,27 +147,27 @@ func terminalSize(log log.T) (uint32, uint32) {
 
 	width, height, err := GetTerminalSizeCall(int(os.Stdin.Fd()))
 	if err != nil {
-		log.Error("Could not get size of terminal", "error", err, "width", width, "height", height)
+		logger.Error("Could not get size of terminal", "error", err, "width", width, "height", height)
 
 		return defaultWidth, defaultHeight
 	}
 
 	safeWidth, err := util.SafeUint32(width)
 	if err != nil {
-		log.Error("Could not convert width to uint32", "error", err, "width", width)
+		logger.Error("Could not convert width to uint32", "error", err, "width", width)
 
 		return defaultWidth, defaultHeight
 	}
 
 	safeHeight, err := util.SafeUint32(height)
 	if err != nil {
-		log.Error("Could not convert height to uint32", "error", err, "height", height)
+		logger.Error("Could not convert height to uint32", "error", err, "height", height)
 
 		return defaultWidth, defaultHeight
 	}
 
 	if safeWidth == 0 || safeHeight == 0 {
-		log.Error("Terminal size is zero", "width", safeWidth, "height", safeHeight)
+		logger.Error("Terminal size is zero", "width", safeWidth, "height", safeHeight)
 
 		return defaultWidth, defaultHeight
 	}

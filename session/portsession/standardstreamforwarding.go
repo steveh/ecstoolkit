@@ -85,8 +85,6 @@ func (p *StandardStreamForwarding) ReadStream(_ context.Context) error {
 		p.logger.Trace("Received message from stdin", "size", numBytes)
 
 		if err = p.session.SendInputDataMessage(message.Output, msg[:numBytes]); err != nil {
-			p.logger.Error("sending packet", "error", err)
-
 			return fmt.Errorf("sending input data message: %w", err)
 		}
 		// Sleep to process more data
@@ -111,8 +109,6 @@ func (p *StandardStreamForwarding) handleReadError(err error) error {
 
 		return nil
 	}
-
-	p.logger.Error("Reading input failed", "error", err)
 
 	return fmt.Errorf("reading input: %w", err)
 }

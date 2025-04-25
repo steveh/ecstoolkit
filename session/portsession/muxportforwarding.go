@@ -306,8 +306,6 @@ func (p *MuxPortForwarding) transferDataToServer(ctx context.Context) error {
 			p.logger.Trace("Received message from mux client", "size", numBytes)
 
 			if err = p.session.SendInputDataMessage(message.Output, msg[:numBytes]); err != nil {
-				p.logger.Error("sending packet on data channel", "error", err)
-
 				return fmt.Errorf("sending input data message: %w", err)
 			}
 			// sleep to process more data
