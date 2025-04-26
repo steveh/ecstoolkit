@@ -16,7 +16,6 @@ package session
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math/rand"
 	"time"
@@ -64,7 +63,7 @@ func (s *Session) OpenDataChannel(ctx context.Context) error {
 		MaxAttempts:         config.DataChannelNumMaxRetries,
 	}
 
-	if err := s.dataChannel.OpenWithRetry(ctx, retryParams, s.DisplayMessage, s.resumeSessionHandler); err != nil {
+	if err := s.dataChannel.OpenWithRetry(ctx, retryParams, s.DisplayMessage, s.getResumeSessionParams); err != nil {
 		return fmt.Errorf("opening data channel: %w", err)
 	}
 
@@ -176,26 +175,4 @@ func (s *Session) getResumeSessionParams(ctx context.Context) (string, error) {
 	}
 
 	return *resumeSessionOutput.TokenValue, nil
-}
-
-// resumeSessionHandler gets token value and tries to Reconnect to datachannel.
-func (s *Session) resumeSessionHandler(ctx context.Context) error {
-	tokenValue, err := s.getResumeSessionParams(ctx)
-	if err != nil {
-		return fmt.Errorf("getting token: %w", err)
-	}
-
-	if tokenValue == "" {
-		s.logger.Debug("Session timed out", "sessionID", s.sessionID)
-
-		return errors.New("session timed out")
-	}
-
-	s.dataChannel.SetChannelToken(tokenValue)
-
-	if err := s.dataChannel.Reconnect(); err != nil {
-		return fmt.Errorf("reconnecting data channel: %w", err)
-	}
-
-	return nil
 }

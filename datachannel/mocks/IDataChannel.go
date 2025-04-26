@@ -269,17 +269,17 @@ func (_c *IDataChannel_GetTargetID_Call) RunAndReturn(run func() string) *IDataC
 	return _c
 }
 
-// OpenWithRetry provides a mock function with given fields: ctx, retryParams, messageHandler, resumeSessionHandler
-func (_m *IDataChannel) OpenWithRetry(ctx context.Context, retryParams retry.RepeatableExponentialRetryer, messageHandler func(message.ClientMessage), resumeSessionHandler func(context.Context) error) error {
-	ret := _m.Called(ctx, retryParams, messageHandler, resumeSessionHandler)
+// OpenWithRetry provides a mock function with given fields: ctx, retryParams, messageHandler, getReconnectionToken
+func (_m *IDataChannel) OpenWithRetry(ctx context.Context, retryParams retry.RepeatableExponentialRetryer, messageHandler func(message.ClientMessage), getReconnectionToken datachannel.GetReconnectionToken) error {
+	ret := _m.Called(ctx, retryParams, messageHandler, getReconnectionToken)
 
 	if len(ret) == 0 {
 		panic("no return value specified for OpenWithRetry")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, retry.RepeatableExponentialRetryer, func(message.ClientMessage), func(context.Context) error) error); ok {
-		r0 = rf(ctx, retryParams, messageHandler, resumeSessionHandler)
+	if rf, ok := ret.Get(0).(func(context.Context, retry.RepeatableExponentialRetryer, func(message.ClientMessage), datachannel.GetReconnectionToken) error); ok {
+		r0 = rf(ctx, retryParams, messageHandler, getReconnectionToken)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -296,14 +296,14 @@ type IDataChannel_OpenWithRetry_Call struct {
 //   - ctx context.Context
 //   - retryParams retry.RepeatableExponentialRetryer
 //   - messageHandler func(message.ClientMessage)
-//   - resumeSessionHandler func(context.Context) error
-func (_e *IDataChannel_Expecter) OpenWithRetry(ctx interface{}, retryParams interface{}, messageHandler interface{}, resumeSessionHandler interface{}) *IDataChannel_OpenWithRetry_Call {
-	return &IDataChannel_OpenWithRetry_Call{Call: _e.mock.On("OpenWithRetry", ctx, retryParams, messageHandler, resumeSessionHandler)}
+//   - getReconnectionToken datachannel.GetReconnectionToken
+func (_e *IDataChannel_Expecter) OpenWithRetry(ctx interface{}, retryParams interface{}, messageHandler interface{}, getReconnectionToken interface{}) *IDataChannel_OpenWithRetry_Call {
+	return &IDataChannel_OpenWithRetry_Call{Call: _e.mock.On("OpenWithRetry", ctx, retryParams, messageHandler, getReconnectionToken)}
 }
 
-func (_c *IDataChannel_OpenWithRetry_Call) Run(run func(ctx context.Context, retryParams retry.RepeatableExponentialRetryer, messageHandler func(message.ClientMessage), resumeSessionHandler func(context.Context) error)) *IDataChannel_OpenWithRetry_Call {
+func (_c *IDataChannel_OpenWithRetry_Call) Run(run func(ctx context.Context, retryParams retry.RepeatableExponentialRetryer, messageHandler func(message.ClientMessage), getReconnectionToken datachannel.GetReconnectionToken)) *IDataChannel_OpenWithRetry_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(retry.RepeatableExponentialRetryer), args[2].(func(message.ClientMessage)), args[3].(func(context.Context) error))
+		run(args[0].(context.Context), args[1].(retry.RepeatableExponentialRetryer), args[2].(func(message.ClientMessage)), args[3].(datachannel.GetReconnectionToken))
 	})
 	return _c
 }
@@ -313,52 +313,7 @@ func (_c *IDataChannel_OpenWithRetry_Call) Return(_a0 error) *IDataChannel_OpenW
 	return _c
 }
 
-func (_c *IDataChannel_OpenWithRetry_Call) RunAndReturn(run func(context.Context, retry.RepeatableExponentialRetryer, func(message.ClientMessage), func(context.Context) error) error) *IDataChannel_OpenWithRetry_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Reconnect provides a mock function with no fields
-func (_m *IDataChannel) Reconnect() error {
-	ret := _m.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for Reconnect")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func() error); ok {
-		r0 = rf()
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// IDataChannel_Reconnect_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Reconnect'
-type IDataChannel_Reconnect_Call struct {
-	*mock.Call
-}
-
-// Reconnect is a helper method to define mock.On call
-func (_e *IDataChannel_Expecter) Reconnect() *IDataChannel_Reconnect_Call {
-	return &IDataChannel_Reconnect_Call{Call: _e.mock.On("Reconnect")}
-}
-
-func (_c *IDataChannel_Reconnect_Call) Run(run func()) *IDataChannel_Reconnect_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *IDataChannel_Reconnect_Call) Return(_a0 error) *IDataChannel_Reconnect_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *IDataChannel_Reconnect_Call) RunAndReturn(run func() error) *IDataChannel_Reconnect_Call {
+func (_c *IDataChannel_OpenWithRetry_Call) RunAndReturn(run func(context.Context, retry.RepeatableExponentialRetryer, func(message.ClientMessage), datachannel.GetReconnectionToken) error) *IDataChannel_OpenWithRetry_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -569,39 +524,6 @@ func (_c *IDataChannel_SendMessage_Call) Return(_a0 error) *IDataChannel_SendMes
 
 func (_c *IDataChannel_SendMessage_Call) RunAndReturn(run func([]byte, int) error) *IDataChannel_SendMessage_Call {
 	_c.Call.Return(run)
-	return _c
-}
-
-// SetChannelToken provides a mock function with given fields: channelToken
-func (_m *IDataChannel) SetChannelToken(channelToken string) {
-	_m.Called(channelToken)
-}
-
-// IDataChannel_SetChannelToken_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetChannelToken'
-type IDataChannel_SetChannelToken_Call struct {
-	*mock.Call
-}
-
-// SetChannelToken is a helper method to define mock.On call
-//   - channelToken string
-func (_e *IDataChannel_Expecter) SetChannelToken(channelToken interface{}) *IDataChannel_SetChannelToken_Call {
-	return &IDataChannel_SetChannelToken_Call{Call: _e.mock.On("SetChannelToken", channelToken)}
-}
-
-func (_c *IDataChannel_SetChannelToken_Call) Run(run func(channelToken string)) *IDataChannel_SetChannelToken_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
-	})
-	return _c
-}
-
-func (_c *IDataChannel_SetChannelToken_Call) Return() *IDataChannel_SetChannelToken_Call {
-	_c.Call.Return()
-	return _c
-}
-
-func (_c *IDataChannel_SetChannelToken_Call) RunAndReturn(run func(string)) *IDataChannel_SetChannelToken_Call {
-	_c.Run(run)
 	return _c
 }
 

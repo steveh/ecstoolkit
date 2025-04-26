@@ -89,7 +89,7 @@ func TestReconnect(t *testing.T) {
 	mockWsChannel.On("GetChannelToken").Return("")
 
 	// test reconnect
-	err := datachannel.Reconnect()
+	err := datachannel.reconnect()
 
 	require.NoError(t, err)
 	mockWsChannel.AssertExpectations(t)
@@ -677,7 +677,7 @@ func TestOpenWithRetryWithError(t *testing.T) {
 		MaxAttempts:         config.DataChannelNumMaxRetries,
 	}
 
-	err = dataChannel.OpenWithRetry(context.TODO(), retryParams, func(_ message.ClientMessage) {}, func(_ context.Context) error { return nil })
+	err = dataChannel.OpenWithRetry(context.TODO(), retryParams, func(_ message.ClientMessage) {}, func(_ context.Context) (string, error) { return "", nil })
 	require.NoError(t, err)
 }
 

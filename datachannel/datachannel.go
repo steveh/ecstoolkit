@@ -119,7 +119,7 @@ func (c *DataChannel) SendMessage(input []byte, inputType int) error {
 }
 
 // OpenWithRetry opens the data channel and registers the message handler.
-func (c *DataChannel) OpenWithRetry(ctx context.Context, retryParams retry.RepeatableExponentialRetryer, messageHandler func(message.ClientMessage), resumeSessionHandler func(context.Context) error) error {
+func (c *DataChannel) OpenWithRetry(ctx context.Context, retryParams retry.RepeatableExponentialRetryer, messageHandler func(message.ClientMessage), getReconnectionToken GetReconnectionToken) error {
 	c.RegisterOutputMessageHandler(ctx, func() error { return nil }, func(_ []byte) {})
 
 	c.displayHandler = messageHandler
@@ -130,7 +130,7 @@ func (c *DataChannel) OpenWithRetry(ctx context.Context, retryParams retry.Repea
 		c.logger.Error("Retrying connection failed", "sessionID", c.sessionID, "error", err)
 
 		retryParams.CallableFunc = func() error {
-			return c.Reconnect()
+			return c.reconnect()
 		}
 
 		if err := retryParams.Call(); err != nil {
@@ -142,7 +142,22 @@ func (c *DataChannel) OpenWithRetry(ctx context.Context, retryParams retry.Repea
 		c.logger.Error("Trying to reconnect session", "sequenceNumber", c.streamDataSequenceNumber, "error", wsErr)
 
 		retryParams.CallableFunc = func() error {
-			return resumeSessionHandler(ctx)
+			token, err := getReconnectionToken(ctx)
+			if err != nil {
+				return fmt.Errorf("getting reconnection token: %w", err)
+			}
+
+			if token == "" {
+				return errors.New("session timed out")
+			}
+
+			c.wsChannel.SetChannelToken(token)
+
+			if err := c.reconnect(); err != nil {
+				return fmt.Errorf("reconnecting data channel: %w", err)
+			}
+
+			return nil
 		}
 
 		if err := retryParams.Call(); err != nil {
@@ -163,22 +178,6 @@ func (c *DataChannel) Close() error {
 	if err := c.wsChannel.Close(); err != nil {
 		return fmt.Errorf("closing data channel: %w", err)
 	}
-
-	return nil
-}
-
-// Reconnect calls ResumeSession API to reconnect datachannel when connection is lost.
-func (c *DataChannel) Reconnect() error {
-	var err error
-	if err = c.Close(); err != nil {
-		c.logger.Warn("Closing datachannel failed", "error", err)
-	}
-
-	if err = c.open(); err != nil {
-		return fmt.Errorf("reconnecting data channel %s: %w", c.wsChannel.GetStreamURL(), err)
-	}
-
-	c.logger.Debug("Successfully reconnected to data channel", "url", c.wsChannel.GetStreamURL())
 
 	return nil
 }
@@ -403,11 +402,6 @@ func (c *DataChannel) GetSessionProperties() any {
 	return c.sessionProperties
 }
 
-// SetChannelToken set channel token of the DataChannel.
-func (c *DataChannel) SetChannelToken(channelToken string) {
-	c.wsChannel.SetChannelToken(channelToken)
-}
-
 // RegisterOutputMessageHandler sets the message handler for the DataChannel.
 func (c *DataChannel) RegisterOutputMessageHandler(ctx context.Context, stopHandler Stop, onMessageHandler func(input []byte)) {
 	c.wsChannel.SetOnMessage(func(input []byte) {
@@ -466,6 +460,22 @@ func (c *DataChannel) EstablishSessionType(ctx context.Context, sessionType stri
 	}
 
 	return c.sessionType, nil
+}
+
+// reconnect calls ResumeSession API to reconnect datachannel when connection is lost.
+func (c *DataChannel) reconnect() error {
+	var err error
+	if err = c.Close(); err != nil {
+		c.logger.Warn("Closing datachannel failed", "error", err)
+	}
+
+	if err = c.open(); err != nil {
+		return fmt.Errorf("reconnecting data channel %s: %w", c.wsChannel.GetStreamURL(), err)
+	}
+
+	c.logger.Debug("Successfully reconnected to data channel", "url", c.wsChannel.GetStreamURL())
+
+	return nil
 }
 
 // setOnError sets the error handler for the DataChannel.
