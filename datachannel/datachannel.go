@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/rand"
 	"reflect"
 	"sync"
 	"time"
@@ -119,12 +120,19 @@ func (c *DataChannel) SendMessage(input []byte, inputType int) error {
 }
 
 // OpenWithRetry opens the data channel and registers the message handler.
-func (c *DataChannel) OpenWithRetry(ctx context.Context, retryParams retry.RepeatableExponentialRetryer, messageHandler func(message.ClientMessage), getReconnectionToken GetReconnectionToken) error {
+func (c *DataChannel) OpenWithRetry(ctx context.Context, messageHandler func(message.ClientMessage), getReconnectionToken GetReconnectionToken) error {
 	c.RegisterOutputMessageHandler(ctx, func() error { return nil }, func(_ []byte) {})
 
 	c.displayHandler = messageHandler
 
 	c.RegisterOutputStreamHandler(c.firstMessageHandler, false)
+
+	retryParams := retry.RepeatableExponentialRetryer{
+		GeometricRatio:      config.RetryBase,
+		InitialDelayInMilli: rand.Intn(config.DataChannelRetryInitialDelayMillis) + config.DataChannelRetryInitialDelayMillis, //nolint:gosec
+		MaxDelayInMilli:     config.DataChannelRetryMaxIntervalMillis,
+		MaxAttempts:         config.DataChannelNumMaxRetries,
+	}
 
 	if err := c.open(); err != nil {
 		c.logger.Error("Retrying connection failed", "sessionID", c.sessionID, "error", err)

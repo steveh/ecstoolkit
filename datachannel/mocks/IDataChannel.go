@@ -10,8 +10,6 @@ import (
 
 	mock "github.com/stretchr/testify/mock"
 
-	retry "github.com/steveh/ecstoolkit/retry"
-
 	time "time"
 )
 
@@ -269,17 +267,17 @@ func (_c *IDataChannel_GetTargetID_Call) RunAndReturn(run func() string) *IDataC
 	return _c
 }
 
-// OpenWithRetry provides a mock function with given fields: ctx, retryParams, messageHandler, getReconnectionToken
-func (_m *IDataChannel) OpenWithRetry(ctx context.Context, retryParams retry.RepeatableExponentialRetryer, messageHandler func(message.ClientMessage), getReconnectionToken datachannel.GetReconnectionToken) error {
-	ret := _m.Called(ctx, retryParams, messageHandler, getReconnectionToken)
+// OpenWithRetry provides a mock function with given fields: ctx, messageHandler, getReconnectionToken
+func (_m *IDataChannel) OpenWithRetry(ctx context.Context, messageHandler func(message.ClientMessage), getReconnectionToken datachannel.GetReconnectionToken) error {
+	ret := _m.Called(ctx, messageHandler, getReconnectionToken)
 
 	if len(ret) == 0 {
 		panic("no return value specified for OpenWithRetry")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, retry.RepeatableExponentialRetryer, func(message.ClientMessage), datachannel.GetReconnectionToken) error); ok {
-		r0 = rf(ctx, retryParams, messageHandler, getReconnectionToken)
+	if rf, ok := ret.Get(0).(func(context.Context, func(message.ClientMessage), datachannel.GetReconnectionToken) error); ok {
+		r0 = rf(ctx, messageHandler, getReconnectionToken)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -294,16 +292,15 @@ type IDataChannel_OpenWithRetry_Call struct {
 
 // OpenWithRetry is a helper method to define mock.On call
 //   - ctx context.Context
-//   - retryParams retry.RepeatableExponentialRetryer
 //   - messageHandler func(message.ClientMessage)
 //   - getReconnectionToken datachannel.GetReconnectionToken
-func (_e *IDataChannel_Expecter) OpenWithRetry(ctx interface{}, retryParams interface{}, messageHandler interface{}, getReconnectionToken interface{}) *IDataChannel_OpenWithRetry_Call {
-	return &IDataChannel_OpenWithRetry_Call{Call: _e.mock.On("OpenWithRetry", ctx, retryParams, messageHandler, getReconnectionToken)}
+func (_e *IDataChannel_Expecter) OpenWithRetry(ctx interface{}, messageHandler interface{}, getReconnectionToken interface{}) *IDataChannel_OpenWithRetry_Call {
+	return &IDataChannel_OpenWithRetry_Call{Call: _e.mock.On("OpenWithRetry", ctx, messageHandler, getReconnectionToken)}
 }
 
-func (_c *IDataChannel_OpenWithRetry_Call) Run(run func(ctx context.Context, retryParams retry.RepeatableExponentialRetryer, messageHandler func(message.ClientMessage), getReconnectionToken datachannel.GetReconnectionToken)) *IDataChannel_OpenWithRetry_Call {
+func (_c *IDataChannel_OpenWithRetry_Call) Run(run func(ctx context.Context, messageHandler func(message.ClientMessage), getReconnectionToken datachannel.GetReconnectionToken)) *IDataChannel_OpenWithRetry_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(retry.RepeatableExponentialRetryer), args[2].(func(message.ClientMessage)), args[3].(datachannel.GetReconnectionToken))
+		run(args[0].(context.Context), args[1].(func(message.ClientMessage)), args[2].(datachannel.GetReconnectionToken))
 	})
 	return _c
 }
@@ -313,7 +310,7 @@ func (_c *IDataChannel_OpenWithRetry_Call) Return(_a0 error) *IDataChannel_OpenW
 	return _c
 }
 
-func (_c *IDataChannel_OpenWithRetry_Call) RunAndReturn(run func(context.Context, retry.RepeatableExponentialRetryer, func(message.ClientMessage), datachannel.GetReconnectionToken) error) *IDataChannel_OpenWithRetry_Call {
+func (_c *IDataChannel_OpenWithRetry_Call) RunAndReturn(run func(context.Context, func(message.ClientMessage), datachannel.GetReconnectionToken) error) *IDataChannel_OpenWithRetry_Call {
 	_c.Call.Return(run)
 	return _c
 }

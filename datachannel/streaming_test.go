@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"math/rand"
 	"reflect"
 	"strconv"
 	"sync"
@@ -34,7 +33,6 @@ import (
 	"github.com/steveh/ecstoolkit/encryption/mocks"
 	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
-	"github.com/steveh/ecstoolkit/retry"
 	"github.com/steveh/ecstoolkit/version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -670,14 +668,7 @@ func TestOpenWithRetryWithError(t *testing.T) {
 	mockWsChannel.On("SetOnMessage", mock.Anything)
 	mockWsChannel.On("SetOnError", mock.Anything)
 
-	retryParams := retry.RepeatableExponentialRetryer{
-		GeometricRatio:      config.RetryBase,
-		InitialDelayInMilli: rand.Intn(config.DataChannelRetryInitialDelayMillis) + config.DataChannelRetryInitialDelayMillis, //nolint:gosec
-		MaxDelayInMilli:     config.DataChannelRetryMaxIntervalMillis,
-		MaxAttempts:         config.DataChannelNumMaxRetries,
-	}
-
-	err = dataChannel.OpenWithRetry(context.TODO(), retryParams, func(_ message.ClientMessage) {}, func(_ context.Context) (string, error) { return "", nil })
+	err = dataChannel.OpenWithRetry(context.TODO(), func(_ message.ClientMessage) {}, func(_ context.Context) (string, error) { return "", nil })
 	require.NoError(t, err)
 }
 

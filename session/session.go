@@ -17,16 +17,13 @@ package session
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
-	"github.com/steveh/ecstoolkit/config"
 	"github.com/steveh/ecstoolkit/datachannel"
 	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
-	"github.com/steveh/ecstoolkit/retry"
 	"github.com/steveh/ecstoolkit/session/sessionutil"
 )
 
@@ -56,14 +53,7 @@ func NewSession(ssmClient *ssm.Client, dataChannel datachannel.IDataChannel, ses
 
 // OpenDataChannel initializes datachannel.
 func (s *Session) OpenDataChannel(ctx context.Context) error {
-	retryParams := retry.RepeatableExponentialRetryer{
-		GeometricRatio:      config.RetryBase,
-		InitialDelayInMilli: rand.Intn(config.DataChannelRetryInitialDelayMillis) + config.DataChannelRetryInitialDelayMillis, //nolint:gosec
-		MaxDelayInMilli:     config.DataChannelRetryMaxIntervalMillis,
-		MaxAttempts:         config.DataChannelNumMaxRetries,
-	}
-
-	if err := s.dataChannel.OpenWithRetry(ctx, retryParams, s.DisplayMessage, s.getResumeSessionParams); err != nil {
+	if err := s.dataChannel.OpenWithRetry(ctx, s.DisplayMessage, s.getResumeSessionParams); err != nil {
 		return fmt.Errorf("opening data channel: %w", err)
 	}
 

@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/steveh/ecstoolkit/message"
-	"github.com/steveh/ecstoolkit/retry"
 )
 
 // RoundTripTiming represents the interface for calculating round trip time.
@@ -28,5 +27,5 @@ type IDataChannel interface {
 	GetAgentVersion() string
 	GetTargetID() string
 	EstablishSessionType(ctx context.Context, sessionType string, sleepInterval time.Duration, timeoutHandler func(ctx context.Context) error) (string, error)
-	OpenWithRetry(ctx context.Context, retryParams retry.RepeatableExponentialRetryer, messageHandler func(message.ClientMessage), getReconnectionToken GetReconnectionToken) error
+	OpenWithRetry(ctx context.Context, messageHandler func(message.ClientMessage), getReconnectionToken GetReconnectionToken) error
 }
