@@ -22,6 +22,8 @@ import (
 )
 
 func TestCompareWhenVersionsAreSame(t *testing.T) {
+	t.Parallel()
+
 	thisVersion, err := NewVersion("2.3.617.9")
 	require.NoError(t, err)
 
@@ -34,6 +36,8 @@ func TestCompareWhenVersionsAreSame(t *testing.T) {
 }
 
 func TestCompareWhenThisVersionIsGreaterThanOtherVersion(t *testing.T) {
+	t.Parallel()
+
 	thisVersion, err := NewVersion("2.3.617.9")
 	require.NoError(t, err)
 
@@ -46,6 +50,8 @@ func TestCompareWhenThisVersionIsGreaterThanOtherVersion(t *testing.T) {
 }
 
 func TestCompareWhenThisVersionIsLesserThanOtherVersion(t *testing.T) {
+	t.Parallel()
+
 	thisVersion, err := NewVersion("2.3.617.9")
 	require.NoError(t, err)
 
@@ -58,6 +64,8 @@ func TestCompareWhenThisVersionIsLesserThanOtherVersion(t *testing.T) {
 }
 
 func TestCompareWhenVersionsLengthMismatch(t *testing.T) {
+	t.Parallel()
+
 	thisVersion, err := NewVersion("2.3.56.0")
 	require.NoError(t, err)
 
@@ -69,12 +77,16 @@ func TestCompareWhenVersionsLengthMismatch(t *testing.T) {
 }
 
 func TestNewVersion(t *testing.T) {
+	t.Parallel()
+
 	version, err := NewVersion("2.3.525.0")
 	require.NoError(t, err)
 	assert.Equal(t, []string{"2", "3", "525", "0"}, version.version)
 }
 
 func TestNewVersionWhenGivenVersionIsEmptyString(t *testing.T) {
+	t.Parallel()
+
 	_, err := NewVersion("")
 	require.Error(t, err)
 }

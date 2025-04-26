@@ -76,7 +76,7 @@ func GetULong(byteArray []byte, offset int) (uint64, error) {
 	}
 
 	if temp < 0 {
-		return 0, fmt.Errorf("cannot convert negative value %d to ulong", temp)
+		return 0, fmt.Errorf("%w: cannot convert negative value %d to ulong", ErrNegative, temp)
 	}
 
 	return uint64(temp), err

@@ -24,11 +24,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// ErrCallableFunc is a custom error for the callable function.
+var ErrCallableFunc = errors.New("error occurred in callable function")
+
 var callableFunc = func() error {
-	return errors.New("Error occurred in callable function")
+	return ErrCallableFunc
 }
 
 func TestRepeatableExponentialRetryerRetriesForGivenNumberOfMaxRetries(t *testing.T) {
+	t.Parallel()
+
 	retryer := retry.RepeatableExponentialRetryer{
 		callableFunc,
 		config.RetryBase,

@@ -30,6 +30,8 @@ type Comparison struct {
 var mockLog = log.NewMockLog()
 
 func TestDoesAgentSupportTCPMultiplexing(t *testing.T) {
+	t.Parallel()
+
 	// Test exact version of feature; TCPMultiplexingSupported after 3.0.196.0
 	assert.False(t, DoesAgentSupportTCPMultiplexing(mockLog, config.TCPMultiplexingSupportedAfterThisAgentVersion))
 
@@ -57,6 +59,8 @@ func TestDoesAgentSupportTCPMultiplexing(t *testing.T) {
 }
 
 func TestDoesAgentSupportTerminateSessionFlag(t *testing.T) {
+	t.Parallel()
+
 	// Test exact version of feature; TerminateSessionFlag supported after 2.3.722.0
 	assert.False(t, DoesAgentSupportTerminateSessionFlag(mockLog, config.TerminateSessionFlagSupportedAfterThisAgentVersion))
 
@@ -84,6 +88,8 @@ func TestDoesAgentSupportTerminateSessionFlag(t *testing.T) {
 }
 
 func TestIsAgentVersionGreaterThanSupportedVersionWithNormalInputs(t *testing.T) {
+	t.Parallel()
+
 	const (
 		defaultSupportedVersion = "3.0.0.0"
 	)
@@ -113,18 +119,26 @@ func TestIsAgentVersionGreaterThanSupportedVersionWithNormalInputs(t *testing.T)
 }
 
 func TestIsAgentVersionGreaterThanSupportedVersionEdgeCases(t *testing.T) {
+	t.Parallel()
+
 	// Test non-numeric strings
 	t.Run("Non-numeric strings", func(t *testing.T) {
+		t.Parallel()
+
 		errorLog := log.NewMockLog()
 		notNumberCase := Comparison{"randomString", "randomString"}
 		assert.False(t, isAgentVersionGreaterThanSupportedVersion(errorLog, notNumberCase.agentVersion, notNumberCase.supportedVersion))
 	})
 	t.Run("Uneven-length strings", func(t *testing.T) {
+		t.Parallel()
+
 		errorLog := log.NewMockLog()
 		unevenLengthCase := Comparison{"1.4.1.2.4.1", "3.0.0.0"}
 		assert.False(t, isAgentVersionGreaterThanSupportedVersion(errorLog, unevenLengthCase.agentVersion, unevenLengthCase.supportedVersion))
 	})
 	t.Run("Invalid Version Numbers", func(t *testing.T) {
+		t.Parallel()
+
 		errorLog := log.NewMockLog()
 		invalidVersionNumberCases := []Comparison{
 			{"", "3.0.0.0"},
@@ -139,21 +153,31 @@ func TestIsAgentVersionGreaterThanSupportedVersionEdgeCases(t *testing.T) {
 }
 
 func TestDoesAgentSupportTerminateSessionFlagForSupportedScenario(t *testing.T) {
+	t.Parallel()
+
 	assert.True(t, DoesAgentSupportTerminateSessionFlag(mockLog, "2.3.750.0"))
 }
 
 func TestDoesAgentSupportTerminateSessionFlagForNotSupportedScenario(t *testing.T) {
+	t.Parallel()
+
 	assert.False(t, DoesAgentSupportTerminateSessionFlag(mockLog, "2.3.614.0"))
 }
 
 func TestDoesAgentSupportTerminateSessionFlagWhenAgentVersionIsEqualSupportedAfterVersion(t *testing.T) {
+	t.Parallel()
+
 	assert.False(t, DoesAgentSupportTerminateSessionFlag(mockLog, "2.3.722.0"))
 }
 
 func TestDoesAgentSupportDisableSmuxKeepAliveForNotSupportedScenario(t *testing.T) {
+	t.Parallel()
+
 	assert.False(t, DoesAgentSupportDisableSmuxKeepAlive(mockLog, "3.1.1476.0"))
 }
 
 func TestDoesAgentSupportDisableSmuxKeepAliveForSupportedScenario(t *testing.T) {
+	t.Parallel()
+
 	assert.True(t, DoesAgentSupportDisableSmuxKeepAlive(mockLog, "3.1.1600.0"))
 }

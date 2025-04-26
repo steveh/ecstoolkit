@@ -3,6 +3,7 @@ package executor
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -19,6 +20,14 @@ import (
 	"github.com/steveh/ecstoolkit/session"
 	"github.com/steveh/ecstoolkit/session/portsession"
 	"github.com/steveh/ecstoolkit/session/shellsession"
+)
+
+var (
+	// ErrInvalidARN indicates that the provided ARN is invalid.
+	ErrInvalidARN = errors.New("invalid ARN")
+
+	// ErrInvalidSessionType indicates that the provided session type is invalid.
+	ErrInvalidSessionType = errors.New("invalid session type")
 )
 
 // ExecuteSessionOptions contains the configuration options for executing a session.
@@ -79,13 +88,13 @@ func (e *Executor) ExecuteSession(ctx context.Context, options *ExecuteSessionOp
 func (e *Executor) parseTaskID(taskARN string) (string, error) {
 	parsedARN, err := arn.Parse(taskARN)
 	if err != nil {
-		return "", fmt.Errorf("invalid ARN: %w", err)
+		return "", fmt.Errorf("%w: %w", ErrInvalidARN, err)
 	}
 
 	// if we could guarantee the task ARN was in the newer long format we could extract the cluster name from there
 	taskResourceParts := strings.Split(parsedARN.Resource, "/")
 	if len(taskResourceParts) < 3 { //nolint:mnd
-		return "", fmt.Errorf("invalid resource ID: %s", parsedARN.Resource)
+		return "", fmt.Errorf("%w: invalid resource ID: %s", ErrInvalidARN, parsedARN.Resource)
 	}
 
 	taskID := taskResourceParts[2]
@@ -164,7 +173,7 @@ func (e *Executor) initSession(ctx context.Context, sess *session.Session) error
 	case config.PortPluginName:
 		sessionSubType, err = portsession.NewPortSession(ctx, e.logger, sess)
 	default:
-		return fmt.Errorf("unsupported session type: %s", sessionType)
+		return fmt.Errorf("%w: %s", ErrInvalidSessionType, sessionType)
 	}
 
 	if err != nil {

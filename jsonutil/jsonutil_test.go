@@ -26,6 +26,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// errMock is a mock error for testing.
+var errMock = errors.New("mock error")
+
 func ExampleMarshal() {
 	type ColorGroup struct {
 		ID     int
@@ -115,6 +118,8 @@ func ExampleIndent() {
 }
 
 func TestIndent(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		name  string
 		input string
@@ -140,6 +145,8 @@ func TestIndent(t *testing.T) {
 }
 
 func TestMarshal(t *testing.T) {
+	t.Parallel()
+
 	group := struct {
 		ID     int
 		Name   string
@@ -164,12 +171,14 @@ func TestMarshal(t *testing.T) {
 }
 
 func TestUnmarshalFile(t *testing.T) {
+	t.Parallel()
+
 	filename := "rumpelstilzchen"
 
 	var contents any
 
 	// missing file
-	ioUtil = ioUtilStub{err: errors.New("some error")}
+	ioUtil = ioUtilStub{err: errMock}
 	err1 := UnmarshalFile(filename, &contents)
 	require.Error(t, err1, "expected readfile error")
 
@@ -185,6 +194,8 @@ func TestUnmarshalFile(t *testing.T) {
 }
 
 func TestRemarshal(t *testing.T) {
+	t.Parallel()
+
 	prop := make(map[string]string)
 	prop["RunCommand"] = "echo"
 	prop2 := make(map[string]string)
@@ -206,6 +217,8 @@ func TestRemarshal(t *testing.T) {
 }
 
 func TestRemarshalInvalidInput(t *testing.T) {
+	t.Parallel()
+
 	// Using channel as unsupported json type
 	// Expect an error and no change to input object
 	badInput := make(chan bool)
@@ -226,6 +239,8 @@ func TestRemarshalInvalidInput(t *testing.T) {
 }
 
 func TestUnmarshal(t *testing.T) {
+	t.Parallel()
+
 	content := `{"parameter": "1"}`
 
 	type TestStruct struct {
@@ -239,6 +254,8 @@ func TestUnmarshal(t *testing.T) {
 }
 
 func TestUnmarshalExtraInput(t *testing.T) {
+	t.Parallel()
+
 	content := `{"parameter": "1", "name": "Richard"}`
 
 	type TestStruct struct {
@@ -252,6 +269,8 @@ func TestUnmarshalExtraInput(t *testing.T) {
 }
 
 func TestUnmarshalInvalidInput(t *testing.T) {
+	t.Parallel()
+
 	content := "Hello"
 
 	var dest any
@@ -260,6 +279,8 @@ func TestUnmarshalInvalidInput(t *testing.T) {
 }
 
 func TestMarshalIndent(t *testing.T) {
+	t.Parallel()
+
 	group := struct {
 		ID     int
 		Name   string
@@ -286,6 +307,8 @@ func TestMarshalIndent(t *testing.T) {
 }
 
 func TestMarshalIndentErrorsOnInvalidInput(t *testing.T) {
+	t.Parallel()
+
 	// Using channel as invalid input
 	// Breaks the same for any json-invalid types
 	_, err := MarshalIndent(make(chan int))

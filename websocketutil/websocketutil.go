@@ -22,6 +22,9 @@ import (
 	"github.com/steveh/ecstoolkit/log"
 )
 
+// ErrNil is returned when the websocket connection is nil.
+var ErrNil = errors.New("websocket is nil")
+
 // IWebsocketUtil is the interface for the websocketutil.
 type IWebsocketUtil interface {
 	OpenConnection(url string) (*websocket.Conn, error)
@@ -72,7 +75,7 @@ func (u *WebsocketUtil) OpenConnection(url string) (*websocket.Conn, error) {
 // CloseConnection closes a websocket connection given the Conn object as input.
 func (u *WebsocketUtil) CloseConnection(ws *websocket.Conn) error {
 	if ws == nil {
-		return errors.New("websocket conn object is nil")
+		return ErrNil
 	}
 
 	u.log.Debug("Closing websocket connection", "remoteAddr", ws.RemoteAddr().String())

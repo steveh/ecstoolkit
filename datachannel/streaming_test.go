@@ -192,7 +192,7 @@ func TestProcessAcknowledgedMessage(t *testing.T) {
 
 	mockWsChannel := &communicatorMocks.IWebSocketChannel{}
 
-	_, streamingMessages := getClientAndStreamingMessageList(7)
+	_, streamingMessages := getClientAndStreamingMessageList()
 
 	dataChannel := getDataChannel(t, mockWsChannel)
 	dataChannel.addDataToOutgoingMessageBuffer(streamingMessages[0])
@@ -237,7 +237,7 @@ func TestAddDataToOutgoingMessageBuffer(t *testing.T) {
 	dataChannel := getDataChannel(t, mockWsChannel)
 	dataChannel.outgoingMessageBuffer.Capacity = 2
 
-	_, streamingMessages := getClientAndStreamingMessageList(7)
+	_, streamingMessages := getClientAndStreamingMessageList()
 
 	dataChannel.addDataToOutgoingMessageBuffer(streamingMessages[0])
 	assert.Equal(t, 1, dataChannel.outgoingMessageBuffer.Messages.Len())
@@ -278,7 +278,7 @@ func TestAddDataToIncomingMessageBuffer(t *testing.T) {
 	dataChannel := getDataChannel(t, mockWsChannel)
 	dataChannel.incomingMessageBuffer.Capacity = 2
 
-	_, streamingMessages := getClientAndStreamingMessageList(7)
+	_, streamingMessages := getClientAndStreamingMessageList()
 
 	dataChannel.addDataToIncomingMessageBuffer(streamingMessages[0])
 	assert.Len(t, dataChannel.incomingMessageBuffer.Messages, 1)
@@ -307,7 +307,7 @@ func TestRemoveDataFromOutgoingMessageBuffer(t *testing.T) {
 
 	mockWsChannel := &communicatorMocks.IWebSocketChannel{}
 
-	_, streamingMessages := getClientAndStreamingMessageList(7)
+	_, streamingMessages := getClientAndStreamingMessageList()
 
 	dataChannel := getDataChannel(t, mockWsChannel)
 	for i := range 3 {
@@ -323,7 +323,7 @@ func TestRemoveDataFromIncomingMessageBuffer(t *testing.T) {
 
 	mockWsChannel := &communicatorMocks.IWebSocketChannel{}
 
-	_, streamingMessages := getClientAndStreamingMessageList(7)
+	_, streamingMessages := getClientAndStreamingMessageList()
 
 	dataChannel := getDataChannel(t, mockWsChannel)
 	for i := range 3 {
@@ -341,7 +341,7 @@ func TestResendStreamDataMessageScheduler(t *testing.T) {
 
 	dataChannel := getDataChannel(t, mockWsChannel)
 
-	_, streamingMessages := getClientAndStreamingMessageList(7)
+	_, streamingMessages := getClientAndStreamingMessageList()
 
 	for i := range 3 {
 		dataChannel.addDataToOutgoingMessageBuffer(streamingMessages[i])
@@ -392,7 +392,7 @@ func TestDataChannelIncomingMessageHandlerForExpectedInputStreamDataMessage(t *t
 		return nil
 	}
 
-	serializedClientMessages, streamingMessages := getClientAndStreamingMessageList(7)
+	serializedClientMessages, streamingMessages := getClientAndStreamingMessageList()
 
 	dataChannel.RegisterOutputStreamHandler(handler, true)
 	// First scenario is to test when incoming message sequence number matches with expected sequence number
@@ -428,7 +428,7 @@ func TestDataChannelIncomingMessageHandlerForUnexpectedInputStreamDataMessage(t 
 	dataChannel := getDataChannel(t, mockWsChannel)
 	dataChannel.incomingMessageBuffer.Capacity = 2
 
-	serializedClientMessages, _ := getClientAndStreamingMessageList(7)
+	serializedClientMessages, _ := getClientAndStreamingMessageList()
 
 	SendAcknowledgeMessageCallCount := 0
 	sendAcknowledgeMessageCall = func(_ *DataChannel, _ message.ClientMessage) error {
@@ -470,7 +470,7 @@ func TestDataChannelIncomingMessageHandlerForAcknowledgeMessage(t *testing.T) {
 
 	dataChannel := getDataChannel(t, mockWsChannel)
 
-	_, streamingMessages := getClientAndStreamingMessageList(7)
+	_, streamingMessages := getClientAndStreamingMessageList()
 
 	var stopHandler StopHandler = func() error {
 		return nil
@@ -519,10 +519,10 @@ func TestDataChannelIncomingMessageHandlerForPausePublicationessage(t *testing.T
 
 	dataChannel := getDataChannel(t, mockWsChannel)
 
-	serializedClientMessages, streamingMessages := getClientAndStreamingMessageList(7)
+	serializedClientMessages, _ := getClientAndStreamingMessageList()
 
 	size := 5
-	streamingMessages = make([]StreamingMessage, size)
+	streamingMessages := make([]StreamingMessage, size)
 	serializedClientMessage := make([][]byte, size)
 
 	for i := range size {
@@ -854,7 +854,9 @@ func getClientMessage(sequenceNumber int64, messageType string, payloadType uint
 	return clientMessage
 }
 
-func getClientAndStreamingMessageList(size int) ([][]byte, []StreamingMessage) {
+func getClientAndStreamingMessageList() ([][]byte, []StreamingMessage) {
+	const size = 7
+
 	var payload string
 
 	streamingMessages := make([]StreamingMessage, size)

@@ -50,6 +50,8 @@ func handlerToBeTested(w http.ResponseWriter, req *http.Request) {
 }
 
 func TestWebsocketUtilOpenCloseConnection(t *testing.T) {
+	t.Parallel()
+
 	srv := httptest.NewServer(http.HandlerFunc(handlerToBeTested))
 	u, _ := url.Parse(srv.URL)
 	u.Scheme = "ws"
@@ -65,6 +67,8 @@ func TestWebsocketUtilOpenCloseConnection(t *testing.T) {
 }
 
 func TestWebsocketUtilOpenConnectionInvalidUrl(t *testing.T) {
+	t.Parallel()
+
 	srv := httptest.NewServer(http.HandlerFunc(handlerToBeTested))
 	u, _ := url.Parse(srv.URL)
 	u.Scheme = "ws"
@@ -80,6 +84,8 @@ func TestWebsocketUtilOpenConnectionInvalidUrl(t *testing.T) {
 }
 
 func TestSendMessage(t *testing.T) {
+	t.Parallel()
+
 	srv := httptest.NewServer(http.HandlerFunc(handlerToBeTested))
 	u, _ := url.Parse(srv.URL)
 	u.Scheme = "ws"

@@ -125,6 +125,8 @@ type TestParams struct {
 }
 
 func TestPutString(t *testing.T) {
+	t.Parallel()
+
 	t.Logf("Starting test suite: %s", t.Name())
 
 	testCases := []TestParams{
@@ -168,6 +170,8 @@ func TestPutString(t *testing.T) {
 	for _, tc := range testCases {
 		testString := "Running test case: " + tc.name
 		t.Run(testString, func(t *testing.T) {
+			t.Parallel()
+
 			// Asserting type as string for input
 			strInput, ok := tc.input.(string)
 			assert.True(t, ok, "Type assertion failed in %s:%s", t.Name(), tc.name)
@@ -195,6 +199,8 @@ func TestPutString(t *testing.T) {
 }
 
 func TestPutBytes(t *testing.T) {
+	t.Parallel()
+
 	t.Logf("Starting test suite: %s", t.Name())
 
 	testCases := []TestParams{
@@ -238,6 +244,8 @@ func TestPutBytes(t *testing.T) {
 	for _, tc := range testCases {
 		testString := "Running test case: " + tc.name
 		t.Run(testString, func(t *testing.T) {
+			t.Parallel()
+
 			// Assert type as byte array
 			byteInput, ok := tc.input.([]byte)
 			assert.True(t, ok, "Type assertion failed in %s:%s", t.Name(), tc.name)
@@ -265,6 +273,8 @@ func TestPutBytes(t *testing.T) {
 }
 
 func TestLongToBytes(t *testing.T) {
+	t.Parallel()
+
 	t.Logf("Starting test suite: %s", t.Name())
 
 	testcases := []struct {
@@ -284,6 +294,8 @@ func TestLongToBytes(t *testing.T) {
 	for _, tc := range testcases {
 		testString := "Running test case: " + tc.name
 		t.Run(testString, func(t *testing.T) {
+			t.Parallel()
+
 			bytes, err := message.LongToBytes(tc.input)
 
 			switch tc.expectation {
@@ -299,6 +311,8 @@ func TestLongToBytes(t *testing.T) {
 }
 
 func TestPutLong(t *testing.T) {
+	t.Parallel()
+
 	t.Logf("Starting test suite: %s", t.Name())
 	// OffsetEnd is not used in PutLong: Long is always 8-bytes
 	testCases := []TestParams{
@@ -360,6 +374,8 @@ func TestPutLong(t *testing.T) {
 	for _, tc := range testCases {
 		testString := "Running test case: " + tc.name
 		t.Run(testString, func(t *testing.T) {
+			t.Parallel()
+
 			// Assert type as long int
 			longInput, ok := tc.input.(int)
 			assert.True(t, reflect.DeepEqual(tc.input, longInput), "Cast went wrong. Expected: %v, Got: %v", tc.input, longInput)
@@ -387,6 +403,8 @@ func TestPutLong(t *testing.T) {
 }
 
 func TestPutInteger(t *testing.T) {
+	t.Parallel()
+
 	t.Logf("Starting test suite: %s", t.Name())
 	// OffsetEnd is not used in PutInt: Int is always 4-bytes
 	testCases := []TestParams{
@@ -448,6 +466,8 @@ func TestPutInteger(t *testing.T) {
 	for _, tc := range testCases {
 		testString := "Running test case: " + tc.name
 		t.Run(testString, func(t *testing.T) {
+			t.Parallel()
+
 			// Assert type as long int
 			intInput, ok := tc.input.(int)
 			assert.True(t, reflect.DeepEqual(tc.input, intInput), "Cast went wrong. Expected: %v, Got: %v", tc.input, intInput)
@@ -476,6 +496,8 @@ func TestPutInteger(t *testing.T) {
 }
 
 func TestGetString(t *testing.T) {
+	t.Parallel()
+
 	t.Logf("Starting test suite: %s", t.Name())
 	// For GetString, the test parameter "offsetEnd" is used to indicate the length of the string to be read.
 	testCases := []TestParams{
@@ -519,6 +541,8 @@ func TestGetString(t *testing.T) {
 	for _, tc := range testCases {
 		testString := "Running test case: " + tc.name
 		t.Run(testString, func(t *testing.T) {
+			t.Parallel()
+
 			strOut, err := message.GetString(
 				tc.byteArray,
 				tc.offsetStart,
@@ -543,6 +567,8 @@ func TestGetString(t *testing.T) {
 }
 
 func TestGetBytes(t *testing.T) {
+	t.Parallel()
+
 	t.Logf("Starting test suite: %s", t.Name())
 	// For GetBytes, the test parameter "offsetEnd" is used to indicate the length of the bytes to be read.
 	testCases := []TestParams{
@@ -586,6 +612,8 @@ func TestGetBytes(t *testing.T) {
 	for _, tc := range testCases {
 		testString := "Running test case: " + tc.name
 		t.Run(testString, func(t *testing.T) {
+			t.Parallel()
+
 			byteOut, err := message.GetBytes(
 				tc.byteArray,
 				tc.offsetStart,
@@ -608,6 +636,8 @@ func TestGetBytes(t *testing.T) {
 }
 
 func TestGetLong(t *testing.T) {
+	t.Parallel()
+
 	t.Logf("Starting test suite: %s", t.Name())
 	// For GetLong, effsetEnd is not used as a test parameter.
 	testCases := []TestParams{
@@ -669,6 +699,8 @@ func TestGetLong(t *testing.T) {
 	for _, tc := range testCases {
 		testString := "Running test case: " + tc.name
 		t.Run(testString, func(t *testing.T) {
+			t.Parallel()
+
 			longOut, err := message.GetLong(
 				tc.byteArray,
 				tc.offsetStart)
@@ -696,6 +728,8 @@ func TestGetLong(t *testing.T) {
 }
 
 func TestClientMessage_Validate(t *testing.T) {
+	t.Parallel()
+
 	u, err := uuid.Parse(messageID)
 	require.NoError(t, err)
 
@@ -735,6 +769,8 @@ func TestClientMessage_Validate(t *testing.T) {
 }
 
 func TestClientMessage_ValidateStartPublicationMessage(t *testing.T) {
+	t.Parallel()
+
 	u, err := uuid.Parse(messageID)
 	require.NoError(t, err)
 
@@ -754,6 +790,8 @@ func TestClientMessage_ValidateStartPublicationMessage(t *testing.T) {
 }
 
 func TestClientMessage_DeserializeDataStreamAcknowledgeContent(t *testing.T) {
+	t.Parallel()
+
 	t.Logf("Starting test: %s", t.Name())
 	// ClientMessage is initialized with improperly formatted json data
 	testMessage := message.ClientMessage{
@@ -777,6 +815,8 @@ func TestClientMessage_DeserializeDataStreamAcknowledgeContent(t *testing.T) {
 }
 
 func TestClientMessage_DeserializeChannelClosedMessage(t *testing.T) {
+	t.Parallel()
+
 	t.Logf("Starting test: %s", t.Name())
 	// ClientMessage is initialized with improperly formatted json data
 	testMessage := message.ClientMessage{
@@ -804,6 +844,8 @@ func TestClientMessage_DeserializeChannelClosedMessage(t *testing.T) {
 }
 
 func TestClientMessage_DeserializeHandshakeRequest(t *testing.T) {
+	t.Parallel()
+
 	t.Logf("Starting test: %s", t.Name())
 	// ClientMessage is initialized with improperly formatted json data
 	testMessage := message.ClientMessage{
@@ -828,6 +870,8 @@ func TestClientMessage_DeserializeHandshakeRequest(t *testing.T) {
 }
 
 func TestClientMessage_DeserializeHandshakeComplete(t *testing.T) {
+	t.Parallel()
+
 	t.Logf("Starting test: %s", t.Name())
 	// ClientMessage is initialized with improperly formatted json data
 	testMessage := message.ClientMessage{
@@ -851,6 +895,8 @@ func TestClientMessage_DeserializeHandshakeComplete(t *testing.T) {
 }
 
 func TestPutUuid(t *testing.T) {
+	t.Parallel()
+
 	t.Logf("Starting test suite: %s", t.Name())
 	// OffsetEnd is not used for putUUID as uuid are always 128-bit
 	testCases := []TestParams{
@@ -867,6 +913,8 @@ func TestPutUuid(t *testing.T) {
 	for _, tc := range testCases {
 		testString := "Running test case: " + tc.name
 		t.Run(testString, func(t *testing.T) {
+			t.Parallel()
+
 			// Asserting type as string for input
 			strInput, ok := tc.input.(string)
 			assert.True(t, ok, "Type assertion failed in %s:%s", t.Name(), tc.name)
@@ -906,6 +954,8 @@ func TestPutUuid(t *testing.T) {
 }
 
 func TestPutGetString(t *testing.T) {
+	t.Parallel()
+
 	input := []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x01}
 	err1 := message.PutString(input, 1, 8, "hello")
 	require.NoError(t, err1)
@@ -916,6 +966,8 @@ func TestPutGetString(t *testing.T) {
 }
 
 func TestPutGetInteger(t *testing.T) {
+	t.Parallel()
+
 	input := []byte{0x00, 0x00, 0x00, 0x00, 0xFF, 0x00}
 	err := message.PutInteger(input, 1, 256)
 	require.NoError(t, err)
@@ -938,6 +990,8 @@ func TestPutGetInteger(t *testing.T) {
 }
 
 func TestPutGetLong(t *testing.T) {
+	t.Parallel()
+
 	input := []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00}
 	err := message.PutLong(input, 1, 4294967296) // 2 to the 32 + 1
 	require.NoError(t, err)
@@ -956,6 +1010,8 @@ func TestPutGetLong(t *testing.T) {
 }
 
 func TestGetBytesFromInteger(t *testing.T) {
+	t.Parallel()
+
 	input := int32(256)
 	result, err := message.IntegerToBytes(input)
 	require.NoError(t, err)
@@ -966,6 +1022,8 @@ func TestGetBytesFromInteger(t *testing.T) {
 }
 
 func TestSerializeAndDeserializeClientMessage(t *testing.T) {
+	t.Parallel()
+
 	u, err := uuid.Parse(messageID)
 	require.NoError(t, err)
 
@@ -1028,12 +1086,16 @@ func TestSerializeAndDeserializeClientMessage(t *testing.T) {
 }
 
 func TestSerializeMessagePayloadNegative(t *testing.T) {
+	t.Parallel()
+
 	functionEx := func() {}
 	_, err := message.SerializeClientMessagePayload(functionEx)
 	require.Error(t, err)
 }
 
 func TestSerializeAndDeserializeClientMessageWithAcknowledgeContent(t *testing.T) {
+	t.Parallel()
+
 	acknowledgeContent := message.AcknowledgeContent{
 		MessageType:         messageType,
 		MessageID:           messageID,
@@ -1055,6 +1117,8 @@ func TestSerializeAndDeserializeClientMessageWithAcknowledgeContent(t *testing.T
 }
 
 func TestDeserializeAgentMessageWithChannelClosed(t *testing.T) {
+	t.Parallel()
+
 	channelClosed := message.ChannelClosed{
 		MessageType:   message.ChannelClosedMessage,
 		MessageID:     messageID,
