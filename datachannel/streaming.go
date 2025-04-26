@@ -69,11 +69,6 @@ var processAcknowledgedMessageCall = func(dataChannel *DataChannel, acknowledgeM
 	return dataChannel.processAcknowledgedMessage(acknowledgeMessage)
 }
 
-// SendMessageCall is a function that sends a message through the data channel.
-var SendMessageCall = func(dataChannel *DataChannel, input []byte, inputType int) error {
-	return dataChannel.SendMessage(input, inputType)
-}
-
 var newEncrypter = func(ctx context.Context, logger log.T, kmsKeyID string, encryptionConext map[string]string, kmsService *kms.Client) (encryption.IEncrypter, error) {
 	return encryption.NewEncrypter(ctx, logger, kmsKeyID, encryptionConext, kmsService)
 }

@@ -23,7 +23,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/steveh/ecstoolkit/datachannel"
 	"github.com/steveh/ecstoolkit/jsonutil"
 	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
@@ -144,15 +143,16 @@ func TestStartSessionWithClosedWsConn(t *testing.T) {
 	done := make(chan struct{})
 	errChan := make(chan error, 1)
 
-	datachannel.SendMessageCall = func(_ *datachannel.DataChannel, input []byte, _ int) error {
+	// Mock SendMessage on the wsChannel
+	mockWsChannel := getMockWsChannel()
+	mockWsChannel.On("SendMessage", mock.Anything, mock.Anything).Return(func(input []byte, _ int) error {
 		actualPayload = input
 
 		close(done)
 
 		return nil
-	}
+	})
 
-	mockWsChannel := getMockWsChannel()
 	mockLogger := log.NewMockLog()
 
 	sess := *getSessionMock(t, mockWsChannel)

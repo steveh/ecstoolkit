@@ -251,7 +251,7 @@ func (c *DataChannel) SendInputDataMessage(payloadType message.PayloadType, inpu
 
 	c.logger.Trace("Sending message", "sequenceNumber", c.streamDataSequenceNumber)
 
-	if err = SendMessageCall(c, msg, websocket.BinaryMessage); err != nil {
+	if err = c.SendMessage(msg, websocket.BinaryMessage); err != nil {
 		return fmt.Errorf("sending message: %w", err)
 	}
 
@@ -559,7 +559,7 @@ func (c *DataChannel) resendStreamDataMessageScheduler() {
 				}
 
 				*streamMessage.ResendAttempt++
-				if err := SendMessageCall(c, streamMessage.Content, websocket.BinaryMessage); err != nil {
+				if err := c.SendMessage(streamMessage.Content, websocket.BinaryMessage); err != nil {
 					c.logger.Error("Unable to send stream data message", "error", err)
 				}
 
@@ -649,7 +649,7 @@ func (c *DataChannel) sendAcknowledgeMessage(streamDataMessage message.ClientMes
 		return fmt.Errorf("serializing acknowledge message: %w", err)
 	}
 
-	if err = SendMessageCall(c, msg, websocket.BinaryMessage); err != nil {
+	if err = c.SendMessage(msg, websocket.BinaryMessage); err != nil {
 		return fmt.Errorf("sending acknowledge message: %w", err)
 	}
 

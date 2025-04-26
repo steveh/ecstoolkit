@@ -138,18 +138,22 @@ func TestSendInputDataMessageWithPayloadTypeSize(t *testing.T) {
 		t.Fatalf("marshaling size data: %v", err)
 	}
 
-	dataChannel := getDataChannel(t)
+	mockWsChannel := &mocks.IWebSocketChannel{}
+	dataChannel := getDataChannelWithMockWs(t, mockWsChannel)
 
 	SendMessageCallCount := 0
-	datachannel.SendMessageCall = func(_ *datachannel.DataChannel, _ []byte, _ int) error {
+	// Mock SendMessage on the wsChannel
+	mockWsChannel.On("SendMessage", mock.Anything, mock.Anything).Return(func([]byte, int) error {
 		SendMessageCallCount++
 
 		return nil
-	}
+	})
 
 	err = dataChannel.SendInputDataMessage(message.Size, sizeDataBytes)
 	require.NoError(t, err)
 	assert.Equal(t, expectedSequenceNumber, dataChannel.GetExpectedSequenceNumber())
+	// Assert that SendMessage was called on the mock channel
+	mockWsChannel.AssertExpectations(t)
 	assert.Equal(t, 1, SendMessageCallCount)
 }
 
@@ -157,8 +161,8 @@ func TestTerminalResizeWhenSessionSizeDataIsNotEqualToActualSize(t *testing.T) {
 	t.Parallel()
 
 	mockLogger := log.NewMockLog()
-
-	dataChannel := getDataChannel(t)
+	mockWsChannel := &mocks.IWebSocketChannel{}
+	dataChannel := getDataChannelWithMockWs(t, mockWsChannel)
 
 	sess, err := session.NewSession(nil, dataChannel, "", mockLogger)
 	require.NoError(t, err)
@@ -189,14 +193,17 @@ func TestTerminalResizeWhenSessionSizeDataIsNotEqualToActualSize(t *testing.T) {
 	}()
 
 	SendMessageCallCount := 0
-	datachannel.SendMessageCall = func(_ *datachannel.DataChannel, _ []byte, _ int) error {
+	// Mock SendMessage on the wsChannel
+	mockWsChannel.On("SendMessage", mock.Anything, mock.Anything).Return(func([]byte, int) error {
 		SendMessageCallCount++
 
 		return nil
-	}
+	})
 
 	go shellSession.handleTerminalResize()
 	wg.Wait()
+	// Assert that SendMessage was called on the mock channel
+	mockWsChannel.AssertExpectations(t)
 	assert.Equal(t, 1, SendMessageCallCount)
 }
 
@@ -222,11 +229,11 @@ func TestProcessStreamMessagePayload(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func getDataChannel(t *testing.T) *datachannel.DataChannel {
+// Helper function to get DataChannel with a specific mock WebSocket channel.
+func getDataChannelWithMockWs(t *testing.T, mockWsChannel *mocks.IWebSocketChannel) *datachannel.DataChannel {
 	t.Helper()
 
 	mockLogger := log.NewMockLog()
-	mockWsChannel := &mocks.IWebSocketChannel{}
 	mockKMSClient := &kms.Client{}
 
 	dataChannel, err := datachannel.NewDataChannel(mockKMSClient, mockWsChannel, clientID, sessionID, instanceID, mockLogger)

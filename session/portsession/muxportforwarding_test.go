@@ -20,10 +20,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/steveh/ecstoolkit/datachannel"
 	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -69,11 +69,12 @@ func TestReadStream(t *testing.T) {
 
 	var actualPayload []byte
 
-	datachannel.SendMessageCall = func(_ *datachannel.DataChannel, input []byte, _ int) error {
+	// Mock SendMessage on the wsChannel
+	mockWsChannel.On("SendMessage", mock.Anything, mock.Anything).Return(func(input []byte, _ int) error {
 		actualPayload = input
 
 		return nil
-	}
+	})
 
 	go func() {
 		if err := portSession.portSessionType.ReadStream(context.TODO()); err != nil {
