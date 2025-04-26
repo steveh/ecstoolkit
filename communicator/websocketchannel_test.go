@@ -91,6 +91,8 @@ func handlerToBeTested(w http.ResponseWriter, req *http.Request) {
 }
 
 func TestWebSocketChannel_GetChannelToken(t *testing.T) {
+	t.Parallel()
+
 	t.Log("Starting test: webSocketChannel.GetChannelToken")
 
 	log := log.NewMockLog()
@@ -103,6 +105,8 @@ func TestWebSocketChannel_GetChannelToken(t *testing.T) {
 }
 
 func TestWebSocketChannel_SetChannelToken(t *testing.T) {
+	t.Parallel()
+
 	t.Log("Starting test: webSocketChannel.SetChannelToken")
 
 	log := log.NewMockLog()
@@ -115,6 +119,8 @@ func TestWebSocketChannel_SetChannelToken(t *testing.T) {
 }
 
 func TestWebSocketChannel_GetStreamURL(t *testing.T) {
+	t.Parallel()
+
 	t.Log("Starting test: webSocketChannel.GetStreamURL")
 
 	log := log.NewMockLog()
@@ -127,6 +133,8 @@ func TestWebSocketChannel_GetStreamURL(t *testing.T) {
 }
 
 func TestWebSocketChannel_SetOnError(t *testing.T) {
+	t.Parallel()
+
 	t.Log("Starting test: webSocketChannel.SetOnError")
 
 	channel := &communicator.WebSocketChannel{}
@@ -141,6 +149,8 @@ func TestWebSocketChannel_SetOnError(t *testing.T) {
 }
 
 func TestWebsocketChannel_SetOnMessage(t *testing.T) {
+	t.Parallel()
+
 	t.Log("Starting test: webSocketChannel.SetOnMessage")
 
 	channel := &communicator.WebSocketChannel{}
@@ -155,6 +165,8 @@ func TestWebsocketChannel_SetOnMessage(t *testing.T) {
 }
 
 func TestNewWebSocketChannel(t *testing.T) {
+	t.Parallel()
+
 	t.Log("Starting test: TestNewWebSocketChannel")
 
 	log := log.NewMockLog()
@@ -167,6 +179,8 @@ func TestNewWebSocketChannel(t *testing.T) {
 }
 
 func TestOpenCloseWebSocketChannel(t *testing.T) {
+	t.Parallel()
+
 	t.Log("Starting test: TestOpenCloseWebSocketChannel")
 
 	srv := httptest.NewServer(http.HandlerFunc(handlerToBeTested))
@@ -189,6 +203,8 @@ func TestOpenCloseWebSocketChannel(t *testing.T) {
 }
 
 func TestReadWriteTextToWebSocketChannel(t *testing.T) {
+	t.Parallel()
+
 	t.Log("Starting test: TestReadWriteWebSocketChannel ")
 
 	srv := httptest.NewServer(http.HandlerFunc(handlerToBeTested))
@@ -230,6 +246,8 @@ func TestReadWriteTextToWebSocketChannel(t *testing.T) {
 }
 
 func TestReadWriteBinaryToWebSocketChannel(t *testing.T) {
+	t.Parallel()
+
 	t.Log("Starting test: TestReadWriteBinaryWebSocketChannel ")
 
 	srv := httptest.NewServer(http.HandlerFunc(handlerToBeTested))
@@ -271,6 +289,8 @@ func TestReadWriteBinaryToWebSocketChannel(t *testing.T) {
 }
 
 func TestMultipleReadWriteWebSocketChannel(t *testing.T) {
+	t.Parallel()
+
 	t.Log("Starting test: TestMultipleReadWriteWebSocketChannel")
 
 	srv := httptest.NewServer(http.HandlerFunc(handlerToBeTested))

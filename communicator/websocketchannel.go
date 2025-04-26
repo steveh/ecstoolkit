@@ -26,17 +26,13 @@ import (
 	"github.com/steveh/ecstoolkit/websocketutil"
 )
 
-// IWebSocketChannel is the interface for DataChannel.
-type IWebSocketChannel interface {
-	Open() error
-	Close() error
-	SendMessage(input []byte, inputType int) error
-	GetChannelToken() string
-	GetStreamURL() string
-	SetChannelToken(channelToken string)
-	SetOnError(onErrorHandler func(error))
-	SetOnMessage(onMessageHandler func([]byte))
-}
+var (
+	// ErrConnectionClosed is returned when the connection is closed.
+	ErrConnectionClosed = errors.New("connection is closed")
+
+	// ErrEmptyInput is returned when the input is empty.
+	ErrEmptyInput = errors.New("input is empty")
+)
 
 // WebSocketChannel parent class for DataChannel.
 type WebSocketChannel struct {
@@ -89,11 +85,11 @@ func (c *WebSocketChannel) SetOnMessage(onMessageHandler func([]byte)) {
 // Examples of message type are websocket.TextMessage or websocket.Binary.
 func (c *WebSocketChannel) SendMessage(input []byte, inputType int) error {
 	if !c.isOpen {
-		return errors.New("connection is closed")
+		return ErrConnectionClosed
 	}
 
 	if len(input) < 1 {
-		return errors.New("empty input")
+		return ErrEmptyInput
 	}
 
 	c.writeLock.Lock()
