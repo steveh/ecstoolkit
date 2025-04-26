@@ -29,6 +29,17 @@ import (
 	"github.com/steveh/ecstoolkit/version"
 )
 
+var (
+	// ErrTimedOut is returned when the session times out.
+	ErrTimedOut = errors.New("timed out")
+
+	// ErrUnknownSessionType is returned when the session type is unknown.
+	ErrUnknownSessionType = errors.New("unknown session type")
+
+	// ErrUnsupportedAction is returned when the action is unsupported.
+	ErrUnsupportedAction = errors.New("unsupported action")
+)
+
 // DataChannel used for communication between the mgs and the cli.
 type DataChannel struct {
 	wsChannel communicator.IWebSocketChannel
@@ -156,7 +167,7 @@ func (c *DataChannel) Open(ctx context.Context, messageHandler DisplayMessageHan
 			}
 
 			if token == "" {
-				return errors.New("session timed out")
+				return ErrTimedOut
 			}
 
 			c.wsChannel.SetChannelToken(token)
@@ -401,7 +412,7 @@ func (c *DataChannel) ProcessSessionTypeHandshakeAction(actionParams json.RawMes
 
 		return nil
 	default:
-		return errors.New("Unknown session type " + sessTypeReq.SessionType)
+		return fmt.Errorf("%w: %s", ErrUnknownSessionType, sessTypeReq.SessionType)
 	}
 }
 
@@ -464,7 +475,7 @@ func (c *DataChannel) establishSessionType(ctx context.Context, timeoutHandler T
 
 	// The session type is set either by handshake or the first packet received.
 	if !<-c.isSessionTypeSet {
-		return "", errors.New("unable to determine session type")
+		return "", ErrUnknownSessionType
 	}
 
 	return c.sessionType, nil
@@ -782,10 +793,11 @@ func (c *DataChannel) handleHandshakeRequest(ctx context.Context, clientMessage 
 			}
 
 		default:
+			err = fmt.Errorf("%w: %s", ErrUnsupportedAction, action.ActionType)
 			processedAction.ActionType = action.ActionType
 			processedAction.ActionResult = message.Unsupported
-			processedAction.Error = fmt.Sprintf("Unsupported action %s", action.ActionType)
-			errorList = append(errorList, errors.New(processedAction.Error))
+			processedAction.Error = err.Error()
+			errorList = append(errorList, err)
 		}
 
 		handshakeResponse.ProcessedClientActions = append(handshakeResponse.ProcessedClientActions, processedAction)
