@@ -54,8 +54,8 @@ type KMSEncryptionResponse struct {
 
 // SessionTypeRequest represents a request containing session type and plugin properties.
 type SessionTypeRequest struct {
-	SessionType string      `json:"SessionType"`
-	Properties  interface{} `json:"Properties"`
+	SessionType string `json:"SessionType"`
+	Properties  any    `json:"Properties"`
 }
 
 // HandshakeRequestPayload represents the handshake payload sent by the agent to the session manager plugin.
@@ -74,7 +74,7 @@ type RequestedClientAction struct {
 type ProcessedClientAction struct {
 	ActionType   ActionType   `json:"ActionType"`
 	ActionStatus ActionStatus `json:"ActionStatus"`
-	ActionResult interface{}  `json:"ActionResult"`
+	ActionResult any          `json:"ActionResult"`
 	Error        string       `json:"Error"`
 }
 

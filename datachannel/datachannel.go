@@ -399,7 +399,7 @@ func (c *DataChannel) ProcessSessionTypeHandshakeAction(actionParams json.RawMes
 }
 
 // GetSessionProperties returns SessionProperties of the DataChannel.
-func (c *DataChannel) GetSessionProperties() interface{} {
+func (c *DataChannel) GetSessionProperties() any {
 	return c.sessionProperties
 }
 

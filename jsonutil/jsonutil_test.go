@@ -166,7 +166,7 @@ func TestMarshal(t *testing.T) {
 func TestUnmarshalFile(t *testing.T) {
 	filename := "rumpelstilzchen"
 
-	var contents interface{}
+	var contents any
 
 	// missing file
 	ioUtil = ioUtilStub{err: errors.New("some error")}
@@ -254,7 +254,7 @@ func TestUnmarshalExtraInput(t *testing.T) {
 func TestUnmarshalInvalidInput(t *testing.T) {
 	content := "Hello"
 
-	var dest interface{}
+	var dest any
 	err := Unmarshal(content, &dest)
 	require.Error(t, err, "This is not json format. Error expected")
 }

@@ -21,7 +21,7 @@ type IDataChannel interface {
 	SendInputDataMessage(payloadType message.PayloadType, inputData []byte) error
 	SendMessage(input []byte, inputType int) error
 	RegisterOutputStreamHandler(handler OutputStreamDataMessageHandler, isSessionSpecificHandler bool)
-	GetSessionProperties() interface{}
+	GetSessionProperties() any
 	SetChannelToken(channelToken string)
 	RegisterOutputMessageHandler(ctx context.Context, stopHandler Stop, onMessageHandler func(input []byte))
 	GetAgentVersion() string

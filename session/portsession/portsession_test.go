@@ -55,7 +55,7 @@ func TestInitializePortSession(t *testing.T) {
 func TestInitializePortSessionForPortForwardingWithOldAgent(t *testing.T) {
 	var portParameters PortParameters
 
-	if err := jsonutil.Remarshal(map[string]interface{}{"portNumber": "8080", "type": "LocalPortForwarding"}, &portParameters); err != nil {
+	if err := jsonutil.Remarshal(map[string]any{"portNumber": "8080", "type": "LocalPortForwarding"}, &portParameters); err != nil {
 		t.Errorf("Failed to remarshal properties: %v", err)
 
 		return
@@ -75,7 +75,7 @@ func TestInitializePortSessionForPortForwardingWithOldAgent(t *testing.T) {
 func TestInitializePortSessionForPortForwarding(t *testing.T) {
 	var portParameters PortParameters
 
-	if err := jsonutil.Remarshal(map[string]interface{}{"portNumber": "8080", "type": "LocalPortForwarding"}, &portParameters); err != nil {
+	if err := jsonutil.Remarshal(map[string]any{"portNumber": "8080", "type": "LocalPortForwarding"}, &portParameters); err != nil {
 		t.Errorf("Failed to remarshal properties: %v", err)
 
 		return

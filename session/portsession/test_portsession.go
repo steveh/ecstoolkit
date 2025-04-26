@@ -37,7 +37,7 @@ var (
 		Payload:       []byte("testing123"),
 		PayloadLength: 10, //nolint:mnd
 	}
-	properties = map[string]interface{}{
+	properties = map[string]any{
 		"PortNumber": "22",
 	}
 )
@@ -50,7 +50,7 @@ func getSessionMock(t *testing.T) *session.Session {
 
 var mockLogger = log.NewMockLog()
 
-func getSessionMockWithParams(t *testing.T, properties interface{}, agentVersion string) *session.Session {
+func getSessionMockWithParams(t *testing.T, properties any, agentVersion string) *session.Session {
 	t.Helper()
 
 	mockKMSClient := &kms.Client{}

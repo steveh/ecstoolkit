@@ -120,8 +120,8 @@ type TestParams struct {
 	byteArray   []byte
 	offsetStart int
 	offsetEnd   int
-	input       interface{}
-	expected    interface{}
+	input       any
+	expected    any
 }
 
 func TestPutString(t *testing.T) {
@@ -271,7 +271,7 @@ func TestLongToBytes(t *testing.T) {
 		name        string
 		expectation EXPECTATION
 		input       int64
-		expected    interface{}
+		expected    any
 	}{
 		{
 			"Basic",

@@ -35,9 +35,9 @@ func Indent(jsonStr string) (string, error) {
 }
 
 // Remarshal marshals an object to Json then parses it back to another object.
-// This is useful for example when we want to go from map[string]interface{}
+// This is useful for example when we want to go from map[string]any
 // to a more specific struct type or if we want a deep copy of the object.
-func Remarshal(obj interface{}, remarshalledObj interface{}) error {
+func Remarshal(obj any, remarshalledObj any) error {
 	b, err := json.Marshal(obj)
 	if err != nil {
 		return fmt.Errorf("marshaling object: %w", err)
@@ -53,7 +53,7 @@ func Remarshal(obj interface{}, remarshalledObj interface{}) error {
 
 // Marshal marshals an object to a json string.
 // Returns empty string if marshal fails.
-func Marshal(obj interface{}) (string, error) {
+func Marshal(obj any) (string, error) {
 	resultB, err := json.Marshal(obj)
 	if err != nil {
 		return "", fmt.Errorf("marshaling object: %w", err)
@@ -63,7 +63,7 @@ func Marshal(obj interface{}) (string, error) {
 }
 
 // UnmarshalFile reads the content of a file then Unmarshals the content to an object.
-func UnmarshalFile(filePath string, dest interface{}) error {
+func UnmarshalFile(filePath string, dest any) error {
 	content, err := ioUtil.ReadFile(filePath)
 	if err != nil {
 		return fmt.Errorf("reading file %s: %w", filePath, err)
@@ -78,7 +78,7 @@ func UnmarshalFile(filePath string, dest interface{}) error {
 }
 
 // Unmarshal unmarshals the content in string format to an object.
-func Unmarshal(jsonContent string, dest interface{}) error {
+func Unmarshal(jsonContent string, dest any) error {
 	content := []byte(jsonContent)
 
 	err := json.Unmarshal(content, dest)
@@ -91,7 +91,7 @@ func Unmarshal(jsonContent string, dest interface{}) error {
 
 // MarshalIndent is like Marshal but applies Indent to format the output.
 // Returns empty string if marshal fails.
-func MarshalIndent(obj interface{}) (string, error) {
+func MarshalIndent(obj any) (string, error) {
 	// Make sure the output file keeps formal json format
 	resultsByte, err := json.MarshalIndent(obj, "", jsonFormat)
 	if err != nil {
