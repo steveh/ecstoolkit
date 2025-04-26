@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
 )
 
 // jsonFormat json formatIndent.
@@ -64,7 +65,7 @@ func Marshal(obj any) (string, error) {
 
 // UnmarshalFile reads the content of a file then Unmarshals the content to an object.
 func UnmarshalFile(filePath string, dest any) error {
-	content, err := ioUtil.ReadFile(filePath)
+	content, err := os.ReadFile(filePath) //nolint:gosec
 	if err != nil {
 		return fmt.Errorf("reading file %s: %w", filePath, err)
 	}

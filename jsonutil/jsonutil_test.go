@@ -15,7 +15,6 @@
 package jsonutil
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -25,9 +24,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-// errMock is a mock error for testing.
-var errMock = errors.New("mock error")
 
 func ExampleMarshal() {
 	type ColorGroup struct {
@@ -173,23 +169,18 @@ func TestMarshal(t *testing.T) {
 func TestUnmarshalFile(t *testing.T) {
 	t.Parallel()
 
-	filename := "rumpelstilzchen"
-
 	var contents any
 
 	// missing file
-	ioUtil = ioUtilStub{err: errMock}
-	err1 := UnmarshalFile(filename, &contents)
+	err1 := UnmarshalFile(filepath.Join("testdata", "TestUnmarshalFileMissing.json"), &contents)
 	require.Error(t, err1, "expected readfile error")
 
 	// non json content
-	ioUtil = ioUtilStub{b: []byte("Sample text")}
-	err2 := UnmarshalFile(filename, &contents)
+	err2 := UnmarshalFile(filepath.Join("testdata", "TestUnmarshalFileParseError.json"), &contents)
 	require.Error(t, err2, "expected json parsing error")
 
 	// valid json content
-	ioUtil = ioUtilStub{b: []byte("{\"ID\":1,\"Name\":\"Reds\",\"Colors\":[\"Crimson\",\"Red\",\"Ruby\",\"Maroon\"]}")}
-	err3 := UnmarshalFile(filename, &contents)
+	err3 := UnmarshalFile(filepath.Join("testdata", "TestUnmarshalFileValid.json"), &contents)
 	require.NoError(t, err3, "message should parse successfully")
 }
 
@@ -313,14 +304,4 @@ func TestMarshalIndentErrorsOnInvalidInput(t *testing.T) {
 	// Breaks the same for any json-invalid types
 	_, err := MarshalIndent(make(chan int))
 	require.Error(t, err)
-}
-
-// ioutil stub.
-type ioUtilStub struct {
-	b   []byte
-	err error
-}
-
-func (a ioUtilStub) ReadFile(_ string) ([]byte, error) {
-	return a.b, a.err
 }
