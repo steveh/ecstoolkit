@@ -119,8 +119,8 @@ func (c *DataChannel) SendMessage(input []byte, inputType int) error {
 	return nil
 }
 
-// OpenWithRetry opens the data channel and registers the message handler.
-func (c *DataChannel) OpenWithRetry(ctx context.Context, messageHandler func(message.ClientMessage), getReconnectionToken GetReconnectionToken) error {
+// Open opens the data channel and registers the message handler.
+func (c *DataChannel) Open(ctx context.Context, messageHandler DisplayMessageHandler, refreshTokenHandler RefreshTokenHandler, timeoutHandler TimeoutHandler) (string, error) {
 	c.RegisterOutputMessageHandler(ctx, func() error { return nil }, func(_ []byte) {})
 
 	c.displayHandler = messageHandler
@@ -146,11 +146,11 @@ func (c *DataChannel) OpenWithRetry(ctx context.Context, messageHandler func(mes
 		}
 	}
 
-	c.setOnError(func(wsErr error) {
+	c.wsChannel.SetOnError(func(wsErr error) {
 		c.logger.Error("Trying to reconnect session", "sequenceNumber", c.streamDataSequenceNumber, "error", wsErr)
 
 		retryParams.CallableFunc = func() error {
-			token, err := getReconnectionToken(ctx)
+			token, err := refreshTokenHandler(ctx)
 			if err != nil {
 				return fmt.Errorf("getting reconnection token: %w", err)
 			}
@@ -176,7 +176,7 @@ func (c *DataChannel) OpenWithRetry(ctx context.Context, messageHandler func(mes
 	// Scheduler for resending of data
 	c.resendStreamDataMessageScheduler()
 
-	return nil
+	return c.establishSessionType(ctx, timeoutHandler)
 }
 
 // Close closes datachannel - its web socket connection.
@@ -340,7 +340,7 @@ func (c *DataChannel) HandleAcknowledgeMessage(
 }
 
 // HandleChannelClosedMessage handles the channel closed message and exits the shell.
-func (c *DataChannel) HandleChannelClosedMessage(stopHandler Stop, sessionID string, outputMessage message.ClientMessage) {
+func (c *DataChannel) HandleChannelClosedMessage(stopHandler StopHandler, sessionID string, outputMessage message.ClientMessage) {
 	var (
 		channelClosedMessage message.ChannelClosed
 		err                  error
@@ -411,7 +411,7 @@ func (c *DataChannel) GetSessionProperties() any {
 }
 
 // RegisterOutputMessageHandler sets the message handler for the DataChannel.
-func (c *DataChannel) RegisterOutputMessageHandler(ctx context.Context, stopHandler Stop, onMessageHandler func(input []byte)) {
+func (c *DataChannel) RegisterOutputMessageHandler(ctx context.Context, stopHandler StopHandler, onMessageHandler OnMessageHandler) {
 	c.wsChannel.SetOnMessage(func(input []byte) {
 		onMessageHandler(input)
 
@@ -441,14 +441,14 @@ func (c *DataChannel) GetTargetID() string {
 	return c.targetID
 }
 
-// EstablishSessionType establishes the session type for the DataChannel.
-func (c *DataChannel) EstablishSessionType(ctx context.Context, sessionType string, sleepInterval time.Duration, timeoutHandler func(context.Context) error) (string, error) {
-	c.setSessionType(sessionType)
+// establishSessionType establishes the session type for the DataChannel.
+func (c *DataChannel) establishSessionType(ctx context.Context, timeoutHandler TimeoutHandler) (string, error) {
+	c.setSessionType(config.ShellPluginName)
 
 	go func() {
 		for {
 			// Repeat this loop for every 200ms
-			time.Sleep(sleepInterval)
+			time.Sleep(config.ResendSleepInterval)
 
 			if <-c.isStreamMessageResendTimeout {
 				c.logger.Error("Stream data timeout", "sessionID", c.sessionID)
@@ -484,11 +484,6 @@ func (c *DataChannel) reconnect() error {
 	c.logger.Debug("Successfully reconnected to data channel", "url", c.wsChannel.GetStreamURL())
 
 	return nil
-}
-
-// setOnError sets the error handler for the DataChannel.
-func (c *DataChannel) setOnError(onErrorHandler func(error)) {
-	c.wsChannel.SetOnError(onErrorHandler)
 }
 
 // open opens websocket connects and does final handshake to acknowledge connection.
@@ -706,7 +701,7 @@ func (c *DataChannel) calculateRetransmissionTimeout(streamingMessage RoundTripT
 }
 
 // outputMessageHandler gets output on the data channel.
-func (c *DataChannel) outputMessageHandler(ctx context.Context, stopHandler Stop, rawMessage []byte) error {
+func (c *DataChannel) outputMessageHandler(ctx context.Context, stopHandler StopHandler, rawMessage []byte) error {
 	outputMessage := &message.ClientMessage{}
 
 	err := outputMessage.DeserializeClientMessage(rawMessage)

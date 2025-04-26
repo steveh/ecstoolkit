@@ -49,9 +49,9 @@ func TestOpenDataChannel(t *testing.T) {
 	sessionMock.dataChannel = mockDataChannel
 
 	SetupMockActions()
-	mockDataChannel.On("OpenWithRetry", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	mockDataChannel.On("Open", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return("", nil)
 
-	err := sessionMock.OpenDataChannel(context.TODO())
+	_, err := sessionMock.OpenDataChannel(context.TODO())
 	require.NoError(t, err)
 }
 
@@ -67,8 +67,8 @@ func TestOpenDataChannelWithError(t *testing.T) {
 	SetupMockActions()
 
 	// First reconnection failed when open datachannel, success after retry
-	mockDataChannel.On("OpenWithRetry", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	mockDataChannel.On("Open", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return("", nil)
 
-	err := sessionMock.OpenDataChannel(context.TODO())
+	_, err := sessionMock.OpenDataChannel(context.TODO())
 	require.NoError(t, err)
 }

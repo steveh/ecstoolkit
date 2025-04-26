@@ -314,7 +314,7 @@ func TestDataChannelIncomingMessageHandlerForExpectedInputStreamDataMessage(t *t
 		return true, nil
 	}
 
-	var stopHandler Stop = func() error {
+	var stopHandler StopHandler = func() error {
 		return nil
 	}
 
@@ -357,7 +357,7 @@ func TestDataChannelIncomingMessageHandlerForUnexpectedInputStreamDataMessage(t 
 		return nil
 	}
 
-	var stopHandler Stop = func() error {
+	var stopHandler StopHandler = func() error {
 		return nil
 	}
 
@@ -388,7 +388,7 @@ func TestDataChannelIncomingMessageHandlerForAcknowledgeMessage(t *testing.T) {
 	mockChannel := &communicatorMocks.IWebSocketChannel{}
 	dataChannel.wsChannel = mockChannel
 
-	var stopHandler Stop = func() error {
+	var stopHandler StopHandler = func() error {
 		return nil
 	}
 
@@ -453,7 +453,7 @@ func TestDataChannelIncomingMessageHandlerForPausePublicationessage(t *testing.T
 		return true, nil
 	}
 
-	var stopHandler Stop = func() error {
+	var stopHandler StopHandler = func() error {
 		return nil
 	}
 
@@ -668,7 +668,12 @@ func TestOpenWithRetryWithError(t *testing.T) {
 	mockWsChannel.On("SetOnMessage", mock.Anything)
 	mockWsChannel.On("SetOnError", mock.Anything)
 
-	err = dataChannel.OpenWithRetry(context.TODO(), func(_ message.ClientMessage) {}, func(_ context.Context) (string, error) { return "", nil })
+	_, err = dataChannel.Open(
+		context.TODO(),
+		func(_ message.ClientMessage) {},
+		func(_ context.Context) (string, error) { return "", nil },
+		func(_ context.Context) error { return nil },
+	)
 	require.NoError(t, err)
 }
 

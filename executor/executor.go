@@ -151,13 +151,9 @@ func (e *Executor) newSession(options *ExecuteSessionOptions, execute *ecs.Execu
 }
 
 func (e *Executor) initSession(ctx context.Context, sess *session.Session) error {
-	if err := sess.OpenDataChannel(ctx); err != nil {
-		return fmt.Errorf("opening data channel: %w", err)
-	}
-
-	sessionType, err := sess.EstablishSessionType(ctx, config.ShellPluginName, config.ResendSleepInterval)
+	sessionType, err := sess.OpenDataChannel(ctx)
 	if err != nil {
-		return fmt.Errorf("establishing session type: %w", err)
+		return fmt.Errorf("opening data channel: %w", err)
 	}
 
 	var sessionSubType session.ISessionPlugin

@@ -56,8 +56,8 @@ func (m StreamingMessage) GetRoundTripTime() time.Duration {
 // OutputStreamDataMessageHandler is a function type that handles output stream data messages.
 type OutputStreamDataMessageHandler func(streamDataMessage message.ClientMessage) (bool, error)
 
-// Stop is a function type that handles stopping the data channel.
-type Stop func() error
+// StopHandler is a function type that handles stopping the data channel.
+type StopHandler func() error
 
 // sendAcknowledgeMessageCall is a function that sends an acknowledgment message for a stream data message.
 var sendAcknowledgeMessageCall = func(dataChannel *DataChannel, streamDataMessage message.ClientMessage) error {

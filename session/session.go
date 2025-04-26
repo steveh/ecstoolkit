@@ -17,7 +17,6 @@ package session
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
@@ -52,19 +51,10 @@ func NewSession(ssmClient *ssm.Client, dataChannel datachannel.IDataChannel, ses
 }
 
 // OpenDataChannel initializes datachannel.
-func (s *Session) OpenDataChannel(ctx context.Context) error {
-	if err := s.dataChannel.OpenWithRetry(ctx, s.DisplayMessage, s.getResumeSessionParams); err != nil {
-		return fmt.Errorf("opening data channel: %w", err)
-	}
-
-	return nil
-}
-
-// EstablishSessionType ensures the channel session type is set.
-func (s *Session) EstablishSessionType(ctx context.Context, sessionType string, sleepInterval time.Duration) (string, error) {
-	sessionType, err := s.dataChannel.EstablishSessionType(ctx, sessionType, sleepInterval, s.TerminateSession)
+func (s *Session) OpenDataChannel(ctx context.Context) (string, error) {
+	sessionType, err := s.dataChannel.Open(ctx, s.DisplayMessage, s.getResumeSessionParams, s.TerminateSession)
 	if err != nil {
-		return "", fmt.Errorf("establishing session type: %w", err)
+		return "", fmt.Errorf("opening data channel: %w", err)
 	}
 
 	return sessionType, nil
@@ -138,13 +128,13 @@ func (s *Session) GetSessionProperties() any {
 }
 
 // RegisterOutputMessageHandler registers a handler for output messages.
-func (s *Session) RegisterOutputMessageHandler(ctx context.Context, stopHandler datachannel.Stop, onMessageHandler func(input []byte)) {
+func (s *Session) RegisterOutputMessageHandler(ctx context.Context, stopHandler datachannel.StopHandler, onMessageHandler func(input []byte)) {
 	s.dataChannel.RegisterOutputMessageHandler(ctx, stopHandler, onMessageHandler)
 }
 
 // RegisterOutputStreamHandler registers a handler for output stream messages.
-func (s *Session) RegisterOutputStreamHandler(handler datachannel.OutputStreamDataMessageHandler, isSessionSpecificHandler bool) {
-	s.dataChannel.RegisterOutputStreamHandler(handler, isSessionSpecificHandler)
+func (s *Session) RegisterOutputStreamHandler(handler datachannel.OutputStreamDataMessageHandler, sessionSpecific bool) {
+	s.dataChannel.RegisterOutputStreamHandler(handler, sessionSpecific)
 }
 
 // getResumeSessionParams calls ResumeSession API and gets tokenvalue for reconnecting.
