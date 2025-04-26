@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/steveh/ecstoolkit/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -49,8 +50,9 @@ func TestSetSessionHandlers(t *testing.T) {
 		return nil
 	}
 
-	mockWsChannel := getMockWsChannel()
+	mockLogger := log.NewMockLog()
 
+	mockWsChannel := getMockWsChannel()
 	mockWsChannel.On("SendMessage", mock.Anything, mock.Anything).
 		Return(countTimes())
 
@@ -62,9 +64,9 @@ func TestSetSessionHandlers(t *testing.T) {
 		portSessionType: &BasicPortForwarding{
 			session:        &mockSession,
 			portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding"},
-			logger:         getMockLogger(),
+			logger:         mockLogger,
 		},
-		logger: getMockLogger(),
+		logger: mockLogger,
 	}
 	signalCh := make(chan os.Signal, 1)
 
@@ -72,7 +74,7 @@ func TestSetSessionHandlers(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 
 		if _, err := out.Write([]byte("testing123")); err != nil {
-			getMockLogger().Info("Write error", "error", err)
+			mockLogger.Info("Write error", "error", err)
 		}
 	}()
 
@@ -104,6 +106,8 @@ func TestStartSessionTCPLocalPortFromDocument(t *testing.T) {
 		return nil, errAcceptFailed
 	}
 
+	mockLogger := log.NewMockLog()
+
 	mockWsChannel := getMockWsChannel()
 
 	sess := *getSessionMock(t, mockWsChannel)
@@ -114,9 +118,9 @@ func TestStartSessionTCPLocalPortFromDocument(t *testing.T) {
 		portSessionType: &BasicPortForwarding{
 			session:        &sess,
 			portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding"},
-			logger:         getMockLogger(),
+			logger:         mockLogger,
 		},
-		logger: getMockLogger(),
+		logger: mockLogger,
 	}
 	if err := portSession.SetSessionHandlers(context.TODO()); err != nil {
 		t.Logf("Error setting session handlers: %v", err)
@@ -126,6 +130,7 @@ func TestStartSessionTCPLocalPortFromDocument(t *testing.T) {
 }
 
 func TestStartSessionTCPAcceptFailed(t *testing.T) {
+	mockLogger := log.NewMockLog()
 	mockWsChannel := getMockWsChannel()
 
 	connErr := errAcceptFailed
@@ -139,14 +144,15 @@ func TestStartSessionTCPAcceptFailed(t *testing.T) {
 		portSessionType: &BasicPortForwarding{
 			session:        &sess,
 			portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding"},
-			logger:         getMockLogger(),
+			logger:         mockLogger,
 		},
-		logger: getMockLogger(),
+		logger: mockLogger,
 	}
 	require.ErrorIs(t, portSession.SetSessionHandlers(context.TODO()), connErr)
 }
 
 func TestStartSessionTCPConnectFailed(t *testing.T) {
+	mockLogger := log.NewMockLog()
 	mockWsChannel := getMockWsChannel()
 
 	listenerError := ErrConnectionFailed
@@ -160,9 +166,9 @@ func TestStartSessionTCPConnectFailed(t *testing.T) {
 		portSessionType: &BasicPortForwarding{
 			session:        &sess,
 			portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding"},
-			logger:         getMockLogger(),
+			logger:         mockLogger,
 		},
-		logger: getMockLogger(),
+		logger: mockLogger,
 	}
 	require.ErrorIs(t, portSession.SetSessionHandlers(context.TODO()), listenerError)
 }

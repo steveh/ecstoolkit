@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/steveh/ecstoolkit/datachannel"
+	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -67,6 +68,7 @@ func TestStartSessionForStandardStreamForwarding(t *testing.T) {
 		return nil
 	}
 
+	mockLogger := log.NewMockLog()
 	mockWsChannel := getMockWsChannel()
 
 	sess := *getSessionMock(t, mockWsChannel)
@@ -76,9 +78,9 @@ func TestStartSessionForStandardStreamForwarding(t *testing.T) {
 		portSessionType: &StandardStreamForwarding{
 			session:        &sess,
 			portParameters: PortParameters{PortNumber: "22"},
-			logger:         getMockLogger(),
+			logger:         mockLogger,
 		},
-		logger: getMockLogger(),
+		logger: mockLogger,
 	}
 
 	// Start session handlers in a goroutine

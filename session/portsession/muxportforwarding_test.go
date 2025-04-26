@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/steveh/ecstoolkit/datachannel"
+	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -37,7 +38,7 @@ func TestReadStream(t *testing.T) {
 		}
 	}()
 
-	mockLogger := getMockLogger()
+	mockLogger := log.NewMockLog()
 	mockWsChannel := getMockWsChannel()
 	outputMessage := getMockOutputMessage()
 
@@ -103,7 +104,7 @@ func TestWriteStream(t *testing.T) {
 		}
 	}()
 
-	mockLogger := getMockLogger()
+	mockLogger := log.NewMockLog()
 	mockWsChannel := getMockWsChannel()
 	outputMessage := getMockOutputMessage()
 

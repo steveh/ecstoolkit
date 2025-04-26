@@ -31,15 +31,23 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var (
-	errDefault     = errors.New("default error")
-	defaultMessage = []byte("Default Message")
-)
+var errDefault = errors.New("default error")
 
 const (
 	defaultChannelToken = "channelToken"
 	defaultStreamURL    = "streamUrl"
 )
+
+func mockDefaultMessage() []byte {
+	return []byte("Default Message")
+}
+
+func mockUpgrader() websocket.Upgrader {
+	return websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+	}
+}
 
 type ErrorCallbackWrapper struct {
 	mock.Mock
@@ -61,15 +69,12 @@ func (m *MessageCallbackWrapper) defaultMessageHandler(msg []byte) {
 	m.message = msg
 }
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-}
-
 // handlerToBeTested echos all incoming input from a websocket connection back to the client while
 // adding the word "echo".
 func handlerToBeTested(w http.ResponseWriter, req *http.Request) {
 	log := log.NewMockLog()
+
+	upgrader := mockUpgrader()
 
 	conn, err := upgrader.Upgrade(w, req, nil)
 	if err != nil {
@@ -158,13 +163,13 @@ func TestWebsocketChannel_SetOnMessage(t *testing.T) {
 
 	channel := &communicator.WebSocketChannel{}
 	messageCallbackWrapper := &MessageCallbackWrapper{}
-	messageCallbackWrapper.On("defaultMessageHandler", defaultMessage).Return()
+	messageCallbackWrapper.On("defaultMessageHandler", mockDefaultMessage()).Return()
 
 	channel.SetOnMessage((*messageCallbackWrapper).defaultMessageHandler)
-	channel.OnMessage(defaultMessage)
+	channel.OnMessage(mockDefaultMessage())
 
-	messageCallbackWrapper.AssertCalled(t, "defaultMessageHandler", defaultMessage)
-	assert.Equal(t, defaultMessage, messageCallbackWrapper.message)
+	messageCallbackWrapper.AssertCalled(t, "defaultMessageHandler", mockDefaultMessage())
+	assert.Equal(t, mockDefaultMessage(), messageCallbackWrapper.message)
 }
 
 func TestNewWebSocketChannel(t *testing.T) {

@@ -25,6 +25,7 @@ import (
 
 	"github.com/steveh/ecstoolkit/datachannel"
 	"github.com/steveh/ecstoolkit/jsonutil"
+	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -48,12 +49,13 @@ func TestInitializePortSession(t *testing.T) {
 		return
 	}
 
-	mockWsChannel := getMockWsChannel()
+	mockLogger := log.NewMockLog()
 
+	mockWsChannel := getMockWsChannel()
 	mockWsChannel.On("SetOnMessage", mock.Anything)
 
 	sess := getSessionMock(t, mockWsChannel)
-	portSession, err := NewPortSession(context.TODO(), getMockLogger(), sess)
+	portSession, err := NewPortSession(context.TODO(), mockLogger, sess)
 	require.NoError(t, err, "Initialize port session")
 
 	mockWsChannel.AssertExpectations(t)
@@ -72,12 +74,13 @@ func TestInitializePortSessionForPortForwardingWithOldAgent(t *testing.T) {
 		return
 	}
 
-	mockWsChannel := getMockWsChannel()
+	mockLogger := log.NewMockLog()
 
+	mockWsChannel := getMockWsChannel()
 	mockWsChannel.On("SetOnMessage", mock.Anything)
 
 	sess := getSessionMockWithParams(t, mockWsChannel, portParameters, "2.2.0.0")
-	portSession, err := NewPortSession(context.TODO(), getMockLogger(), sess)
+	portSession, err := NewPortSession(context.TODO(), mockLogger, sess)
 	require.NoError(t, err, "Initialize port session")
 
 	mockWsChannel.AssertExpectations(t)
@@ -96,12 +99,13 @@ func TestInitializePortSessionForPortForwarding(t *testing.T) {
 		return
 	}
 
-	mockWsChannel := getMockWsChannel()
+	mockLogger := log.NewMockLog()
 
+	mockWsChannel := getMockWsChannel()
 	mockWsChannel.On("SetOnMessage", mock.Anything)
 
 	sess := getSessionMockWithParams(t, mockWsChannel, portParameters, "3.1.0.0")
-	portSession, err := NewPortSession(context.TODO(), getMockLogger(), sess)
+	portSession, err := NewPortSession(context.TODO(), mockLogger, sess)
 	require.NoError(t, err, "Initialize port session")
 
 	mockWsChannel.AssertExpectations(t)
@@ -149,7 +153,7 @@ func TestStartSessionWithClosedWsConn(t *testing.T) {
 	}
 
 	mockWsChannel := getMockWsChannel()
-	mockLogger := getMockLogger()
+	mockLogger := log.NewMockLog()
 
 	sess := *getSessionMock(t, mockWsChannel)
 	portSession := PortSession{
@@ -189,7 +193,7 @@ func TestStartSessionWithClosedWsConn(t *testing.T) {
 	assert.Equal(t, getMockOutputMessage().Payload, deserializedMsg.Payload)
 }
 
-// Test ProcessStreamMessagePayload.
+//nolint:cyclop
 func TestProcessStreamMessagePayload(t *testing.T) {
 	t.Parallel()
 
@@ -218,7 +222,7 @@ func TestProcessStreamMessagePayload(t *testing.T) {
 	var payload []byte
 
 	mockWsChannel := getMockWsChannel()
-	mockLogger := getMockLogger()
+	mockLogger := log.NewMockLog()
 	outputMessage := getMockOutputMessage()
 
 	session := *getSessionMock(t, mockWsChannel)

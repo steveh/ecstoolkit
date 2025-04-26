@@ -2,12 +2,10 @@ version: "2"
 linters:
   default: all
   disable:
-    - cyclop
     - depguard
     - dupl
     - exhaustruct
     - funlen
-    - gocognit
     - lll
     - tagliatelle
     - testpackage

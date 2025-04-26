@@ -33,10 +33,6 @@ const (
 	agentVersion = "2.3.750.0"
 )
 
-func getMockLogger() *log.MockLog {
-	return log.NewMockLog()
-}
-
 func getMockWsChannel() *mocks.IWebSocketChannel {
 	return &mocks.IWebSocketChannel{}
 }
@@ -64,9 +60,10 @@ func getSessionMock(t *testing.T, wsChannel communicator.IWebSocketChannel) *ses
 func getSessionMockWithParams(t *testing.T, wsChannel communicator.IWebSocketChannel, properties any, agentVersion string) *session.Session {
 	t.Helper()
 
+	mockLogger := log.NewMockLog()
 	mockKMSClient := &kms.Client{}
 
-	dataChannel, err := datachannel.NewDataChannel(mockKMSClient, wsChannel, "clientId", "sessionId", "targetId", getMockLogger())
+	dataChannel, err := datachannel.NewDataChannel(mockKMSClient, wsChannel, "clientId", "sessionId", "targetId", mockLogger)
 	require.NoError(t, err)
 
 	dataChannel.SetAgentVersion(agentVersion)
@@ -80,7 +77,7 @@ func getSessionMockWithParams(t *testing.T, wsChannel communicator.IWebSocketCha
 	err = dataChannel.ProcessSessionTypeHandshakeAction(b)
 	require.NoError(t, err)
 
-	mockSession, err := session.NewSession(nil, dataChannel, "", getMockLogger())
+	mockSession, err := session.NewSession(nil, dataChannel, "", mockLogger)
 	require.NoError(t, err)
 
 	return mockSession

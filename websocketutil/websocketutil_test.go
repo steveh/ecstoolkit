@@ -28,12 +28,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-}
-
 func handlerToBeTested(w http.ResponseWriter, req *http.Request) {
+	upgrader := websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+	}
+
 	conn, err := upgrader.Upgrade(w, req, nil)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("cannot upgrade: %v", err), http.StatusInternalServerError)

@@ -45,6 +45,8 @@ type ClientMessage struct {
 // * | HL|         MessageType           |Ver|  CD   |  Seq  | Flags |
 // * |         MessageID                     |           Digest              | PayType | PayLen|
 // * |         Payload      			|.
+//
+//nolint:cyclop
 func (m *ClientMessage) DeserializeClientMessage(input []byte) error {
 	var err error
 
@@ -139,6 +141,8 @@ func (m *ClientMessage) Validate() error {
 // * | HL|         MessageType           |Ver|  CD   |  Seq  | Flags |
 // * |         MessageID                     |           Digest              |PayType| PayLen|
 // * |         Payload      			|.
+//
+//nolint:cyclop
 func (m *ClientMessage) SerializeClientMessage() ([]byte, error) {
 	payloadLength, err := util.SafeUint32(len(m.Payload))
 	if err != nil {

@@ -64,20 +64,25 @@ const (
 	sequenceNumber   = int64(2)
 	agentVersion     = "3.0"
 	sessionID        = "sessionId_01234567890abcedf"
+	messageType      = message.InputStreamMessage
 )
 
-var (
-	defaultByteBufferGenerator = get8ByteBuffer
-	messageType                = message.InputStreamMessage
-	payload                    = []byte("payload")
-	ackMessagePayload          = []byte(fmt.Sprintf(
+func mockPayload() []byte {
+	return []byte("payload")
+}
+
+func mockAckMessagePayload() []byte {
+	return []byte(fmt.Sprintf(
 		`{
 			"AcknowledgedMessageType": "%s",
 			"AcknowledgedMessageId":"%s"
 		}`,
 		message.AcknowledgeMessage,
 		messageID))
-	channelClosedPayload = []byte(fmt.Sprintf(
+}
+
+func mockChannelClosedPayload() []byte {
+	return []byte(fmt.Sprintf(
 		`{
 			"MessageType": "%s",
 			"MessageId": "%s",
@@ -91,9 +96,12 @@ var (
 		strconv.FormatUint(createdDate, 10),
 		sessionID,
 		strconv.FormatUint(uint64(schemaVersion), 10),
-		string(payload),
+		string(mockPayload()),
 	))
-	handshakeReqPayload = []byte(fmt.Sprintf(
+}
+
+func mockHandshakeReqPayload() []byte {
+	return []byte(fmt.Sprintf(
 		`{
 			"AgentVersion": "%s",
 			"RequestedClientActions": [
@@ -107,7 +115,10 @@ var (
 		actionType,
 		sampleParameters,
 	))
-	handshakeCompletePayload = []byte(fmt.Sprintf(
+}
+
+func mockHandshakeCompletePayload() []byte {
+	return []byte(fmt.Sprintf(
 		`{
 			"HandshakeTimeToComplete": %d,
 			"CustomerMessage": "%s"
@@ -115,7 +126,7 @@ var (
 		timeToComplete,
 		customerMessage,
 	))
-)
+}
 
 type TestParams struct {
 	name        string
@@ -136,7 +147,7 @@ func TestPutString(t *testing.T) {
 		{
 			"Basic",
 			SUCCESS,
-			defaultByteBufferGenerator(),
+			get8ByteBuffer(),
 			0,
 			7,
 			"hello",
@@ -145,7 +156,7 @@ func TestPutString(t *testing.T) {
 		{
 			"Basic offset",
 			SUCCESS,
-			defaultByteBufferGenerator(),
+			get8ByteBuffer(),
 			1,
 			7,
 			"hello",
@@ -154,7 +165,7 @@ func TestPutString(t *testing.T) {
 		{
 			"Bad offset",
 			ERROR,
-			defaultByteBufferGenerator(),
+			get8ByteBuffer(),
 			-1,
 			7,
 			"hello",
@@ -163,7 +174,7 @@ func TestPutString(t *testing.T) {
 		{
 			"Data too long for buffer",
 			ERROR,
-			defaultByteBufferGenerator(),
+			get8ByteBuffer(),
 			0,
 			7,
 			"longinPutString",
@@ -210,7 +221,7 @@ func TestPutBytes(t *testing.T) {
 		{
 			"Basic",
 			SUCCESS,
-			defaultByteBufferGenerator(),
+			get8ByteBuffer(),
 			0,
 			3,
 			[]byte{0x22, 0x55, 0xff, 0x22},
@@ -219,7 +230,7 @@ func TestPutBytes(t *testing.T) {
 		{
 			"Basic offset",
 			SUCCESS,
-			defaultByteBufferGenerator(),
+			get8ByteBuffer(),
 			1,
 			4,
 			[]byte{0x22, 0x55, 0xff, 0x22},
@@ -228,7 +239,7 @@ func TestPutBytes(t *testing.T) {
 		{
 			"Bad offset",
 			ERROR,
-			defaultByteBufferGenerator(),
+			get8ByteBuffer(),
 			-1,
 			7,
 			[]byte{0x22, 0x55, 0x00, 0x22},
@@ -237,7 +248,7 @@ func TestPutBytes(t *testing.T) {
 		{
 			"Data too long for buffer",
 			ERROR,
-			defaultByteBufferGenerator(),
+			get8ByteBuffer(),
 			0,
 			2,
 			[]byte{0x22, 0x55, 0x00, 0x22},
@@ -340,7 +351,7 @@ func TestPutLong(t *testing.T) {
 		{
 			"Exact offset",
 			SUCCESS,
-			defaultByteBufferGenerator(),
+			get8ByteBuffer(),
 			0,
 			0,
 			50,
@@ -349,7 +360,7 @@ func TestPutLong(t *testing.T) {
 		{
 			"Exact offset +1",
 			ERROR,
-			defaultByteBufferGenerator(),
+			get8ByteBuffer(),
 			5,
 			0,
 			50,
@@ -423,7 +434,7 @@ func TestPutInteger(t *testing.T) {
 		{
 			"Basic offset",
 			SUCCESS,
-			defaultByteBufferGenerator(),
+			get8ByteBuffer(),
 			1,
 			0,
 			520392,
@@ -441,7 +452,7 @@ func TestPutInteger(t *testing.T) {
 		{
 			"Exact offset +1",
 			ERROR,
-			defaultByteBufferGenerator(),
+			get8ByteBuffer(),
 			5,
 			0,
 			50,
@@ -596,7 +607,7 @@ func TestGetBytes(t *testing.T) {
 		{
 			"Negative offset",
 			ERROR,
-			defaultByteBufferGenerator(),
+			get8ByteBuffer(),
 			-1,
 			0,
 			nil,
@@ -741,7 +752,7 @@ func TestClientMessage_Validate(t *testing.T) {
 		SequenceNumber: 1,
 		Flags:          2,
 		MessageID:      u,
-		Payload:        payload,
+		Payload:        mockPayload(),
 		PayloadLength:  3,
 	}
 
@@ -765,7 +776,7 @@ func TestClientMessage_Validate(t *testing.T) {
 	assert.Contains(t, err.Error(), "PayloadDigest is invalid")
 
 	hasher := sha256.New()
-	hasher.Write(payload)
+	hasher.Write(mockPayload())
 	clientMessage.PayloadDigest = hasher.Sum(nil)
 	err = clientMessage.Validate()
 	require.NoError(t, err, "An error was thrown when none was expected.")
@@ -784,7 +795,7 @@ func TestClientMessage_ValidateStartPublicationMessage(t *testing.T) {
 		SequenceNumber: 1,
 		Flags:          2,
 		MessageID:      u,
-		Payload:        payload,
+		Payload:        mockPayload(),
 		PayloadLength:  3,
 	}
 
@@ -798,7 +809,7 @@ func TestClientMessage_DeserializeDataStreamAcknowledgeContent(t *testing.T) {
 	t.Logf("Starting test: %s", t.Name())
 	// ClientMessage is initialized with improperly formatted json data
 	testMessage := message.ClientMessage{
-		Payload: payload,
+		Payload: mockPayload(),
 	}
 
 	ackMessage, err := testMessage.DeserializeDataStreamAcknowledgeContent()
@@ -810,7 +821,7 @@ func TestClientMessage_DeserializeDataStreamAcknowledgeContent(t *testing.T) {
 	assert.Equal(t, message.AcknowledgeContent{}, ackMessage2)
 	require.Error(t, err, "An error was not thrown when one was expected.")
 
-	testMessage.Payload = ackMessagePayload
+	testMessage.Payload = mockAckMessagePayload()
 	ackMessage3, err := testMessage.DeserializeDataStreamAcknowledgeContent()
 	assert.Equal(t, message.AcknowledgeMessage, ackMessage3.MessageType)
 	assert.Equal(t, messageID, ackMessage3.MessageID)
@@ -823,7 +834,7 @@ func TestClientMessage_DeserializeChannelClosedMessage(t *testing.T) {
 	t.Logf("Starting test: %s", t.Name())
 	// ClientMessage is initialized with improperly formatted json data
 	testMessage := message.ClientMessage{
-		Payload: payload,
+		Payload: mockPayload(),
 	}
 
 	closeMessage, err := testMessage.DeserializeChannelClosedMessage()
@@ -835,14 +846,14 @@ func TestClientMessage_DeserializeChannelClosedMessage(t *testing.T) {
 	assert.Equal(t, message.ChannelClosed{}, closeMessage2)
 	require.Error(t, err, "An error was not thrown when one was expected.")
 
-	testMessage.Payload = channelClosedPayload
+	testMessage.Payload = mockChannelClosedPayload()
 	closeMessage3, err := testMessage.DeserializeChannelClosedMessage()
 	assert.Equal(t, message.ChannelClosedMessage, closeMessage3.MessageType)
 	assert.Equal(t, messageID, closeMessage3.MessageID)
 	assert.Equal(t, strconv.FormatUint(createdDate, 10), closeMessage3.CreatedDate)
 	assert.Equal(t, int(schemaVersion), closeMessage3.SchemaVersion)
 	assert.Equal(t, sessionID, closeMessage3.SessionID)
-	assert.Equal(t, string(payload), closeMessage3.Output)
+	assert.Equal(t, string(mockPayload()), closeMessage3.Output)
 	require.NoError(t, err, "An error was thrown when one was not expected.")
 }
 
@@ -852,7 +863,7 @@ func TestClientMessage_DeserializeHandshakeRequest(t *testing.T) {
 	t.Logf("Starting test: %s", t.Name())
 	// ClientMessage is initialized with improperly formatted json data
 	testMessage := message.ClientMessage{
-		Payload: payload,
+		Payload: mockPayload(),
 	}
 
 	handshakeReq, err := testMessage.DeserializeHandshakeRequest()
@@ -864,7 +875,7 @@ func TestClientMessage_DeserializeHandshakeRequest(t *testing.T) {
 	assert.Equal(t, message.HandshakeRequestPayload{}, handshakeReq2)
 	require.Error(t, err, "An error was not thrown when one was expected.")
 
-	testMessage.Payload = handshakeReqPayload
+	testMessage.Payload = mockHandshakeReqPayload()
 	handshakeReq3, err := testMessage.DeserializeHandshakeRequest()
 	assert.Equal(t, agentVersion, handshakeReq3.AgentVersion)
 	assert.Equal(t, message.ActionType(actionType), handshakeReq3.RequestedClientActions[0].ActionType)
@@ -878,7 +889,7 @@ func TestClientMessage_DeserializeHandshakeComplete(t *testing.T) {
 	t.Logf("Starting test: %s", t.Name())
 	// ClientMessage is initialized with improperly formatted json data
 	testMessage := message.ClientMessage{
-		Payload: payload,
+		Payload: mockPayload(),
 	}
 
 	handshakeComplete, err := testMessage.DeserializeHandshakeComplete()
@@ -890,7 +901,7 @@ func TestClientMessage_DeserializeHandshakeComplete(t *testing.T) {
 	assert.Equal(t, message.HandshakeCompletePayload{}, handshakeComplete2)
 	require.Error(t, err, "An error was not thrown when one was expected.")
 
-	testMessage.Payload = handshakeCompletePayload
+	testMessage.Payload = mockHandshakeCompletePayload()
 	handshakeComplete3, err := testMessage.DeserializeHandshakeComplete()
 	assert.Equal(t, time.Duration(timeToComplete), handshakeComplete3.HandshakeTimeToComplete)
 	assert.Equal(t, customerMessage, handshakeComplete3.CustomerMessage)
@@ -1037,7 +1048,7 @@ func TestSerializeAndDeserializeClientMessage(t *testing.T) {
 		SequenceNumber: 1,
 		Flags:          2,
 		MessageID:      u,
-		Payload:        payload,
+		Payload:        mockPayload(),
 	}
 
 	// Test SerializeClientMessage
@@ -1045,7 +1056,7 @@ func TestSerializeAndDeserializeClientMessage(t *testing.T) {
 	require.NoError(t, err, "Error serializing message")
 
 	seralizedMessageType := strings.TrimRight(string(serializedBytes[message.ClientMessageMessageTypeOffset:message.ClientMessageMessageTypeOffset+message.ClientMessageMessageTypeLength-1]), " ")
-	assert.Equal(t, seralizedMessageType, messageType)
+	assert.Equal(t, messageType, seralizedMessageType)
 
 	serializedVersion, err := message.GetUInteger(serializedBytes, message.ClientMessageSchemaVersionOffset)
 	require.NoError(t, err)
@@ -1085,7 +1096,7 @@ func TestSerializeAndDeserializeClientMessage(t *testing.T) {
 	assert.Equal(t, createdDate, deserializedClientMessage.CreatedDate)
 	assert.Equal(t, uint64(2), deserializedClientMessage.Flags)
 	assert.Equal(t, int64(1), deserializedClientMessage.SequenceNumber)
-	assert.True(t, reflect.DeepEqual(payload, deserializedClientMessage.Payload))
+	assert.True(t, reflect.DeepEqual(mockPayload(), deserializedClientMessage.Payload))
 }
 
 func TestSerializeMessagePayloadNegative(t *testing.T) {

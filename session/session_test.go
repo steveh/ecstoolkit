@@ -18,39 +18,35 @@ import (
 	"context"
 	"testing"
 
-	wsChannelMock "github.com/steveh/ecstoolkit/communicator/mocks"
 	dataChannelMock "github.com/steveh/ecstoolkit/datachannel/mocks"
 	"github.com/steveh/ecstoolkit/log"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
-var (
-	logger          = log.NewMockLog()
-	mockDataChannel = &dataChannelMock.IDataChannel{}
-	mockWsChannel   = &wsChannelMock.IWebSocketChannel{}
-)
+func getMockDataChannel() *dataChannelMock.IDataChannel {
+	mockDataChannel := dataChannelMock.IDataChannel{}
 
-func SetupMockActions() {
 	mockDataChannel.On("Open", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return("", nil)
 	mockDataChannel.On("SetOnMessage", mock.Anything)
 	mockDataChannel.On("RegisterOutputStreamHandler", mock.Anything, mock.Anything)
 	mockDataChannel.On("RegisterOutputMessageHandler", mock.Anything, mock.Anything, mock.Anything)
 	mockDataChannel.On("ResendStreamDataMessageScheduler", mock.Anything).Return(nil)
+
+	return &mockDataChannel
 }
 
 func TestOpenDataChannel(t *testing.T) {
 	t.Parallel()
 
-	mockDataChannel = &dataChannelMock.IDataChannel{}
-	mockWsChannel = &wsChannelMock.IWebSocketChannel{}
+	mockLogger := log.NewMockLog()
+	mockDataChannel := getMockDataChannel()
 
 	sessionMock := &Session{
-		logger: logger,
+		logger: mockLogger,
 	}
 	sessionMock.dataChannel = mockDataChannel
 
-	SetupMockActions()
 	mockDataChannel.On("Open", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return("", nil)
 
 	_, err := sessionMock.OpenDataChannel(context.TODO())
@@ -60,15 +56,13 @@ func TestOpenDataChannel(t *testing.T) {
 func TestOpenDataChannelWithError(t *testing.T) {
 	t.Parallel()
 
-	mockDataChannel = &dataChannelMock.IDataChannel{}
-	mockWsChannel = &wsChannelMock.IWebSocketChannel{}
+	mockLogger := log.NewMockLog()
+	mockDataChannel := getMockDataChannel()
 
 	sessionMock := &Session{
-		logger: logger,
+		logger: mockLogger,
 	}
 	sessionMock.dataChannel = mockDataChannel
-
-	SetupMockActions()
 
 	// First reconnection failed when open datachannel, success after retry
 	mockDataChannel.On("Open", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return("", nil)

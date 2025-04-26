@@ -39,12 +39,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var (
-	mockLogger    = log.NewMockLog()
-	payload       = []byte("testPayload")
-	cipherTextKey = []byte("cipher-text-key")
-	errMock       = errors.New("mock error")
-)
+var errMock = errors.New("mock error")
+
+func mockPayload() []byte {
+	return []byte("testPayload")
+}
+
+func mockCipherTextKey() []byte {
+	return []byte("cipher-text-key")
+}
 
 const (
 	streamURL    = "stream-url"
@@ -64,6 +67,8 @@ const (
 
 func TestNewDataChannel(t *testing.T) {
 	t.Parallel()
+
+	mockLogger := log.NewMockLog()
 
 	mockWsChannel := &communicatorMocks.IWebSocketChannel{}
 
@@ -179,7 +184,7 @@ func TestSendInputDataMessage(t *testing.T) {
 
 	mockWsChannel.On("SendMessage", mock.Anything, mock.Anything).Return(nil)
 
-	err := dataChannel.SendInputDataMessage(message.Output, payload)
+	err := dataChannel.SendInputDataMessage(message.Output, mockPayload())
 	require.NoError(t, err, "Error sending input data message")
 
 	assert.Equal(t, streamDataSequenceNumber+1, dataChannel.streamDataSequenceNumber)
@@ -573,7 +578,7 @@ func TestHandshakeRequestHandler(t *testing.T) {
 
 		assert.Equal(t, kmsKeyID, kmsKeyIDInput)
 		assert.Equal(t, expectedContext, context)
-		mockEncrypter.On("GetEncryptedDataKey").Return(cipherTextKey)
+		mockEncrypter.On("GetEncryptedDataKey").Return(mockCipherTextKey())
 
 		return mockEncrypter, nil
 	}
@@ -603,7 +608,7 @@ func TestHandshakeRequestHandler(t *testing.T) {
 		processedAction.ActionType = message.KMSEncryption
 		processedAction.ActionStatus = message.Success
 		processedAction.ActionResult = message.KMSEncryptionResponse{
-			KMSCipherTextKey: cipherTextKey,
+			KMSCipherTextKey: mockCipherTextKey(),
 		}
 		expectedActions = append(expectedActions, processedAction)
 
@@ -631,7 +636,7 @@ func TestHandleOutputMessageForDefaultTypeWithError(t *testing.T) {
 
 	dataChannel := getDataChannel(t, mockWsChannel)
 	clientMessage := getClientMessage(0, message.OutputStreamMessage,
-		uint32(message.Output), payload)
+		uint32(message.Output), mockPayload())
 	rawMessage := []byte("rawMessage")
 
 	var handler OutputStreamDataMessageHandler = func(_ message.ClientMessage) (bool, error) {
@@ -651,7 +656,7 @@ func TestHandleOutputMessageForExitCodePayloadTypeWithError(t *testing.T) {
 
 	dataChannel := getDataChannel(t, mockWsChannel)
 	clientMessage := getClientMessage(0, message.OutputStreamMessage,
-		uint32(message.ExitCode), payload)
+		uint32(message.ExitCode), mockPayload())
 	dataChannel.encryptionEnabled = true
 	mockEncrypter := &mocks.IEncrypter{}
 	dataChannel.encryption = mockEncrypter
@@ -744,6 +749,8 @@ func TestProcessSessionTypeHandshakeActionForNonInteractiveCommands(t *testing.T
 func TestProcessFirstMessageOutputMessageFirst(t *testing.T) {
 	t.Parallel()
 
+	mockLogger := log.NewMockLog()
+
 	mockWsChannel := &communicatorMocks.IWebSocketChannel{}
 
 	outputMessage := message.ClientMessage{
@@ -769,6 +776,8 @@ func TestProcessFirstMessageOutputMessageFirst(t *testing.T) {
 
 func TestOpenWithRetryWithError(t *testing.T) {
 	t.Parallel()
+
+	mockLogger := log.NewMockLog()
 
 	mockWsChannel := &communicatorMocks.IWebSocketChannel{}
 
@@ -824,6 +833,8 @@ func buildHandshakeRequest(t *testing.T) message.HandshakeRequestPayload {
 
 func getDataChannel(t *testing.T, mockWsChannel *communicatorMocks.IWebSocketChannel) *DataChannel {
 	t.Helper()
+
+	mockLogger := log.NewMockLog()
 
 	mockKMSClient := &kms.Client{}
 
