@@ -30,6 +30,8 @@ import (
 )
 
 // This test passes ctrl+c signal which blocks running of all other tests.
+//
+//nolint:paralleltest // uses signal handling
 func TestSetSessionHandlers(t *testing.T) {
 	out, in := net.Pipe()
 	defer func() {

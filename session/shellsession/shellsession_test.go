@@ -76,9 +76,8 @@ func TestInitialize(t *testing.T) {
 	assert.Equal(t, shellSession.session, session)
 }
 
+//nolint:paralleltest // uses signal handling
 func TestHandleControlSignals(t *testing.T) {
-	t.Parallel()
-
 	mockLogger := log.NewMockLog()
 	mockDataChannel := &dataChannelMock.IDataChannel{}
 
@@ -173,9 +172,9 @@ func TestTerminalResizeWhenSessionSizeDataIsNotEqualToActualSize(t *testing.T) {
 		session:  sess,
 		SizeData: sizeData,
 		logger:   mockLogger,
-	}
-	getTerminalSizeCall = func(_ int) (int, int, error) {
-		return 123, 123, nil
+		terminalSizer: func(_ int) (int, int, error) {
+			return 123, 123, nil
+		},
 	}
 
 	var wg sync.WaitGroup

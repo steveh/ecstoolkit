@@ -47,18 +47,20 @@ type ShellSession struct {
 	originalSttyState bytes.Buffer
 	shutdown          context.CancelFunc
 	logger            log.T
+	terminalSizer     TerminalSizer
 }
 
 var _ session.ISessionPlugin = (*ShellSession)(nil)
 
-// getTerminalSizeCall is a function that retrieves the terminal dimensions.
-var getTerminalSizeCall = term.GetSize
+// TerminalSizer is a function type that retrieves the size of the terminal.
+type TerminalSizer = func(fd int) (width, height int, err error)
 
 // NewShellSession creates a new shell session.
 func NewShellSession(ctx context.Context, logger log.T, sess session.ISessionSupport) (*ShellSession, error) {
 	s := &ShellSession{
-		session: sess,
-		logger:  logger,
+		session:       sess,
+		logger:        logger,
+		terminalSizer: term.GetSize,
 	}
 
 	sess.RegisterOutputStreamHandler(s.ProcessStreamMessagePayload, true)
@@ -112,7 +114,7 @@ func (s *ShellSession) handleControlSignals() {
 func (s *ShellSession) handleTerminalResize() {
 	go func() {
 		for {
-			width, height := terminalSize(s.logger)
+			width, height := s.getTerminalSize()
 
 			if s.SizeData.Rows != height || s.SizeData.Cols != width {
 				sizeData := message.SizeData{
@@ -139,35 +141,35 @@ func (s *ShellSession) handleTerminalResize() {
 }
 
 // If running from IDE GetTerminalSizeCall will not work. Supply a fixed width and height value.
-func terminalSize(logger log.T) (uint32, uint32) {
+func (s *ShellSession) getTerminalSize() (uint32, uint32) {
 	const (
 		defaultWidth  = 300
 		defaultHeight = 100
 	)
 
-	width, height, err := getTerminalSizeCall(int(os.Stdin.Fd()))
+	width, height, err := s.terminalSizer(int(os.Stdin.Fd()))
 	if err != nil {
-		logger.Error("Could not get size of terminal", "error", err, "width", width, "height", height)
+		s.logger.Error("Could not get size of terminal", "error", err, "width", width, "height", height)
 
 		return defaultWidth, defaultHeight
 	}
 
 	safeWidth, err := util.SafeUint32(width)
 	if err != nil {
-		logger.Error("Could not convert width to uint32", "error", err, "width", width)
+		s.logger.Error("Could not convert width to uint32", "error", err, "width", width)
 
 		return defaultWidth, defaultHeight
 	}
 
 	safeHeight, err := util.SafeUint32(height)
 	if err != nil {
-		logger.Error("Could not convert height to uint32", "error", err, "height", height)
+		s.logger.Error("Could not convert height to uint32", "error", err, "height", height)
 
 		return defaultWidth, defaultHeight
 	}
 
 	if safeWidth == 0 || safeHeight == 0 {
-		logger.Error("Terminal size is zero", "width", safeWidth, "height", safeHeight)
+		s.logger.Error("Terminal size is zero", "width", safeWidth, "height", safeHeight)
 
 		return defaultWidth, defaultHeight
 	}
