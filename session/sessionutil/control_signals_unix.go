@@ -26,6 +26,8 @@ import (
 // SIGINT captures Ctrl+C
 // SIGQUIT captures Ctrl+\
 // SIGTSTP captures Ctrl+Z.
+//
+//nolint:gochecknoglobals
 var SignalsByteMap = map[os.Signal]byte{
 	syscall.SIGINT:  '\003',
 	syscall.SIGQUIT: '\x1c',
@@ -33,4 +35,6 @@ var SignalsByteMap = map[os.Signal]byte{
 }
 
 // ControlSignals contains the list of signals that can be used to control the session.
+//
+//nolint:gochecknoglobals
 var ControlSignals = []os.Signal{syscall.SIGINT, syscall.SIGTSTP, syscall.SIGQUIT}

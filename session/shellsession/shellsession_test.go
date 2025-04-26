@@ -37,43 +37,56 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var (
+var errMock = errors.New("mock error")
+
+const (
 	expectedSequenceNumber = int64(0)
-	logger                 = log.NewMockLog()
 	clientID               = "clientId"
 	sessionID              = "sessionId"
 	instanceID             = "instanceId"
-	mockDataChannel        = &dataChannelMock.IDataChannel{}
-	mockWsChannel          = &mocks.IWebSocketChannel{}
 )
 
 func TestName(t *testing.T) {
+	t.Parallel()
+
+	mockLogger := log.NewMockLog()
+
 	shellSession := ShellSession{
-		logger: logger,
+		logger: mockLogger,
 	}
 	name := shellSession.Name()
 	assert.Equal(t, "Standard_Stream", name)
 }
 
 func TestInitialize(t *testing.T) {
-	session, err := session.NewSession(nil, mockDataChannel, "", logger)
+	t.Parallel()
+
+	mockLogger := log.NewMockLog()
+	mockDataChannel := &dataChannelMock.IDataChannel{}
+
+	session, err := session.NewSession(nil, mockDataChannel, "", mockLogger)
 	require.NoError(t, err)
 
 	mockDataChannel.On("RegisterOutputStreamHandler", mock.Anything, true).Times(1)
 	mockDataChannel.On("RegisterOutputMessageHandler", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 
-	shellSession, err := NewShellSession(context.TODO(), logger, session)
+	shellSession, err := NewShellSession(context.TODO(), mockLogger, session)
 	require.NoError(t, err, "Initialize port session")
 
 	assert.Equal(t, shellSession.session, session)
 }
 
 func TestHandleControlSignals(t *testing.T) {
-	sess, err := session.NewSession(nil, mockDataChannel, "", logger)
+	t.Parallel()
+
+	mockLogger := log.NewMockLog()
+	mockDataChannel := &dataChannelMock.IDataChannel{}
+
+	sess, err := session.NewSession(nil, mockDataChannel, "", mockLogger)
 	require.NoError(t, err)
 
 	shellSession := ShellSession{
-		logger:  logger,
+		logger:  mockLogger,
 		session: sess,
 	}
 
@@ -82,7 +95,7 @@ func TestHandleControlSignals(t *testing.T) {
 	sendDataMessage := func() error {
 		counter++
 
-		return errors.New("SendInputDataMessage error")
+		return errMock
 	}
 	mockDataChannel.On("SendInputDataMessage", mock.Anything, mock.Anything, mock.Anything).Return(sendDataMessage())
 
@@ -114,6 +127,8 @@ func TestHandleControlSignals(t *testing.T) {
 }
 
 func TestSendInputDataMessageWithPayloadTypeSize(t *testing.T) {
+	t.Parallel()
+
 	sizeData := message.SizeData{
 		Cols: 100,
 		Rows: 100,
@@ -140,9 +155,13 @@ func TestSendInputDataMessageWithPayloadTypeSize(t *testing.T) {
 }
 
 func TestTerminalResizeWhenSessionSizeDataIsNotEqualToActualSize(t *testing.T) {
+	t.Parallel()
+
+	mockLogger := log.NewMockLog()
+
 	dataChannel := getDataChannel(t)
 
-	sess, err := session.NewSession(nil, dataChannel, "", logger)
+	sess, err := session.NewSession(nil, dataChannel, "", mockLogger)
 	require.NoError(t, err)
 
 	sizeData := message.SizeData{
@@ -153,9 +172,9 @@ func TestTerminalResizeWhenSessionSizeDataIsNotEqualToActualSize(t *testing.T) {
 	shellSession := ShellSession{
 		session:  sess,
 		SizeData: sizeData,
-		logger:   logger,
+		logger:   mockLogger,
 	}
-	GetTerminalSizeCall = func(_ int) (int, int, error) {
+	getTerminalSizeCall = func(_ int) (int, int, error) {
 		return 123, 123, nil
 	}
 
@@ -183,12 +202,17 @@ func TestTerminalResizeWhenSessionSizeDataIsNotEqualToActualSize(t *testing.T) {
 }
 
 func TestProcessStreamMessagePayload(t *testing.T) {
-	sess, err := session.NewSession(nil, mockDataChannel, "", logger)
+	t.Parallel()
+
+	mockLogger := log.NewMockLog()
+	mockDataChannel := &dataChannelMock.IDataChannel{}
+
+	sess, err := session.NewSession(nil, mockDataChannel, "", mockLogger)
 	require.NoError(t, err)
 
 	shellSession := ShellSession{
 		session: sess,
-		logger:  logger,
+		logger:  mockLogger,
 	}
 
 	msg := message.ClientMessage{
@@ -202,9 +226,11 @@ func TestProcessStreamMessagePayload(t *testing.T) {
 func getDataChannel(t *testing.T) *datachannel.DataChannel {
 	t.Helper()
 
+	mockLogger := log.NewMockLog()
+	mockWsChannel := &mocks.IWebSocketChannel{}
 	mockKMSClient := &kms.Client{}
 
-	dataChannel, err := datachannel.NewDataChannel(mockKMSClient, mockWsChannel, clientID, sessionID, instanceID, logger)
+	dataChannel, err := datachannel.NewDataChannel(mockKMSClient, mockWsChannel, clientID, sessionID, instanceID, mockLogger)
 	require.NoError(t, err)
 
 	return dataChannel

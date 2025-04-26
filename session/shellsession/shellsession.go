@@ -51,8 +51,8 @@ type ShellSession struct {
 
 var _ session.ISessionPlugin = (*ShellSession)(nil)
 
-// GetTerminalSizeCall is a function that retrieves the terminal dimensions.
-var GetTerminalSizeCall = term.GetSize
+// getTerminalSizeCall is a function that retrieves the terminal dimensions.
+var getTerminalSizeCall = term.GetSize
 
 // NewShellSession creates a new shell session.
 func NewShellSession(ctx context.Context, logger log.T, sess session.ISessionSupport) (*ShellSession, error) {
@@ -145,7 +145,7 @@ func terminalSize(logger log.T) (uint32, uint32) {
 		defaultHeight = 100
 	)
 
-	width, height, err := GetTerminalSizeCall(int(os.Stdin.Fd()))
+	width, height, err := getTerminalSizeCall(int(os.Stdin.Fd()))
 	if err != nil {
 		logger.Error("Could not get size of terminal", "error", err, "width", width, "height", height)
 

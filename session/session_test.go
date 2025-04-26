@@ -32,7 +32,7 @@ var (
 )
 
 func SetupMockActions() {
-	mockDataChannel.On("Initialize", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return()
+	mockDataChannel.On("Open", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return("", nil)
 	mockDataChannel.On("SetOnMessage", mock.Anything)
 	mockDataChannel.On("RegisterOutputStreamHandler", mock.Anything, mock.Anything)
 	mockDataChannel.On("RegisterOutputMessageHandler", mock.Anything, mock.Anything, mock.Anything)
@@ -40,6 +40,8 @@ func SetupMockActions() {
 }
 
 func TestOpenDataChannel(t *testing.T) {
+	t.Parallel()
+
 	mockDataChannel = &dataChannelMock.IDataChannel{}
 	mockWsChannel = &wsChannelMock.IWebSocketChannel{}
 
@@ -56,6 +58,8 @@ func TestOpenDataChannel(t *testing.T) {
 }
 
 func TestOpenDataChannelWithError(t *testing.T) {
+	t.Parallel()
+
 	mockDataChannel = &dataChannelMock.IDataChannel{}
 	mockWsChannel = &wsChannelMock.IWebSocketChannel{}
 

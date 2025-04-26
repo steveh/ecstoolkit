@@ -51,16 +51,25 @@ func get16ByteBuffer() []byte {
 	return getNByteBuffer(16)
 }
 
+const (
+	messageID        = "dd01e56b-ff48-483e-a508-b5f073f31b16"
+	schemaVersion    = uint32(1)
+	createdDate      = uint64(1503434274948)
+	destinationID    = "destination-id"
+	actionType       = "start"
+	defaultUUID      = "dd01e56b-ff48-483e-a508-b5f073f31b16"
+	timeToComplete   = 1000000
+	customerMessage  = "Handshake Complete"
+	sampleParameters = "{\"name\": \"richard\"}"
+	sequenceNumber   = int64(2)
+	agentVersion     = "3.0"
+	sessionID        = "sessionId_01234567890abcedf"
+)
+
 var (
 	defaultByteBufferGenerator = get8ByteBuffer
-	messageID                  = "dd01e56b-ff48-483e-a508-b5f073f31b16"
 	messageType                = message.InputStreamMessage
-	schemaVersion              = uint32(1)
-	createdDate                = uint64(1503434274948)
-	destinationID              = "destination-id"
-	actionType                 = "start"
 	payload                    = []byte("payload")
-	defaultUUID                = "dd01e56b-ff48-483e-a508-b5f073f31b16"
 	ackMessagePayload          = []byte(fmt.Sprintf(
 		`{
 			"AcknowledgedMessageType": "%s",
@@ -106,12 +115,6 @@ var (
 		timeToComplete,
 		customerMessage,
 	))
-	timeToComplete   = 1000000
-	customerMessage  = "Handshake Complete"
-	sampleParameters = "{\"name\": \"richard\"}"
-	sequenceNumber   = int64(2)
-	agentVersion     = "3.0"
-	sessionID        = "sessionId_01234567890abcedf"
 )
 
 type TestParams struct {
@@ -1046,11 +1049,11 @@ func TestSerializeAndDeserializeClientMessage(t *testing.T) {
 
 	serializedVersion, err := message.GetUInteger(serializedBytes, message.ClientMessageSchemaVersionOffset)
 	require.NoError(t, err)
-	assert.Equal(t, serializedVersion, schemaVersion)
+	assert.Equal(t, schemaVersion, serializedVersion)
 
 	serializedCD, err := message.GetULong(serializedBytes, message.ClientMessageCreatedDateOffset)
 	require.NoError(t, err)
-	assert.Equal(t, serializedCD, createdDate)
+	assert.Equal(t, createdDate, serializedCD)
 
 	serializedSequence, err := message.GetLong(serializedBytes, message.ClientMessageSequenceNumberOffset)
 	require.NoError(t, err)
@@ -1062,7 +1065,7 @@ func TestSerializeAndDeserializeClientMessage(t *testing.T) {
 
 	seralizedMessageID, err := message.GetUUID(serializedBytes, message.ClientMessageMessageIDOffset)
 	require.NoError(t, err)
-	assert.Equal(t, seralizedMessageID.String(), messageID)
+	assert.Equal(t, messageID, seralizedMessageID.String())
 
 	serializedDigest, err := message.GetBytes(serializedBytes, message.ClientMessagePayloadDigestOffset, message.ClientMessagePayloadDigestLength)
 	require.NoError(t, err)

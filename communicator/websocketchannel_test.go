@@ -32,10 +32,13 @@ import (
 )
 
 var (
+	errDefault     = errors.New("default error")
+	defaultMessage = []byte("Default Message")
+)
+
+const (
 	defaultChannelToken = "channelToken"
 	defaultStreamURL    = "streamUrl"
-	errDefault          = errors.New("default error")
-	defaultMessage      = []byte("Default Message")
 )
 
 type ErrorCallbackWrapper struct {
