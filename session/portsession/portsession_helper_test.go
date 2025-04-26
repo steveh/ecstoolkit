@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/service/kms"
+	"github.com/steveh/ecstoolkit/communicator"
 	"github.com/steveh/ecstoolkit/communicator/mocks"
 	"github.com/steveh/ecstoolkit/config"
 	"github.com/steveh/ecstoolkit/datachannel"
@@ -28,34 +29,44 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var (
-	agentVersion         = "2.3.750.0"
-	mockLog              = log.NewMockLog()
-	mockWebSocketChannel = mocks.IWebSocketChannel{}
-	outputMessage        = message.ClientMessage{
-		PayloadType:   uint32(message.Output),
-		Payload:       []byte("testing123"),
-		PayloadLength: 10, //nolint:mnd
-	}
-	properties = map[string]any{
-		"PortNumber": "22",
-	}
+const (
+	agentVersion = "2.3.750.0"
 )
 
-func getSessionMock(t *testing.T) *session.Session {
-	t.Helper()
-
-	return getSessionMockWithParams(t, properties, agentVersion)
+func getMockLogger() *log.MockLog {
+	return log.NewMockLog()
 }
 
-var mockLogger = log.NewMockLog()
+func getMockWsChannel() *mocks.IWebSocketChannel {
+	return &mocks.IWebSocketChannel{}
+}
 
-func getSessionMockWithParams(t *testing.T, properties any, agentVersion string) *session.Session {
+func getMockOutputMessage() message.ClientMessage {
+	return message.ClientMessage{
+		PayloadType:   uint32(message.Output),
+		Payload:       []byte("testing123"),
+		PayloadLength: 10,
+	}
+}
+
+func getMockProperties() map[string]any {
+	return map[string]any{
+		"PortNumber": "22",
+	}
+}
+
+func getSessionMock(t *testing.T, wsChannel communicator.IWebSocketChannel) *session.Session {
+	t.Helper()
+
+	return getSessionMockWithParams(t, wsChannel, getMockProperties(), agentVersion)
+}
+
+func getSessionMockWithParams(t *testing.T, wsChannel communicator.IWebSocketChannel, properties any, agentVersion string) *session.Session {
 	t.Helper()
 
 	mockKMSClient := &kms.Client{}
 
-	dataChannel, err := datachannel.NewDataChannel(mockKMSClient, &mockWebSocketChannel, "clientId", "sessionId", "targetId", mockLogger)
+	dataChannel, err := datachannel.NewDataChannel(mockKMSClient, wsChannel, "clientId", "sessionId", "targetId", getMockLogger())
 	require.NoError(t, err)
 
 	dataChannel.SetAgentVersion(agentVersion)
@@ -69,7 +80,7 @@ func getSessionMockWithParams(t *testing.T, properties any, agentVersion string)
 	err = dataChannel.ProcessSessionTypeHandshakeAction(b)
 	require.NoError(t, err)
 
-	mockSession, err := session.NewSession(nil, dataChannel, "", mockLogger)
+	mockSession, err := session.NewSession(nil, dataChannel, "", getMockLogger())
 	require.NoError(t, err)
 
 	return mockSession

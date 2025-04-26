@@ -31,28 +31,39 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var (
+	errAcceptFailed    = errors.New("accept failed")
+	errHandlerNotReady = errors.New("handler not ready")
+)
+
 // Test Initialize.
 func TestInitializePortSession(t *testing.T) {
+	t.Parallel()
+
 	var portParameters PortParameters
 
-	if err := jsonutil.Remarshal(properties, &portParameters); err != nil {
+	if err := jsonutil.Remarshal(getMockProperties(), &portParameters); err != nil {
 		t.Errorf("Failed to remarshal properties: %v", err)
 
 		return
 	}
 
-	mockWebSocketChannel.On("SetOnMessage", mock.Anything)
+	mockWsChannel := getMockWsChannel()
 
-	sess := getSessionMock(t)
-	portSession, err := NewPortSession(context.TODO(), mockLog, sess)
+	mockWsChannel.On("SetOnMessage", mock.Anything)
+
+	sess := getSessionMock(t, mockWsChannel)
+	portSession, err := NewPortSession(context.TODO(), getMockLogger(), sess)
 	require.NoError(t, err, "Initialize port session")
 
-	mockWebSocketChannel.AssertExpectations(t)
+	mockWsChannel.AssertExpectations(t)
 	assert.Equal(t, portParameters, portSession.portParameters, "Initialize port parameters")
 	assert.IsType(t, &StandardStreamForwarding{}, portSession.portSessionType)
 }
 
 func TestInitializePortSessionForPortForwardingWithOldAgent(t *testing.T) {
+	t.Parallel()
+
 	var portParameters PortParameters
 
 	if err := jsonutil.Remarshal(map[string]any{"portNumber": "8080", "type": "LocalPortForwarding"}, &portParameters); err != nil {
@@ -61,18 +72,22 @@ func TestInitializePortSessionForPortForwardingWithOldAgent(t *testing.T) {
 		return
 	}
 
-	mockWebSocketChannel.On("SetOnMessage", mock.Anything)
+	mockWsChannel := getMockWsChannel()
 
-	sess := getSessionMockWithParams(t, portParameters, "2.2.0.0")
-	portSession, err := NewPortSession(context.TODO(), mockLog, sess)
+	mockWsChannel.On("SetOnMessage", mock.Anything)
+
+	sess := getSessionMockWithParams(t, mockWsChannel, portParameters, "2.2.0.0")
+	portSession, err := NewPortSession(context.TODO(), getMockLogger(), sess)
 	require.NoError(t, err, "Initialize port session")
 
-	mockWebSocketChannel.AssertExpectations(t)
+	mockWsChannel.AssertExpectations(t)
 	assert.Equal(t, portParameters, portSession.portParameters, "Initialize port parameters")
 	assert.IsType(t, &BasicPortForwarding{}, portSession.portSessionType)
 }
 
 func TestInitializePortSessionForPortForwarding(t *testing.T) {
+	t.Parallel()
+
 	var portParameters PortParameters
 
 	if err := jsonutil.Remarshal(map[string]any{"portNumber": "8080", "type": "LocalPortForwarding"}, &portParameters); err != nil {
@@ -81,13 +96,15 @@ func TestInitializePortSessionForPortForwarding(t *testing.T) {
 		return
 	}
 
-	mockWebSocketChannel.On("SetOnMessage", mock.Anything)
+	mockWsChannel := getMockWsChannel()
 
-	sess := getSessionMockWithParams(t, portParameters, "3.1.0.0")
-	portSession, err := NewPortSession(context.TODO(), mockLog, sess)
+	mockWsChannel.On("SetOnMessage", mock.Anything)
+
+	sess := getSessionMockWithParams(t, mockWsChannel, portParameters, "3.1.0.0")
+	portSession, err := NewPortSession(context.TODO(), getMockLogger(), sess)
 	require.NoError(t, err, "Initialize port session")
 
-	mockWebSocketChannel.AssertExpectations(t)
+	mockWsChannel.AssertExpectations(t)
 	assert.Equal(t, portParameters, portSession.portParameters, "Initialize port parameters")
 	assert.IsType(t, &MuxPortForwarding{}, portSession.portSessionType)
 }
@@ -110,7 +127,7 @@ func TestStartSessionWithClosedWsConn(t *testing.T) {
 		// Restore original stdin
 	}()
 
-	if _, err := out.Write(outputMessage.Payload); err != nil {
+	if _, err := out.Write(getMockOutputMessage().Payload); err != nil {
 		t.Errorf("Failed to write to out: %v", err)
 
 		return
@@ -131,7 +148,10 @@ func TestStartSessionWithClosedWsConn(t *testing.T) {
 		return nil
 	}
 
-	sess := *getSessionMock(t)
+	mockWsChannel := getMockWsChannel()
+	mockLogger := getMockLogger()
+
+	sess := *getSessionMock(t, mockWsChannel)
 	portSession := PortSession{
 		session:        &sess,
 		portParameters: PortParameters{PortNumber: "22"},
@@ -139,9 +159,9 @@ func TestStartSessionWithClosedWsConn(t *testing.T) {
 			inputStream:  in,
 			outputStream: out,
 			session:      &sess,
-			logger:       mockLog,
+			logger:       mockLogger,
 		},
-		logger: mockLog,
+		logger: mockLogger,
 	}
 
 	// Start session handlers in a goroutine
@@ -166,11 +186,13 @@ func TestStartSessionWithClosedWsConn(t *testing.T) {
 	deserializedMsg := &message.ClientMessage{}
 	err = deserializedMsg.DeserializeClientMessage(actualPayload)
 	require.NoError(t, err)
-	assert.Equal(t, outputMessage.Payload, deserializedMsg.Payload)
+	assert.Equal(t, getMockOutputMessage().Payload, deserializedMsg.Payload)
 }
 
 // Test ProcessStreamMessagePayload.
 func TestProcessStreamMessagePayload(t *testing.T) {
+	t.Parallel()
+
 	outR, outW, err := os.Pipe()
 	if err != nil {
 		t.Fatalf("Failed to create output pipe: %v", err)
@@ -195,14 +217,18 @@ func TestProcessStreamMessagePayload(t *testing.T) {
 
 	var payload []byte
 
-	session := *getSessionMock(t)
+	mockWsChannel := getMockWsChannel()
+	mockLogger := getMockLogger()
+	outputMessage := getMockOutputMessage()
+
+	session := *getSessionMock(t, mockWsChannel)
 
 	go func() {
 		portSession := PortSession{
 			session:         &session,
 			portParameters:  PortParameters{PortNumber: "22"},
 			portSessionType: ssf,
-			logger:          mockLog,
+			logger:          mockLogger,
 		}
 
 		t.Log("Calling ProcessStreamMessagePayload")
@@ -215,7 +241,7 @@ func TestProcessStreamMessagePayload(t *testing.T) {
 		}
 
 		if !isReady {
-			errChan <- errors.New("handler was not ready")
+			errChan <- errHandlerNotReady
 
 			return
 		}

@@ -28,6 +28,8 @@ import (
 
 // test readStream.
 func TestReadStream(t *testing.T) {
+	t.Parallel()
+
 	out, in := net.Pipe()
 	defer func() {
 		if err := out.Close(); err != nil {
@@ -35,7 +37,11 @@ func TestReadStream(t *testing.T) {
 		}
 	}()
 
-	session := *getSessionMock(t)
+	mockLogger := getMockLogger()
+	mockWsChannel := getMockWsChannel()
+	outputMessage := getMockOutputMessage()
+
+	session := *getSessionMock(t, mockWsChannel)
 
 	portSession := PortSession{
 		session: &session,
@@ -43,9 +49,9 @@ func TestReadStream(t *testing.T) {
 			session:   &session,
 			muxClient: &MuxClient{in, nil},
 			mgsConn:   &MgsConn{nil, out},
-			logger:    mockLog,
+			logger:    mockLogger,
 		},
-		logger: mockLog,
+		logger: mockLogger,
 	}
 
 	go func() {
@@ -84,6 +90,8 @@ func TestReadStream(t *testing.T) {
 
 // test writeStream.
 func TestWriteStream(t *testing.T) {
+	t.Parallel()
+
 	out, in := net.Pipe()
 	defer func() {
 		if err := in.Close(); err != nil {
@@ -95,14 +103,18 @@ func TestWriteStream(t *testing.T) {
 		}
 	}()
 
-	sess := *getSessionMock(t)
+	mockLogger := getMockLogger()
+	mockWsChannel := getMockWsChannel()
+	outputMessage := getMockOutputMessage()
+
+	sess := *getSessionMock(t, mockWsChannel)
 	portSession := PortSession{
 		portSessionType: &MuxPortForwarding{
 			session: &sess,
 			mgsConn: &MgsConn{nil, in},
-			logger:  mockLog,
+			logger:  mockLogger,
 		},
-		logger: mockLog,
+		logger: mockLogger,
 	}
 
 	go func() {
@@ -127,6 +139,10 @@ func TestWriteStream(t *testing.T) {
 
 // Test handleDataTransfer.
 func TestHandleDataTransferSrcToDst(t *testing.T) {
+	t.Parallel()
+
+	outputMessage := getMockOutputMessage()
+
 	msg := make([]byte, 20)
 	out, in := net.Pipe()
 	out1, in1 := net.Pipe()
@@ -164,6 +180,10 @@ func TestHandleDataTransferSrcToDst(t *testing.T) {
 }
 
 func TestHandleDataTransferDstToSrc(t *testing.T) {
+	t.Parallel()
+
+	outputMessage := getMockOutputMessage()
+
 	msg := make([]byte, 20)
 	out, in := net.Pipe()
 	out1, in1 := net.Pipe()

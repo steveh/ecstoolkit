@@ -58,7 +58,7 @@ func (p *StandardStreamForwarding) Stop() error {
 	}
 
 	if len(errs) > 0 {
-		return fmt.Errorf("stopping standard stream forwarding: %v", errs)
+		return fmt.Errorf("stopping standard stream forwarding: %w", errors.Join(errs...))
 	}
 
 	return nil

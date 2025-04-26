@@ -46,7 +46,7 @@ func TestStartSessionForStandardStreamForwarding(t *testing.T) {
 		// Restore original stdin
 	}()
 
-	if _, err := out.Write(outputMessage.Payload); err != nil {
+	if _, err := out.Write(getMockOutputMessage().Payload); err != nil {
 		t.Errorf("Failed to write to out: %v", err)
 
 		return
@@ -67,16 +67,18 @@ func TestStartSessionForStandardStreamForwarding(t *testing.T) {
 		return nil
 	}
 
-	sess := *getSessionMock(t)
+	mockWsChannel := getMockWsChannel()
+
+	sess := *getSessionMock(t, mockWsChannel)
 	portSession := PortSession{
 		session:        &sess,
 		portParameters: PortParameters{PortNumber: "22"},
 		portSessionType: &StandardStreamForwarding{
 			session:        &sess,
 			portParameters: PortParameters{PortNumber: "22"},
-			logger:         mockLog,
+			logger:         getMockLogger(),
 		},
-		logger: mockLog,
+		logger: getMockLogger(),
 	}
 
 	// Start session handlers in a goroutine
@@ -101,5 +103,5 @@ func TestStartSessionForStandardStreamForwarding(t *testing.T) {
 	deserializedMsg := &message.ClientMessage{}
 	err = deserializedMsg.DeserializeClientMessage(actualPayload)
 	require.NoError(t, err)
-	assert.Equal(t, outputMessage.Payload, deserializedMsg.Payload)
+	assert.Equal(t, getMockOutputMessage().Payload, deserializedMsg.Payload)
 }

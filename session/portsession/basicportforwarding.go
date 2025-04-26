@@ -32,6 +32,14 @@ import (
 	"github.com/steveh/ecstoolkit/version"
 )
 
+var (
+	// ErrNotTCPListener is returned when the listener is not a TCP listener.
+	ErrNotTCPListener = errors.New("not a TCP listener")
+
+	// ErrConnectionFailed is returned when the connection fails.
+	ErrConnectionFailed = errors.New("connection failed")
+)
+
 // BasicPortForwarding is type of port session
 // accepts one client connection at a time.
 type BasicPortForwarding struct {
@@ -179,7 +187,7 @@ func (p *BasicPortForwarding) startLocalListener(portNumber string) (net.Listene
 		// get port number the TCP listener opened
 		tcpAddr, ok := listener.Addr().(*net.TCPAddr)
 		if !ok {
-			return nil, errors.New("failed to type assert listener.Addr() to *net.TCPAddr")
+			return nil, ErrNotTCPListener
 		}
 
 		p.portParameters.LocalPortNumber = strconv.Itoa(tcpAddr.Port)

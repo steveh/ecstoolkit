@@ -16,7 +16,6 @@ package portsession
 
 import (
 	"context"
-	"errors"
 	"net"
 	"os"
 	"os/signal"
@@ -31,8 +30,6 @@ import (
 
 // This test passes ctrl+c signal which blocks running of all other tests.
 func TestSetSessionHandlers(t *testing.T) {
-	mockLog.Info("Test session started", "message", "TestStartSession!!!!!")
-
 	out, in := net.Pipe()
 	defer func() {
 		if err := out.Close(); err != nil {
@@ -51,10 +48,13 @@ func TestSetSessionHandlers(t *testing.T) {
 
 		return nil
 	}
-	mockWebSocketChannel.On("SendMessage", mock.Anything, mock.Anything).
+
+	mockWsChannel := getMockWsChannel()
+
+	mockWsChannel.On("SendMessage", mock.Anything, mock.Anything).
 		Return(countTimes())
 
-	mockSession := *getSessionMock(t)
+	mockSession := *getSessionMock(t, mockWsChannel)
 
 	portSession := PortSession{
 		session:        &mockSession,
@@ -62,9 +62,9 @@ func TestSetSessionHandlers(t *testing.T) {
 		portSessionType: &BasicPortForwarding{
 			session:        &mockSession,
 			portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding"},
-			logger:         mockLog,
+			logger:         getMockLogger(),
 		},
-		logger: mockLog,
+		logger: getMockLogger(),
 	}
 	signalCh := make(chan os.Signal, 1)
 
@@ -72,7 +72,7 @@ func TestSetSessionHandlers(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 
 		if _, err := out.Write([]byte("testing123")); err != nil {
-			mockLog.Info("Write error", "error", err)
+			getMockLogger().Info("Write error", "error", err)
 		}
 	}()
 
@@ -96,15 +96,17 @@ func TestSetSessionHandlers(t *testing.T) {
 	time.Sleep(time.Second)
 	assert.Equal(t, syscall.SIGINT, <-signalCh)
 	assert.Equal(t, 1, counter)
-	mockWebSocketChannel.AssertExpectations(t)
+	mockWsChannel.AssertExpectations(t)
 }
 
 func TestStartSessionTCPLocalPortFromDocument(t *testing.T) {
 	acceptConnection = func(_ net.Listener) (net.Conn, error) {
-		return nil, errors.New("accept failed")
+		return nil, errAcceptFailed
 	}
 
-	sess := *getSessionMock(t)
+	mockWsChannel := getMockWsChannel()
+
+	sess := *getSessionMock(t, mockWsChannel)
 
 	portSession := PortSession{
 		session:        &sess,
@@ -112,9 +114,9 @@ func TestStartSessionTCPLocalPortFromDocument(t *testing.T) {
 		portSessionType: &BasicPortForwarding{
 			session:        &sess,
 			portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding"},
-			logger:         mockLog,
+			logger:         getMockLogger(),
 		},
-		logger: mockLog,
+		logger: getMockLogger(),
 	}
 	if err := portSession.SetSessionHandlers(context.TODO()); err != nil {
 		t.Logf("Error setting session handlers: %v", err)
@@ -124,39 +126,43 @@ func TestStartSessionTCPLocalPortFromDocument(t *testing.T) {
 }
 
 func TestStartSessionTCPAcceptFailed(t *testing.T) {
-	connErr := errors.New("accept failed")
+	mockWsChannel := getMockWsChannel()
+
+	connErr := errAcceptFailed
 	acceptConnection = func(_ net.Listener) (net.Conn, error) {
 		return nil, connErr
 	}
-	sess := *getSessionMock(t)
+	sess := *getSessionMock(t, mockWsChannel)
 	portSession := PortSession{
 		session:        &sess,
 		portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding"},
 		portSessionType: &BasicPortForwarding{
 			session:        &sess,
 			portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding"},
-			logger:         mockLog,
+			logger:         getMockLogger(),
 		},
-		logger: mockLog,
+		logger: getMockLogger(),
 	}
 	require.ErrorIs(t, portSession.SetSessionHandlers(context.TODO()), connErr)
 }
 
 func TestStartSessionTCPConnectFailed(t *testing.T) {
-	listenerError := errors.New("TCP connection failed")
+	mockWsChannel := getMockWsChannel()
+
+	listenerError := ErrConnectionFailed
 	getNewListener = func(_ string, _ string) (net.Listener, error) {
 		return nil, listenerError
 	}
-	sess := *getSessionMock(t)
+	sess := *getSessionMock(t, mockWsChannel)
 	portSession := PortSession{
 		session:        &sess,
 		portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding"},
 		portSessionType: &BasicPortForwarding{
 			session:        &sess,
 			portParameters: PortParameters{PortNumber: "22", Type: "LocalPortForwarding"},
-			logger:         mockLog,
+			logger:         getMockLogger(),
 		},
-		logger: mockLog,
+		logger: getMockLogger(),
 	}
 	require.ErrorIs(t, portSession.SetSessionHandlers(context.TODO()), listenerError)
 }

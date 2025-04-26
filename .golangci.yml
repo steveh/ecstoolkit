@@ -10,13 +10,8 @@ linters:
     - gocognit
     - lll
     - tagliatelle
-    - varnamelen
-
-    - err113
-    - gochecknoglobals
-    - interfacebloat
-    - paralleltest
     - testpackage
+    - varnamelen
   exclusions:
     generated: lax
 formatters:

@@ -78,7 +78,7 @@ func (c *MgsConn) close() error {
 	}
 
 	if len(errs) > 0 {
-		return fmt.Errorf("closing MgsConn: %v", errs)
+		return fmt.Errorf("closing MgsConn: %w", errors.Join(errs...))
 	}
 
 	return nil
@@ -95,7 +95,7 @@ func (c *MuxClient) close() error {
 	}
 
 	if len(errs) > 0 {
-		return fmt.Errorf("closing MuxClient: %v", errs)
+		return fmt.Errorf("closing MuxClient: %w", errors.Join(errs...))
 	}
 
 	return nil
@@ -127,7 +127,7 @@ func (p *MuxPortForwarding) Stop() error {
 	}
 
 	if len(errs) > 0 {
-		return fmt.Errorf("stopping mux port forwarding: %v", errs)
+		return fmt.Errorf("stopping mux port forwarding: %w", errors.Join(errs...))
 	}
 
 	return nil
@@ -196,7 +196,7 @@ func (p *MuxPortForwarding) WriteStream(outputMessage message.ClientMessage) err
 		}
 
 		if message.ConnectToPortError == flag {
-			return errors.New("connection to destination port failed")
+			return fmt.Errorf("%w: connection to destination port failed", ErrConnectionFailed)
 		}
 	}
 
@@ -340,7 +340,7 @@ func (p *MuxPortForwarding) setupTCPListener() (net.Listener, string, error) {
 
 	tcpAddr, ok := listener.Addr().(*net.TCPAddr)
 	if !ok {
-		return nil, "", errors.New("failed to type assert listener.Addr() to *net.TCPAddr")
+		return nil, "", ErrNotTCPListener
 	}
 
 	p.portParameters.LocalPortNumber = strconv.Itoa(tcpAddr.Port)
