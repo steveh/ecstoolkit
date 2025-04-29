@@ -606,54 +606,50 @@ func TestHandshakeRequestHandler(t *testing.T) {
 
 		return mockEncrypter, nil
 	}
-
-	var processedClientActions []message.ProcessedClientAction
-
-	mockWsChannel.On("SendMessage", mock.MatchedBy(func(sentData []byte) bool {
+	// Mock sending of encryption challenge
+	handshakeResponseMatcher := func(sentData []byte) bool {
 		clientMessage := &message.ClientMessage{}
 		if err := clientMessage.DeserializeClientMessage(sentData); err != nil {
-			return false
-		}
+			t.Errorf("Failed to deserialize client message: %v", err)
 
-		if clientMessage.MessageType != message.InputStreamMessage || clientMessage.PayloadType != uint32(message.HandshakeResponsePayloadType) {
 			return false
 		}
 
 		handshakeResponse := message.HandshakeResponsePayload{}
+
 		if err := json.Unmarshal(clientMessage.Payload, &handshakeResponse); err != nil {
-			t.Logf("Failed to unmarshal handshake response: %v", err)
+			t.Errorf("Failed to unmarshal handshake response: %v", err)
 
 			return false
 		}
+		// Return true if any other message type (typically to account for acknowledge)
+		if clientMessage.MessageType != message.OutputStreamMessage {
+			return true
+		}
 
-		processedClientActions = append(processedClientActions, handshakeResponse.ProcessedClientActions...)
+		expectedActions := []message.ProcessedClientAction{}
+		processedAction := message.ProcessedClientAction{}
+		processedAction.ActionType = message.KMSEncryption
+		processedAction.ActionStatus = message.Success
+		processedAction.ActionResult = message.KMSEncryptionResponse{
+			KMSCipherTextKey: mockCipherTextKey(),
+		}
+		expectedActions = append(expectedActions, processedAction)
 
-		return true
-	}), websocket.BinaryMessage).Return(nil)
+		processedAction = message.ProcessedClientAction{}
+		processedAction.ActionType = message.SessionType
+		processedAction.ActionStatus = message.Success
+		expectedActions = append(expectedActions, processedAction)
+
+		return handshakeResponse.ClientVersion == version.Version &&
+			reflect.DeepEqual(handshakeResponse.ProcessedClientActions, expectedActions)
+	}
+	mockWsChannel.On("SendMessage", mock.Anything, mock.MatchedBy(handshakeResponseMatcher), mock.Anything).Return(nil)
 
 	if err := dataChannel.outputMessageHandler(context.TODO(), func() error { return nil }, handshakeRequestMessageBytes); err != nil {
 		t.Errorf("Failed to handle output message: %v", err)
 	}
 
-	// We'll capture the handshake response for assertion
-	var handshakeResponseFound bool
-
-	//nolint:nestif
-	for _, action := range processedClientActions {
-		if action.ActionType == message.KMSEncryption && action.ActionStatus == message.Success {
-			if resp, ok := action.ActionResult.(map[string]any); ok {
-				if keyStr, ok := resp["KMSCipherTextKey"].(string); ok {
-					if decodedKey, err := base64.StdEncoding.DecodeString(keyStr); err == nil && string(decodedKey) == string(mockCipherTextKey()) {
-						handshakeResponseFound = true
-
-						break
-					}
-				}
-			}
-		}
-	}
-
-	assert.True(t, handshakeResponseFound, "Handshake response was not sent as expected")
 	assert.Equal(t, mockEncrypter, dataChannel.encryption)
 }
 
