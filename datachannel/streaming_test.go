@@ -385,11 +385,12 @@ func TestDataChannelIncomingMessageHandlerForExpectedInputStreamDataMessage(t *t
 	dataChannel := getDataChannel(t, mockWsChannel)
 
 	SendAcknowledgeMessageCallCount := 0
-	sendAcknowledgeMessageCall = func(_ *DataChannel, _ message.ClientMessage) error {
+	// Setup mock expectation for SendMessage
+	mockWsChannel.On("SendMessage", mock.Anything, mock.Anything).Return(func([]byte, int) error {
 		SendAcknowledgeMessageCallCount++
 
 		return nil
-	}
+	})
 
 	var handler OutputStreamDataMessageHandler = func(_ message.ClientMessage) (bool, error) {
 		return true, nil
@@ -438,11 +439,12 @@ func TestDataChannelIncomingMessageHandlerForUnexpectedInputStreamDataMessage(t 
 	serializedClientMessages, _ := getClientAndStreamingMessageList()
 
 	SendAcknowledgeMessageCallCount := 0
-	sendAcknowledgeMessageCall = func(_ *DataChannel, _ message.ClientMessage) error {
+	// Setup mock expectation for SendMessage
+	mockWsChannel.On("SendMessage", mock.Anything, mock.Anything).Return(func([]byte, int) error {
 		SendAcknowledgeMessageCallCount++
 
 		return nil
-	}
+	})
 
 	var stopHandler StopHandler = func() error {
 		return nil
@@ -483,17 +485,6 @@ func TestDataChannelIncomingMessageHandlerForAcknowledgeMessage(t *testing.T) {
 		return nil
 	}
 
-	for i := range 3 {
-		dataChannel.addDataToOutgoingMessageBuffer(streamingMessages[i])
-	}
-
-	ProcessAcknowledgedMessageCallCount := 0
-	processAcknowledgedMessageCall = func(_ *DataChannel, _ message.AcknowledgeContent) error {
-		ProcessAcknowledgedMessageCallCount++
-
-		return nil
-	}
-
 	acknowledgeContent := message.AcknowledgeContent{
 		MessageType:         messageType,
 		MessageID:           messageID,
@@ -511,18 +502,49 @@ func TestDataChannelIncomingMessageHandlerForAcknowledgeMessage(t *testing.T) {
 	serializedClientMessage, err := clientMessage.SerializeClientMessage()
 	require.NoError(t, err)
 
+	streamingMessages[1].Content = serializedClientMessage
+
+	for i := range 3 {
+		dataChannel.addDataToOutgoingMessageBuffer(streamingMessages[i])
+	}
+
+	var acknowledgeMessageDetected = func(dc *DataChannel) bool {
+		for e := dc.outgoingMessageBuffer.Messages.Front(); e != nil; e = e.Next() {
+			sm := e.Value.(StreamingMessage)
+
+			var cm message.ClientMessage
+			if err := cm.DeserializeClientMessage(sm.Content); err != nil {
+				panic(err)
+			}
+
+			if cm.MessageType == message.AcknowledgeMessage {
+				return true
+			}
+		}
+
+		return false
+	}
+
+	assert.Equal(t, 3, dataChannel.outgoingMessageBuffer.Messages.Len())
+	assert.True(t, acknowledgeMessageDetected(dataChannel))
+
 	if err := dataChannel.outputMessageHandler(context.TODO(), stopHandler, serializedClientMessage); err != nil {
 		t.Fatal(err)
 	}
 
-	assert.Equal(t, 1, ProcessAcknowledgedMessageCallCount)
-	assert.Equal(t, 3, dataChannel.outgoingMessageBuffer.Messages.Len())
+	assert.Equal(t, 2, dataChannel.outgoingMessageBuffer.Messages.Len())
+	assert.False(t, acknowledgeMessageDetected(dataChannel))
 }
 
 func TestDataChannelIncomingMessageHandlerForPausePublicationessage(t *testing.T) {
 	t.Parallel()
 
 	mockWsChannel := &communicatorMocks.IWebSocketChannel{}
+
+	// Setup mock expectation for SendMessage
+	mockWsChannel.On("SendMessage", mock.Anything, mock.Anything).Return(func([]byte, int) error {
+		return nil
+	})
 
 	dataChannel := getDataChannel(t, mockWsChannel)
 

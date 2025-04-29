@@ -59,16 +59,6 @@ type OutputStreamDataMessageHandler func(streamDataMessage message.ClientMessage
 // StopHandler is a function type that handles stopping the data channel.
 type StopHandler func() error
 
-// sendAcknowledgeMessageCall is a function that sends an acknowledgment message for a stream data message.
-var sendAcknowledgeMessageCall = func(dataChannel *DataChannel, streamDataMessage message.ClientMessage) error {
-	return dataChannel.sendAcknowledgeMessage(streamDataMessage)
-}
-
-// processAcknowledgedMessageCall is a function that processes an acknowledged message.
-var processAcknowledgedMessageCall = func(dataChannel *DataChannel, acknowledgeMessage message.AcknowledgeContent) error {
-	return dataChannel.processAcknowledgedMessage(acknowledgeMessage)
-}
-
 var newEncrypter = func(ctx context.Context, logger log.T, kmsKeyID string, encryptionConext map[string]string, kmsService *kms.Client) (encryption.IEncrypter, error) {
 	return encryption.NewEncrypter(ctx, logger, kmsKeyID, encryptionConext, kmsService)
 }

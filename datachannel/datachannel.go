@@ -343,7 +343,7 @@ func (c *DataChannel) HandleAcknowledgeMessage(
 		return fmt.Errorf("deserializing data stream acknowledge content: %w", err)
 	}
 
-	if err := processAcknowledgedMessageCall(c, acknowledgeMessage); err != nil {
+	if err := c.processAcknowledgedMessage(acknowledgeMessage); err != nil {
 		return fmt.Errorf("processing acknowledged message: %w", err)
 	}
 
@@ -713,14 +713,12 @@ func (c *DataChannel) calculateRetransmissionTimeout(streamingMessage RoundTripT
 
 // outputMessageHandler gets output on the data channel.
 func (c *DataChannel) outputMessageHandler(ctx context.Context, stopHandler StopHandler, rawMessage []byte) error {
-	outputMessage := &message.ClientMessage{}
-
-	err := outputMessage.DeserializeClientMessage(rawMessage)
-	if err != nil {
+	var outputMessage message.ClientMessage
+	if err := outputMessage.DeserializeClientMessage(rawMessage); err != nil {
 		return fmt.Errorf("could not deserialize rawMessage, %s : %w", rawMessage, err)
 	}
 
-	if err = outputMessage.Validate(); err != nil {
+	if err := outputMessage.Validate(); err != nil {
 		return fmt.Errorf("validating output message: %w", err)
 	}
 
@@ -728,11 +726,11 @@ func (c *DataChannel) outputMessageHandler(ctx context.Context, stopHandler Stop
 
 	switch outputMessage.MessageType {
 	case message.OutputStreamMessage:
-		return c.HandleOutputMessage(ctx, *outputMessage, rawMessage)
+		return c.HandleOutputMessage(ctx, outputMessage, rawMessage)
 	case message.AcknowledgeMessage:
-		return c.HandleAcknowledgeMessage(*outputMessage)
+		return c.HandleAcknowledgeMessage(outputMessage)
 	case message.ChannelClosedMessage:
-		c.HandleChannelClosedMessage(stopHandler, c.sessionID, *outputMessage)
+		c.HandleChannelClosedMessage(stopHandler, c.sessionID, outputMessage)
 	case message.StartPublicationMessage, message.PausePublicationMessage:
 		return nil
 	default:
@@ -923,7 +921,7 @@ func (c *DataChannel) processOutputMessageWithHandlers(message message.ClientMes
 
 // handleHandshakeRequestOutputMessage handles output messages of type HandshakeRequestPayloadType.
 func (c *DataChannel) handleHandshakeRequestOutputMessage(ctx context.Context, outputMessage message.ClientMessage) error {
-	if err := sendAcknowledgeMessageCall(c, outputMessage); err != nil {
+	if err := c.sendAcknowledgeMessage(outputMessage); err != nil {
 		return err
 	}
 
@@ -946,7 +944,7 @@ func (c *DataChannel) handleHandshakeRequestOutputMessage(ctx context.Context, o
 
 // handleHandshakeCompleteOutputMessage handles output messages of type HandshakeCompletePayloadType.
 func (c *DataChannel) handleHandshakeCompleteOutputMessage(outputMessage message.ClientMessage) error {
-	if err := sendAcknowledgeMessageCall(c, outputMessage); err != nil {
+	if err := c.sendAcknowledgeMessage(outputMessage); err != nil {
 		return err
 	}
 
@@ -959,7 +957,7 @@ func (c *DataChannel) handleHandshakeCompleteOutputMessage(outputMessage message
 
 // handleEncryptionChallengeRequestOutputMessage handles output messages of type EncChallengeRequest.
 func (c *DataChannel) handleEncryptionChallengeRequestOutputMessage(outputMessage message.ClientMessage) error {
-	if err := sendAcknowledgeMessageCall(c, outputMessage); err != nil {
+	if err := c.sendAcknowledgeMessage(outputMessage); err != nil {
 		return err
 	}
 
@@ -999,11 +997,7 @@ func (c *DataChannel) handleDefaultOutputMessage(outputMessage message.ClientMes
 	}
 
 	// Acknowledge outputMessage only if session specific handler is ready
-	if err := sendAcknowledgeMessageCall(c, outputMessage); err != nil {
-		return err
-	}
-
-	return nil
+	return c.sendAcknowledgeMessage(outputMessage)
 }
 
 // handleUnexpectedSequenceMessage handles messages with unexpected sequence numbers.
@@ -1016,7 +1010,7 @@ func (c *DataChannel) handleUnexpectedSequenceMessage(outputMessage message.Clie
 		c.logger.Debug("Received sequence number is higher than expected", "receivedSequence", outputMessage.SequenceNumber, "expectedSequence", c.expectedSequenceNumber)
 
 		if len(c.incomingMessageBuffer.Messages) < c.incomingMessageBuffer.Capacity {
-			if err := sendAcknowledgeMessageCall(c, outputMessage); err != nil {
+			if err := c.sendAcknowledgeMessage(outputMessage); err != nil {
 				return err
 			}
 
