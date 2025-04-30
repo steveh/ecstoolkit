@@ -13,4 +13,5 @@ type ISessionSubTypeSupport interface {
 	GetAgentVersion() string
 	TerminateSession(ctx context.Context) error
 	GetTargetID() string
+	GetSessionID() string
 }

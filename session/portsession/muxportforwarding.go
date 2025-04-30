@@ -64,6 +64,20 @@ type MuxPortForwarding struct {
 	logger         log.T
 }
 
+// NewMuxPortForwarding creates a new MuxPortForwarding instance.
+func NewMuxPortForwarding(
+	sess session.ISessionSubTypeSupport,
+	portParameters PortParameters,
+	logger log.T,
+) *MuxPortForwarding {
+	return &MuxPortForwarding{
+		portParameters: portParameters,
+		session:        sess,
+		sessionID:      sess.GetSessionID(),
+		logger:         logger,
+	}
+}
+
 // Ensure MuxPortForwarding implements IPortSession.
 var _ IPortSession = (*MuxPortForwarding)(nil)
 

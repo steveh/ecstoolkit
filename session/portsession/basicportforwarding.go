@@ -40,27 +40,45 @@ var (
 	ErrConnectionFailed = errors.New("connection failed")
 )
 
+// BuildListenerFunc builds a listener for the given host and port.
+type BuildListenerFunc func(host string, port string) (net.Listener, error)
+
+// AcceptConnectionFunc returns connection to the listener.
+type AcceptConnectionFunc func(listener net.Listener) (net.Conn, error)
+
 // BasicPortForwarding is type of port session
 // accepts one client connection at a time.
 type BasicPortForwarding struct {
-	stream         *net.Conn
-	listener       *net.Listener
-	sessionID      string
-	portParameters PortParameters
-	session        session.ISessionSubTypeSupport
-	logger         log.T
+	stream           *net.Conn
+	listener         *net.Listener
+	sessionID        string
+	portParameters   PortParameters
+	session          session.ISessionSubTypeSupport
+	logger           log.T
+	buildListener    BuildListenerFunc
+	acceptConnection AcceptConnectionFunc
+}
+
+// NewBasicPortForwarding creates a new BasicPortForwarding instance.
+func NewBasicPortForwarding(
+	sess session.ISessionSubTypeSupport,
+	portParameters PortParameters,
+	logger log.T,
+) *BasicPortForwarding {
+	return &BasicPortForwarding{
+		portParameters: portParameters,
+		session:        sess,
+		sessionID:      sess.GetSessionID(),
+		logger:         logger,
+		buildListener:  net.Listen,
+		acceptConnection: func(listener net.Listener) (net.Conn, error) {
+			return listener.Accept()
+		},
+	}
 }
 
 // Ensure BasicPortForwarding implements IPortSession.
 var _ IPortSession = (*BasicPortForwarding)(nil)
-
-// getNewListener returns a new listener to given address and type like tcp, unix etc.
-var getNewListener = net.Listen
-
-// acceptConnection returns connection to the listener.
-var acceptConnection = func(listener net.Listener) (net.Conn, error) {
-	return listener.Accept()
-}
 
 // IsStreamNotSet checks if stream is not set.
 func (p *BasicPortForwarding) IsStreamNotSet() bool {
@@ -148,7 +166,7 @@ func (p *BasicPortForwarding) startLocalConn() error {
 		return fmt.Errorf("starting local listener: %w", err)
 	}
 
-	tcpConn, err := acceptConnection(listener)
+	tcpConn, err := p.acceptConnection(listener)
 	if err != nil {
 		p.logger.Error("accepting connection", "error", err)
 
@@ -173,14 +191,14 @@ func (p *BasicPortForwarding) startLocalListener(portNumber string) (net.Listene
 
 	switch p.portParameters.LocalConnectionType {
 	case "unix":
-		listener, err = getNewListener(p.portParameters.LocalConnectionType, p.portParameters.LocalUnixSocket)
+		listener, err = p.buildListener(p.portParameters.LocalConnectionType, p.portParameters.LocalUnixSocket)
 		if err != nil {
 			return nil, err
 		}
 
 		displayMessage = fmt.Sprintf("Unix socket %s opened for sessionID %s.", p.portParameters.LocalUnixSocket, p.sessionID)
 	default:
-		listener, err = getNewListener("tcp", "localhost:"+portNumber)
+		listener, err = p.buildListener("tcp", "localhost:"+portNumber)
 		if err != nil {
 			return nil, err
 		}
@@ -235,7 +253,7 @@ func (p *BasicPortForwarding) reconnect() error {
 	}
 
 	// wait for new connection on listener and accept it
-	conn, err := acceptConnection(*p.listener)
+	conn, err := p.acceptConnection(*p.listener)
 	if err != nil {
 		return fmt.Errorf("accepting connection: %w", err)
 	}

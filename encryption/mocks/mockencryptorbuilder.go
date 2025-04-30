@@ -8,8 +8,6 @@ import (
 )
 
 // MockEncryptorBuilder is a mock implementation of the IEncryptorBuilder interface.
-//
-//nolint:ireturn
 type MockEncryptorBuilder struct {
 	encrypter encryption.IEncrypter
 }

@@ -37,6 +37,19 @@ type StandardStreamForwarding struct {
 	logger         log.T
 }
 
+// NewStandardStreamForwarding creates a new instance of StandardStreamForwarding.
+func NewStandardStreamForwarding(
+	sess session.ISessionSubTypeSupport,
+	portParameters PortParameters,
+	logger log.T,
+) *StandardStreamForwarding {
+	return &StandardStreamForwarding{
+		session:        sess,
+		portParameters: portParameters,
+		logger:         logger,
+	}
+}
+
 // Ensure StandardStreamForwarding implements IPortSession.
 var _ IPortSession = (*StandardStreamForwarding)(nil)
 

@@ -72,12 +72,12 @@ func TestStartSessionForStandardStreamForwarding(t *testing.T) {
 
 	mockLogger := log.NewMockLog()
 
-	sess := *getSessionMock(t, mockWsChannel)
+	sess := getSessionMock(t, mockWsChannel)
 	portSession := PortSession{
-		session:        &sess,
+		session:        sess,
 		portParameters: PortParameters{PortNumber: "22"},
 		portSessionType: &StandardStreamForwarding{
-			session:        &sess,
+			session:        sess,
 			portParameters: PortParameters{PortNumber: "22"},
 			logger:         mockLogger,
 		},

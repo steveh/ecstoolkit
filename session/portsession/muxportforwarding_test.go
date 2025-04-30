@@ -42,12 +42,12 @@ func TestReadStream(t *testing.T) {
 	mockWsChannel := getMockWsChannel()
 	outputMessage := getMockOutputMessage()
 
-	session := *getSessionMock(t, mockWsChannel)
+	session := getSessionMock(t, mockWsChannel)
 
 	portSession := PortSession{
-		session: &session,
+		session: session,
 		portSessionType: &MuxPortForwarding{
-			session:   &session,
+			session:   session,
 			muxClient: &MuxClient{in, nil},
 			mgsConn:   &MgsConn{nil, out},
 			logger:    mockLogger,
@@ -109,10 +109,10 @@ func TestWriteStream(t *testing.T) {
 	mockWsChannel := getMockWsChannel()
 	outputMessage := getMockOutputMessage()
 
-	sess := *getSessionMock(t, mockWsChannel)
+	sess := getSessionMock(t, mockWsChannel)
 	portSession := PortSession{
 		portSessionType: &MuxPortForwarding{
-			session: &sess,
+			session: sess,
 			mgsConn: &MgsConn{nil, in},
 			logger:  mockLogger,
 		},

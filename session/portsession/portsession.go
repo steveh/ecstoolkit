@@ -72,23 +72,12 @@ func NewPortSession(ctx context.Context, logger log.T, sess session.ISessionSupp
 
 	if s.portParameters.Type == LocalPortForwardingType {
 		if version.DoesAgentSupportTCPMultiplexing(logger, sess.GetAgentVersion()) {
-			s.portSessionType = &MuxPortForwarding{
-				sessionID:      sess.GetSessionID(),
-				portParameters: s.portParameters,
-				session:        sess,
-			}
+			s.portSessionType = NewMuxPortForwarding(sess, s.portParameters, logger)
 		} else {
-			s.portSessionType = &BasicPortForwarding{
-				sessionID:      sess.GetSessionID(),
-				portParameters: s.portParameters,
-				session:        sess,
-			}
+			s.portSessionType = NewBasicPortForwarding(sess, s.portParameters, logger)
 		}
 	} else {
-		s.portSessionType = &StandardStreamForwarding{
-			portParameters: s.portParameters,
-			session:        sess,
-		}
+		s.portSessionType = NewStandardStreamForwarding(sess, s.portParameters, logger)
 	}
 
 	sess.RegisterOutputStreamHandler(s.ProcessStreamMessagePayload, true)

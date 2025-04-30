@@ -155,14 +155,14 @@ func TestStartSessionWithClosedWsConn(t *testing.T) {
 
 	mockLogger := log.NewMockLog()
 
-	sess := *getSessionMock(t, mockWsChannel)
+	sess := getSessionMock(t, mockWsChannel)
 	portSession := PortSession{
-		session:        &sess,
+		session:        sess,
 		portParameters: PortParameters{PortNumber: "22"},
 		portSessionType: &StandardStreamForwarding{
 			inputStream:  in,
 			outputStream: out,
-			session:      &sess,
+			session:      sess,
 			logger:       mockLogger,
 		},
 		logger: mockLogger,
@@ -225,11 +225,11 @@ func TestProcessStreamMessagePayload(t *testing.T) {
 	mockLogger := log.NewMockLog()
 	outputMessage := getMockOutputMessage()
 
-	session := *getSessionMock(t, mockWsChannel)
+	session := getSessionMock(t, mockWsChannel)
 
 	go func() {
 		portSession := PortSession{
-			session:         &session,
+			session:         session,
 			portParameters:  PortParameters{PortNumber: "22"},
 			portSessionType: ssf,
 			logger:          mockLogger,
