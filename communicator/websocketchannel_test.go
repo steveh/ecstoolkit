@@ -21,6 +21,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/gorilla/websocket"
@@ -245,6 +246,7 @@ func TestReadWriteTextToWebSocketChannel(t *testing.T) {
 		t.Errorf("Failed to send message: %v", err)
 	}
 
+	// Wait for message to be received before closing the connection
 	wg.Wait()
 
 	err = websocketchannel.Close()
@@ -265,7 +267,6 @@ func TestReadWriteBinaryToWebSocketChannel(t *testing.T) {
 	log := log.NewMockLog()
 
 	var wg sync.WaitGroup
-
 	wg.Add(1)
 
 	onMessage := func(input []byte) {
@@ -288,12 +289,13 @@ func TestReadWriteBinaryToWebSocketChannel(t *testing.T) {
 		t.Errorf("Failed to send message: %v", err)
 	}
 
+	// Wait for message to be received before closing the connection
 	wg.Wait()
 
 	err = websocketchannel.Close()
 	require.NoError(t, err, "Error closing the websocket connection.")
 	assert.False(t, websocketchannel.IsOpen(), "IsOpen is not set to false.")
-	t.Log("Ending test: TestReadWriteWebSocketChannel ")
+	t.Log("Ending test: TestReadWriteBinaryWebSocketChannel ")
 }
 
 func TestMultipleReadWriteWebSocketChannel(t *testing.T) {
@@ -306,19 +308,25 @@ func TestMultipleReadWriteWebSocketChannel(t *testing.T) {
 	u.Scheme = "ws"
 
 	log := log.NewMockLog()
-
-	read1 := make(chan bool)
-	read2 := make(chan bool)
+	
+	var wg sync.WaitGroup
+	wg.Add(2) // Expect two messages
+	
+	// Use atomic values to safely track message receipt
+	var message1Received atomic.Bool
+	var message2Received atomic.Bool
 
 	onMessage := func(input []byte) {
-		t.Log(input)
 		// Verify reads from websocket server
+		t.Log(input)
 		if string(input) == "echo channelreadwrite1" {
-			read1 <- true
+			message1Received.Store(true)
+			wg.Done()
 		}
 
 		if string(input) == "echo channelreadwrite2" {
-			read2 <- true
+			message2Received.Store(true)
+			wg.Done()
 		}
 	}
 
@@ -336,8 +344,12 @@ func TestMultipleReadWriteWebSocketChannel(t *testing.T) {
 	require.NoError(t, err, "Error sending message 1")
 	err = websocketchannel.SendMessage([]byte("channelreadwrite2"), websocket.TextMessage)
 	require.NoError(t, err, "Error sending message 2")
-	assert.True(t, <-read1, "Didn't read value 1 correctly")
-	assert.True(t, <-read2, "Didn't ready value 2 correctly")
+	
+	// Wait for both messages to be received
+	wg.Wait()
+	
+	assert.True(t, message1Received.Load(), "Didn't read value 1 correctly")
+	assert.True(t, message2Received.Load(), "Didn't read value 2 correctly")
 
 	err = websocketchannel.Close()
 	require.NoError(t, err, "Error closing the websocket connection.")
