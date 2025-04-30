@@ -25,10 +25,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/steveh/ecstoolkit/communicator/mocks"
 	"github.com/steveh/ecstoolkit/datachannel"
 	dataChannelMock "github.com/steveh/ecstoolkit/datachannel/mocks"
+	encryptionmocks "github.com/steveh/ecstoolkit/encryption/mocks"
 	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
 	"github.com/steveh/ecstoolkit/session"
@@ -37,14 +37,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var errMock = errors.New("mock error")
-
 const (
 	expectedSequenceNumber = int64(0)
 	clientID               = "clientId"
 	sessionID              = "sessionId"
 	instanceID             = "instanceId"
 )
+
+var errMock = errors.New("mock error")
 
 func TestName(t *testing.T) {
 	t.Parallel()
@@ -234,9 +234,9 @@ func getDataChannelWithMockWs(t *testing.T, mockWsChannel *mocks.IWebSocketChann
 	t.Helper()
 
 	mockLogger := log.NewMockLog()
-	mockKMSClient := &kms.Client{}
+	mockEncryptorBuilder := encryptionmocks.NewMockEncryptorBuilder(nil)
 
-	dataChannel, err := datachannel.NewDataChannel(mockKMSClient, mockWsChannel, clientID, sessionID, instanceID, mockLogger)
+	dataChannel, err := datachannel.NewDataChannel(mockWsChannel, mockEncryptorBuilder, clientID, sessionID, instanceID, mockLogger)
 	require.NoError(t, err)
 
 	return dataChannel

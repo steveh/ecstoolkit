@@ -26,13 +26,13 @@ const KMSKeySizeInBytes int32 = 64
 
 // KMSGenerateDataKey gets cipher text and plain text keys from KMS service.
 // It returns the encrypted data key and the plaintext data key.
-func KMSGenerateDataKey(ctx context.Context, kmsKeyID string, svc *kms.Client, context map[string]string) ([]byte, []byte, error) {
+func KMSGenerateDataKey(ctx context.Context, kmsKeyID string, svc *kms.Client, encryptionContext Context) ([]byte, []byte, error) {
 	kmsKeySize := KMSKeySizeInBytes
 
 	generateDataKeyInput := kms.GenerateDataKeyInput{
 		KeyId:             &kmsKeyID,
 		NumberOfBytes:     &kmsKeySize,
-		EncryptionContext: context,
+		EncryptionContext: encryptionContext,
 	}
 
 	generateDataKeyOutput, err := svc.GenerateDataKey(ctx, &generateDataKeyInput)

@@ -18,11 +18,11 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/steveh/ecstoolkit/communicator"
 	"github.com/steveh/ecstoolkit/communicator/mocks"
 	"github.com/steveh/ecstoolkit/config"
 	"github.com/steveh/ecstoolkit/datachannel"
+	encryptionmocks "github.com/steveh/ecstoolkit/encryption/mocks"
 	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
 	"github.com/steveh/ecstoolkit/session"
@@ -61,9 +61,9 @@ func getSessionMockWithParams(t *testing.T, wsChannel communicator.IWebSocketCha
 	t.Helper()
 
 	mockLogger := log.NewMockLog()
-	mockKMSClient := &kms.Client{}
+	mockEncryptorBuilder := encryptionmocks.NewMockEncryptorBuilder(nil)
 
-	dataChannel, err := datachannel.NewDataChannel(mockKMSClient, wsChannel, "clientId", "sessionId", "targetId", mockLogger)
+	dataChannel, err := datachannel.NewDataChannel(wsChannel, mockEncryptorBuilder, "clientId", "sessionId", "targetId", mockLogger)
 	require.NoError(t, err)
 
 	dataChannel.SetAgentVersion(agentVersion)

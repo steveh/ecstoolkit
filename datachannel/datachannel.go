@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/steveh/ecstoolkit/communicator"
@@ -64,8 +63,6 @@ type DataChannel struct {
 	// timeout used for resending unacknowledged message
 	retransmissionTimeout time.Duration
 
-	kmsClient *kms.Client
-
 	// Encrypter to encrypt/decrypt if agent requests encryption
 	encryption        encryption.IEncrypter
 	encryptionEnabled bool
@@ -87,18 +84,20 @@ type DataChannel struct {
 
 	logger log.T
 
-	displayHandler func(message.ClientMessage)
+	displayHandler   func(message.ClientMessage)
+	encryptorBuilder EncryptorBuilder
 }
 
 // NewDataChannel creates a DataChannel.
-func NewDataChannel(kmsClient *kms.Client, wsChannel communicator.IWebSocketChannel, clientID string, sessionID string, targetID string, logger log.T) (*DataChannel, error) {
+func NewDataChannel(wsChannel communicator.IWebSocketChannel, encryptorBuilder EncryptorBuilder, clientID string, sessionID string, targetID string, logger log.T) (*DataChannel, error) {
 	c := &DataChannel{
-		kmsClient: kmsClient,
-		wsChannel: wsChannel,
-		role:      config.RolePublishSubscribe,
-		clientID:  clientID,
-		sessionID: sessionID,
-		targetID:  targetID,
+		wsChannel:        wsChannel,
+		encryptorBuilder: encryptorBuilder,
+		logger:           logger,
+		role:             config.RolePublishSubscribe,
+		clientID:         clientID,
+		sessionID:        sessionID,
+		targetID:         targetID,
 		outgoingMessageBuffer: ListMessageBuffer{
 			list.New(),
 			config.OutgoingMessageBufferCapacity,
@@ -114,7 +113,6 @@ func NewDataChannel(kmsClient *kms.Client, wsChannel communicator.IWebSocketChan
 		retransmissionTimeout:        config.DefaultTransmissionTimeout,
 		isSessionTypeSet:             make(chan bool, 1),
 		isStreamMessageResendTimeout: make(chan bool, 1),
-		logger:                       logger,
 	}
 
 	return c, nil
@@ -343,9 +341,7 @@ func (c *DataChannel) HandleAcknowledgeMessage(
 		return fmt.Errorf("deserializing data stream acknowledge content: %w", err)
 	}
 
-	if err := c.processAcknowledgedMessage(acknowledgeMessage); err != nil {
-		return fmt.Errorf("processing acknowledged message: %w", err)
-	}
+	c.processAcknowledgedMessage(acknowledgeMessage)
 
 	return nil
 }
@@ -380,14 +376,12 @@ func (c *DataChannel) ProcessKMSEncryptionHandshakeAction(ctx context.Context, a
 
 	kmsKeyID := kmsEncRequest.KMSKeyID
 
-	encryptionContext := map[string]string{"aws:ssm:SessionId": c.sessionID, "aws:ssm:TargetId": c.targetID}
-
-	var err error
-
-	c.encryption, err = newEncrypter(ctx, c.logger, kmsKeyID, encryptionContext, c.kmsClient)
+	encryptor, err := c.encryptorBuilder.Build(ctx, kmsKeyID, c.sessionID, c.targetID)
 	if err != nil {
-		return fmt.Errorf("creating new encrypter: %w", err)
+		return fmt.Errorf("creating encryptor: %w", err)
 	}
+
+	c.encryption = encryptor
 
 	return nil
 }
@@ -608,7 +602,7 @@ func (c *DataChannel) finalizeDataChannelHandshake(tokenValue string) error {
 }
 
 // processAcknowledgedMessage processes acknowledge messages by deleting them from outgoingMessageBuffer.
-func (c *DataChannel) processAcknowledgedMessage(acknowledgeMessageContent message.AcknowledgeContent) error {
+func (c *DataChannel) processAcknowledgedMessage(acknowledgeMessageContent message.AcknowledgeContent) {
 	acknowledgeSequenceNumber := acknowledgeMessageContent.SequenceNumber
 
 	for streamMessageElement := c.outgoingMessageBuffer.Messages.Front(); streamMessageElement != nil; streamMessageElement = streamMessageElement.Next() {
@@ -628,8 +622,6 @@ func (c *DataChannel) processAcknowledgedMessage(acknowledgeMessageContent messa
 			break
 		}
 	}
-
-	return nil
 }
 
 // sendAcknowledgeMessage sends acknowledge message for stream data over data channel.
@@ -756,18 +748,16 @@ func (c *DataChannel) handleHandshakeRequest(ctx context.Context, clientMessage 
 	handshakeResponse.ProcessedClientActions = []message.ProcessedClientAction{}
 
 	for _, action := range handshakeRequest.RequestedClientActions {
-		processedAction := message.ProcessedClientAction{}
+		var processedAction message.ProcessedClientAction
 
 		switch action.ActionType {
 		case message.KMSEncryption:
 			processedAction.ActionType = action.ActionType
-			err := c.ProcessKMSEncryptionHandshakeAction(ctx, action.ActionParameters)
 
+			err := c.ProcessKMSEncryptionHandshakeAction(ctx, action.ActionParameters)
 			if err != nil {
 				processedAction.ActionStatus = message.Failed
-				processedAction.Error = fmt.Sprintf("processing action %s: %s",
-					message.KMSEncryption, err)
-
+				processedAction.Error = fmt.Sprintf("processing action %s: %s", message.KMSEncryption, err)
 				errorList = append(errorList, err)
 			} else {
 				processedAction.ActionStatus = message.Success
@@ -805,9 +795,7 @@ func (c *DataChannel) handleHandshakeRequest(ctx context.Context, clientMessage 
 		handshakeResponse.Errors = append(handshakeResponse.Errors, x.Error())
 	}
 
-	err = c.sendHandshakeResponse(handshakeResponse)
-
-	return err
+	return c.sendHandshakeResponse(handshakeResponse)
 }
 
 // handleHandshakeComplete is the handler for when the payload type is HandshakeComplete. This will trigger
@@ -891,11 +879,7 @@ func (c *DataChannel) sendHandshakeResponse(response message.HandshakeResponsePa
 
 	c.logger.Trace("Sending HandshakeResponse message")
 
-	if err := c.SendInputDataMessage(message.HandshakeResponsePayloadType, resultBytes); err != nil {
-		return err
-	}
-
-	return nil
+	return c.SendInputDataMessage(message.HandshakeResponsePayloadType, resultBytes)
 }
 
 func (c *DataChannel) processOutputMessageWithHandlers(message message.ClientMessage) (bool, error) {

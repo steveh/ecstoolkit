@@ -16,13 +16,9 @@ package datachannel
 
 import (
 	"container/list"
-	"context"
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/service/kms"
-	"github.com/steveh/ecstoolkit/encryption"
-	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
 )
 
@@ -58,7 +54,3 @@ type OutputStreamDataMessageHandler func(streamDataMessage message.ClientMessage
 
 // StopHandler is a function type that handles stopping the data channel.
 type StopHandler func() error
-
-var newEncrypter = func(ctx context.Context, logger log.T, kmsKeyID string, encryptionConext map[string]string, kmsService *kms.Client) (encryption.IEncrypter, error) {
-	return encryption.NewEncrypter(ctx, logger, kmsKeyID, encryptionConext, kmsService)
-}

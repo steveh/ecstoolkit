@@ -16,7 +16,6 @@ package datachannel
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"strconv"
@@ -24,15 +23,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	communicatorMocks "github.com/steveh/ecstoolkit/communicator/mocks"
 	"github.com/steveh/ecstoolkit/config"
 	"github.com/steveh/ecstoolkit/encryption"
 	"github.com/steveh/ecstoolkit/encryption/mocks"
+	"github.com/steveh/ecstoolkit/jsonutil"
 	"github.com/steveh/ecstoolkit/log"
 	"github.com/steveh/ecstoolkit/message"
+	"github.com/steveh/ecstoolkit/version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -70,21 +70,20 @@ func TestNewDataChannel(t *testing.T) {
 	mockLogger := log.NewMockLog()
 
 	mockWsChannel := &communicatorMocks.IWebSocketChannel{}
+	mockEncryptorBuilder := mocks.NewMockEncryptorBuilder(nil)
 
-	mockKMSClient := &kms.Client{}
-
-	datachannel, err := NewDataChannel(mockKMSClient, mockWsChannel, clientID, sessionID, instanceID, mockLogger)
+	dataChannel, err := NewDataChannel(mockWsChannel, mockEncryptorBuilder, clientID, sessionID, instanceID, mockLogger)
 	require.NoError(t, err)
 
-	assert.Equal(t, config.RolePublishSubscribe, datachannel.role)
-	assert.Equal(t, clientID, datachannel.clientID)
-	assert.Equal(t, int64(0), datachannel.expectedSequenceNumber)
-	assert.Equal(t, int64(0), datachannel.streamDataSequenceNumber)
-	assert.NotNil(t, datachannel.outgoingMessageBuffer)
-	assert.NotNil(t, datachannel.incomingMessageBuffer)
-	assert.InDelta(t, float64(config.DefaultRoundTripTime), datachannel.roundTripTime, 0.01)
-	assert.InDelta(t, float64(config.DefaultRoundTripTimeVariation), datachannel.roundTripTimeVariation, 0.01)
-	assert.Equal(t, config.DefaultTransmissionTimeout, datachannel.retransmissionTimeout)
+	assert.Equal(t, config.RolePublishSubscribe, dataChannel.role)
+	assert.Equal(t, clientID, dataChannel.clientID)
+	assert.Equal(t, int64(0), dataChannel.expectedSequenceNumber)
+	assert.Equal(t, int64(0), dataChannel.streamDataSequenceNumber)
+	assert.NotNil(t, dataChannel.outgoingMessageBuffer)
+	assert.NotNil(t, dataChannel.incomingMessageBuffer)
+	assert.InDelta(t, float64(config.DefaultRoundTripTime), dataChannel.roundTripTime, 0.01)
+	assert.InDelta(t, float64(config.DefaultRoundTripTimeVariation), dataChannel.roundTripTimeVariation, 0.01)
+	assert.Equal(t, config.DefaultTransmissionTimeout, dataChannel.retransmissionTimeout)
 }
 
 func TestReconnect(t *testing.T) {
@@ -92,7 +91,7 @@ func TestReconnect(t *testing.T) {
 
 	mockWsChannel := &communicatorMocks.IWebSocketChannel{}
 
-	datachannel := getDataChannel(t, mockWsChannel)
+	dataChannel := getDataChannel(t, mockWsChannel)
 
 	mockWsChannel.On("Close", mock.Anything).Return(nil)
 	mockWsChannel.On("Open", mock.Anything).Return(nil)
@@ -101,7 +100,7 @@ func TestReconnect(t *testing.T) {
 	mockWsChannel.On("GetChannelToken").Return(channelToken)
 
 	// test reconnect
-	err := datachannel.reconnect()
+	err := dataChannel.reconnect()
 
 	require.NoError(t, err)
 	mockWsChannel.AssertExpectations(t)
@@ -112,14 +111,14 @@ func TestOpen(t *testing.T) {
 
 	mockWsChannel := &communicatorMocks.IWebSocketChannel{}
 
-	datachannel := getDataChannel(t, mockWsChannel)
+	dataChannel := getDataChannel(t, mockWsChannel)
 
 	mockWsChannel.On("Open", mock.Anything).Return(nil)
 	mockWsChannel.On("GetChannelToken").Return(channelToken)
 	mockWsChannel.On("GetStreamURL").Return(streamURL)
 	mockWsChannel.On("SendMessage", mock.Anything, mock.Anything).Return(nil)
 
-	err := datachannel.open()
+	err := dataChannel.open()
 
 	require.NoError(t, err)
 	mockWsChannel.AssertExpectations(t)
@@ -131,12 +130,12 @@ func TestClose(t *testing.T) {
 	mockWsChannel := &communicatorMocks.IWebSocketChannel{}
 	mockWsChannel.On("GetStreamURL").Return(streamURL)
 
-	datachannel := getDataChannel(t, mockWsChannel)
+	dataChannel := getDataChannel(t, mockWsChannel)
 
 	mockWsChannel.On("Close", mock.Anything).Return(nil)
 
 	// test close
-	err := datachannel.Close()
+	err := dataChannel.Close()
 
 	require.NoError(t, err)
 	mockWsChannel.AssertExpectations(t)
@@ -147,15 +146,15 @@ func TestFinalizeDataChannelHandshake(t *testing.T) {
 
 	mockWsChannel := &communicatorMocks.IWebSocketChannel{}
 
-	datachannel := getDataChannel(t, mockWsChannel)
+	dataChannel := getDataChannel(t, mockWsChannel)
 
 	mockWsChannel.On("SendMessage", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	mockWsChannel.On("GetStreamURL").Return(streamURL)
 
-	err := datachannel.finalizeDataChannelHandshake(channelToken)
+	err := dataChannel.finalizeDataChannelHandshake(channelToken)
 
 	require.NoError(t, err)
-	assert.Equal(t, streamURL, datachannel.wsChannel.GetStreamURL())
+	assert.Equal(t, streamURL, dataChannel.wsChannel.GetStreamURL())
 	mockWsChannel.AssertExpectations(t)
 }
 
@@ -164,11 +163,11 @@ func TestSendMessage(t *testing.T) {
 
 	mockWsChannel := &communicatorMocks.IWebSocketChannel{}
 
-	datachannel := getDataChannel(t, mockWsChannel)
+	dataChannel := getDataChannel(t, mockWsChannel)
 
 	mockWsChannel.On("SendMessage", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	err := datachannel.SendMessage([]byte{10}, websocket.BinaryMessage)
+	err := dataChannel.SendMessage([]byte{10}, websocket.BinaryMessage)
 
 	require.NoError(t, err)
 	mockWsChannel.AssertExpectations(t)
@@ -207,8 +206,8 @@ func TestProcessAcknowledgedMessage(t *testing.T) {
 		SequenceNumber:      0,
 		IsSequentialMessage: true,
 	}
-	err := dataChannel.processAcknowledgedMessage(dataStreamAcknowledgeContent)
-	require.NoError(t, err, "Error processing acknowledged message")
+
+	dataChannel.processAcknowledgedMessage(dataStreamAcknowledgeContent)
 	assert.Equal(t, 0, dataChannel.outgoingMessageBuffer.Messages.Len())
 }
 
@@ -508,14 +507,14 @@ func TestDataChannelIncomingMessageHandlerForAcknowledgeMessage(t *testing.T) {
 		dataChannel.addDataToOutgoingMessageBuffer(streamingMessages[i])
 	}
 
-	var acknowledgeMessageDetected = func(dc *DataChannel) bool {
+	acknowledgeMessageDetected := func(dc *DataChannel) bool {
 		for e := dc.outgoingMessageBuffer.Messages.Front(); e != nil; e = e.Next() {
-			sm := e.Value.(StreamingMessage)
+			sm, ok := e.Value.(StreamingMessage)
+			require.True(t, ok, "Failed to type assert to StreamingMessage")
 
 			var cm message.ClientMessage
-			if err := cm.DeserializeClientMessage(sm.Content); err != nil {
-				panic(err)
-			}
+			err := cm.DeserializeClientMessage(sm.Content)
+			require.NoError(t, err)
 
 			if cm.MessageType == message.AcknowledgeMessage {
 				return true
@@ -579,78 +578,95 @@ func TestDataChannelIncomingMessageHandlerForPausePublicationessage(t *testing.T
 	require.NoError(t, err)
 }
 
+type mockEncryptorBuilder struct {
+	t         *testing.T
+	encryptor encryption.IEncrypter
+}
+
+//nolint:ireturn
+func (b *mockEncryptorBuilder) Build(_ context.Context, providedKMSKeyID string, providedSessionID string, providedTargetID string) (encryption.IEncrypter, error) {
+	assert.Equal(b.t, kmsKeyID, providedKMSKeyID)
+	assert.Equal(b.t, sessionID, providedSessionID)
+	assert.Equal(b.t, instanceID, providedTargetID)
+
+	return b.encryptor, nil
+}
+
 func TestHandshakeRequestHandler(t *testing.T) {
 	t.Parallel()
 
 	mockWsChannel := &communicatorMocks.IWebSocketChannel{}
 
 	dataChannel := getDataChannel(t, mockWsChannel)
-	mockEncrypter := &mocks.IEncrypter{}
+	mockEncrypter := mocks.IEncrypter{}
+
+	dataChannel.encryptorBuilder = &mockEncryptorBuilder{encryptor: &mockEncrypter, t: t}
 
 	handshakeRequestBytes, err := json.Marshal(buildHandshakeRequest(t))
 	if err != nil {
 		t.Fatalf("marshaling handshake request: %v", err)
 	}
 
-	clientMessage := getClientMessage(0, message.OutputStreamMessage,
-		uint32(message.HandshakeRequestPayloadType), handshakeRequestBytes)
-	handshakeRequestMessageBytes, err := clientMessage.SerializeClientMessage()
+	srcMessage := getClientMessage(0, message.OutputStreamMessage, uint32(message.HandshakeRequestPayloadType), handshakeRequestBytes)
+
+	srcMessageBytes, err := srcMessage.SerializeClientMessage()
 	require.NoError(t, err)
 
-	newEncrypter = func(_ context.Context, _ log.T, kmsKeyIDInput string, context map[string]string, _ *kms.Client) (encryption.IEncrypter, error) {
-		expectedContext := map[string]string{"aws:ssm:SessionId": sessionID, "aws:ssm:TargetId": instanceID}
+	mockEncrypter.On("GetEncryptedDataKey").Return(mockCipherTextKey())
 
-		assert.Equal(t, kmsKeyID, kmsKeyIDInput)
-		assert.Equal(t, expectedContext, context)
-		mockEncrypter.On("GetEncryptedDataKey").Return(mockCipherTextKey())
-
-		return mockEncrypter, nil
-	}
-	// Mock sending of encryption challenge
-	handshakeResponseMatcher := func(sentData []byte) bool {
-		clientMessage := &message.ClientMessage{}
-		if err := clientMessage.DeserializeClientMessage(sentData); err != nil {
-			t.Errorf("Failed to deserialize client message: %v", err)
-
-			return false
+	mockWsChannel.On("SendMessage", mock.Anything, mock.Anything).Return(func(sentData []byte, _ int) error {
+		var cm message.ClientMessage
+		if err := cm.DeserializeClientMessage(sentData); err != nil {
+			t.Fatalf("Failed to deserialize client message: %v", err)
 		}
 
-		handshakeResponse := message.HandshakeResponsePayload{}
-
-		if err := json.Unmarshal(clientMessage.Payload, &handshakeResponse); err != nil {
-			t.Errorf("Failed to unmarshal handshake response: %v", err)
-
-			return false
-		}
-		// Return true if any other message type (typically to account for acknowledge)
-		if clientMessage.MessageType != message.OutputStreamMessage {
-			return true
+		var handshakeResponse message.HandshakeResponsePayload
+		if err := json.Unmarshal(cm.Payload, &handshakeResponse); err != nil {
+			t.Fatalf("Failed to unmarshal handshake response: %v", err)
 		}
 
-		expectedActions := []message.ProcessedClientAction{}
-		processedAction := message.ProcessedClientAction{}
-		processedAction.ActionType = message.KMSEncryption
-		processedAction.ActionStatus = message.Success
-		processedAction.ActionResult = message.KMSEncryptionResponse{
+		// Return if any other message type (typically to account for acknowledge)
+		if cm.MessageType != message.InputStreamMessage {
+			return nil
+		}
+
+		if cm.PayloadType != uint32(message.HandshakeResponsePayloadType) {
+			return nil
+		}
+
+		require.Equal(t, version.Version, handshakeResponse.ClientVersion)
+
+		var expectedActions []message.ProcessedClientAction
+
+		srcActionResult := message.KMSEncryptionResponse{
 			KMSCipherTextKey: mockCipherTextKey(),
 		}
-		expectedActions = append(expectedActions, processedAction)
 
-		processedAction = message.ProcessedClientAction{}
-		processedAction.ActionType = message.SessionType
-		processedAction.ActionStatus = message.Success
-		expectedActions = append(expectedActions, processedAction)
+		var dstActionResult any
+		err := jsonutil.Remarshal(srcActionResult, &dstActionResult)
+		require.NoError(t, err)
 
-		return handshakeResponse.ClientVersion == version.Version &&
-			reflect.DeepEqual(handshakeResponse.ProcessedClientActions, expectedActions)
-	}
-	mockWsChannel.On("SendMessage", mock.Anything, mock.MatchedBy(handshakeResponseMatcher), mock.Anything).Return(nil)
+		expectedActions = append(expectedActions, message.ProcessedClientAction{
+			ActionType:   message.KMSEncryption,
+			ActionStatus: message.Success,
+			ActionResult: dstActionResult,
+		})
 
-	if err := dataChannel.outputMessageHandler(context.TODO(), func() error { return nil }, handshakeRequestMessageBytes); err != nil {
+		expectedActions = append(expectedActions, message.ProcessedClientAction{
+			ActionType:   message.SessionType,
+			ActionStatus: message.Success,
+		})
+
+		require.Len(t, handshakeResponse.ProcessedClientActions, 2)
+		assert.Equal(t, expectedActions[0], handshakeResponse.ProcessedClientActions[0])
+		assert.Equal(t, expectedActions[1], handshakeResponse.ProcessedClientActions[1])
+
+		return nil
+	})
+
+	if err := dataChannel.outputMessageHandler(context.TODO(), func() error { return nil }, srcMessageBytes); err != nil {
 		t.Errorf("Failed to handle output message: %v", err)
 	}
-
-	assert.Equal(t, mockEncrypter, dataChannel.encryption)
 }
 
 func TestHandleOutputMessageForDefaultTypeWithError(t *testing.T) {
@@ -678,13 +694,15 @@ func TestHandleOutputMessageForExitCodePayloadTypeWithError(t *testing.T) {
 
 	mockWsChannel := &communicatorMocks.IWebSocketChannel{}
 
+	mockEncrypter := mocks.IEncrypter{}
+	mockEncrypter.On("Decrypt", mock.Anything, mock.Anything).Return([]byte{10, 11, 12}, errMock)
+
 	dataChannel := getDataChannel(t, mockWsChannel)
+
 	clientMessage := getClientMessage(0, message.OutputStreamMessage,
 		uint32(message.ExitCode), mockPayload())
 	dataChannel.encryptionEnabled = true
-	mockEncrypter := &mocks.IEncrypter{}
-	dataChannel.encryption = mockEncrypter
-	mockEncrypter.On("Decrypt", mock.Anything, mock.Anything).Return([]byte{10, 11, 12}, errMock)
+	dataChannel.encryption = &mockEncrypter
 
 	rawMessage := []byte("rawMessage")
 
@@ -782,9 +800,9 @@ func TestProcessFirstMessageOutputMessageFirst(t *testing.T) {
 		Payload:     []byte("testing"),
 	}
 
-	mockKMSClient := &kms.Client{}
+	mockEncryptorBuilder := mocks.NewMockEncryptorBuilder(nil)
 
-	dataChannel, err := NewDataChannel(mockKMSClient, mockWsChannel, clientID, sessionID, instanceID, mockLogger)
+	dataChannel, err := NewDataChannel(mockWsChannel, mockEncryptorBuilder, clientID, sessionID, instanceID, mockLogger)
 	require.NoError(t, err)
 
 	dataChannel.displayHandler = func(_ message.ClientMessage) {}
@@ -805,12 +823,12 @@ func TestOpenWithRetryWithError(t *testing.T) {
 
 	mockWsChannel := &communicatorMocks.IWebSocketChannel{}
 
-	mockKMSClient := &kms.Client{}
+	mockEncryptorBuilder := mocks.NewMockEncryptorBuilder(nil)
 
-	dataChannel, err := NewDataChannel(mockKMSClient, mockWsChannel, clientID, sessionID, instanceID, mockLogger)
+	dataChannel, err := NewDataChannel(mockWsChannel, mockEncryptorBuilder, clientID, sessionID, instanceID, mockLogger)
 	require.NoError(t, err)
 
-	// First reconnection failed when open datachannel, success after retry
+	// First reconnection failed when open data channel, success after retry
 	mockWsChannel.On("Open").Return(errMock).Once()
 	mockWsChannel.On("Open").Return(nil).Once()
 	mockWsChannel.On("SetOnMessage", mock.Anything)
@@ -860,9 +878,9 @@ func getDataChannel(t *testing.T, mockWsChannel *communicatorMocks.IWebSocketCha
 
 	mockLogger := log.NewMockLog()
 
-	mockKMSClient := &kms.Client{}
+	mockEncryptorBuilder := mocks.NewMockEncryptorBuilder(nil)
 
-	dataChannel, err := NewDataChannel(mockKMSClient, mockWsChannel, clientID, sessionID, instanceID, mockLogger)
+	dataChannel, err := NewDataChannel(mockWsChannel, mockEncryptorBuilder, clientID, sessionID, instanceID, mockLogger)
 	require.NoError(t, err)
 
 	return dataChannel

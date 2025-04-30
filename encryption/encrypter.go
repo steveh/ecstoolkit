@@ -42,6 +42,9 @@ type IEncrypter interface {
 	GetEncryptedDataKey() (ciptherTextBlob []byte)
 }
 
+// Context is a map that holds the encryption context for KMS.
+type Context map[string]string
+
 // Encrypter implements the IEncrypter interface using AWS KMS for key management.
 type Encrypter struct {
 	KMSService *kms.Client
@@ -54,7 +57,7 @@ type Encrypter struct {
 }
 
 // NewEncrypter creates a new Encrypter instance with the given KMS key and encryption context.
-func NewEncrypter(ctx context.Context, logger log.T, kmsKeyID string, encryptionContext map[string]string, kmsService *kms.Client) (*Encrypter, error) {
+func NewEncrypter(ctx context.Context, logger log.T, kmsKeyID string, encryptionContext Context, kmsService *kms.Client) (*Encrypter, error) {
 	e := Encrypter{
 		kmsKeyID:   kmsKeyID,
 		KMSService: kmsService,
@@ -121,7 +124,7 @@ func (e *Encrypter) Decrypt(cipherText []byte) ([]byte, error) {
 }
 
 // generateEncryptionKey calls KMS to generate a new encryption key.
-func (e *Encrypter) generateEncryptionKey(ctx context.Context, kmsKeyID string, encryptionContext map[string]string) error {
+func (e *Encrypter) generateEncryptionKey(ctx context.Context, kmsKeyID string, encryptionContext Context) error {
 	cipherTextKey, plainTextKey, err := KMSGenerateDataKey(ctx, kmsKeyID, e.KMSService, encryptionContext)
 	if err != nil {
 		return fmt.Errorf("generating data key from KMS: %w", err)

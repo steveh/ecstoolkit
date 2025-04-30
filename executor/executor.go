@@ -139,9 +139,17 @@ func (e *Executor) newSession(options *ExecuteSessionOptions, execute *ecs.Execu
 		return nil, fmt.Errorf("creating websocket channel: %w", err)
 	}
 
-	dataChannel, err := datachannel.NewDataChannel(
+	encryptorBuilder, err := datachannel.NewKMSEncryptorBuilder(
 		e.kmsClient,
+		e.logger,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("creating encryptor builder: %w", err)
+	}
+
+	dataChannel, err := datachannel.NewDataChannel(
 		wsChannel,
+		encryptorBuilder,
 		clientID.String(),
 		sessionID,
 		targetID,
