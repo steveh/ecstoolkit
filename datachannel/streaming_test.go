@@ -20,6 +20,7 @@ import (
 	"errors"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -351,6 +352,8 @@ func TestResendStreamDataMessageScheduler(t *testing.T) {
 	}
 
 	var wg sync.WaitGroup
+	// Use atomic counter instead of mutex
+	var sendMessageCallCount atomic.Int64
 
 	wg.Add(1)
 	// Spawning a separate go routine to close websocket connection.
@@ -360,11 +363,10 @@ func TestResendStreamDataMessageScheduler(t *testing.T) {
 		wg.Done()
 	}()
 
-	SendMessageCallCount := 0
 	// Setup mock expectation for SendMessage
 	mockWsChannel.On("SendMessage", mock.Anything, mock.Anything).Return(func([]byte, int) error {
-		SendMessageCallCount++
-
+		// Use atomic increment instead of mutex locking
+		sendMessageCallCount.Add(1)
 		return nil
 	})
 
@@ -373,7 +375,8 @@ func TestResendStreamDataMessageScheduler(t *testing.T) {
 	wg.Wait()
 	// Assert that SendMessage was called on the mock channel
 	mockWsChannel.AssertExpectations(t)
-	assert.Positive(t, SendMessageCallCount, "SendMessage should have been called at least once") // Check if called, exact count might vary
+	// Use atomic load instead of mutex locking
+	assert.Positive(t, sendMessageCallCount.Load(), "SendMessage should have been called at least once") // Check if called, exact count might vary
 }
 
 func TestDataChannelIncomingMessageHandlerForExpectedInputStreamDataMessage(t *testing.T) {
