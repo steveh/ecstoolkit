@@ -15,18 +15,10 @@
 package datachannel
 
 import (
-	"sync"
 	"time"
 
 	"github.com/steveh/ecstoolkit/message"
 )
-
-// MapMessageBuffer represents a buffer for messages using a map data structure.
-type MapMessageBuffer struct {
-	Messages map[int64]StreamingMessage
-	Capacity int
-	Mutex    *sync.Mutex
-}
 
 // StreamingMessage represents a message in the data stream with its metadata.
 type StreamingMessage struct {

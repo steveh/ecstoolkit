@@ -11,7 +11,6 @@ import (
 	"math"
 	"math/rand"
 	"reflect"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -55,7 +54,7 @@ type DataChannel struct {
 	outgoingMessageBuffer *ListMessageBuffer[StreamingMessage]
 	// buffer to store incoming stream messages if received out of sequence
 	// using map for this buffer as incoming messages can be out of order and retrieval would be faster by sequenceId
-	incomingMessageBuffer MapMessageBuffer
+	incomingMessageBuffer *MapMessageBuffer[int64, StreamingMessage]
 	// round trip time of latest acknowledged message
 	roundTripTime float64
 	// round trip time variation of latest acknowledged message
@@ -91,19 +90,15 @@ type DataChannel struct {
 // NewDataChannel creates a DataChannel.
 func NewDataChannel(wsChannel communicator.IWebSocketChannel, encryptorBuilder EncryptorBuilder, clientID string, sessionID string, targetID string, logger log.T) (*DataChannel, error) {
 	c := &DataChannel{
-		wsChannel:             wsChannel,
-		encryptorBuilder:      encryptorBuilder,
-		logger:                logger,
-		role:                  config.RolePublishSubscribe,
-		clientID:              clientID,
-		sessionID:             sessionID,
-		targetID:              targetID,
-		outgoingMessageBuffer: NewListMessageBuffer[StreamingMessage](config.OutgoingMessageBufferCapacity),
-		incomingMessageBuffer: MapMessageBuffer{
-			make(map[int64]StreamingMessage),
-			config.IncomingMessageBufferCapacity,
-			&sync.Mutex{},
-		},
+		wsChannel:                    wsChannel,
+		encryptorBuilder:             encryptorBuilder,
+		logger:                       logger,
+		role:                         config.RolePublishSubscribe,
+		clientID:                     clientID,
+		sessionID:                    sessionID,
+		targetID:                     targetID,
+		outgoingMessageBuffer:        NewListMessageBuffer[StreamingMessage](config.OutgoingMessageBufferCapacity),
+		incomingMessageBuffer:        NewMapMessageBuffer[int64, StreamingMessage](config.IncomingMessageBufferCapacity),
 		roundTripTime:                float64(config.DefaultRoundTripTime),
 		roundTripTimeVariation:       config.DefaultRoundTripTimeVariation,
 		retransmissionTimeout:        config.DefaultTransmissionTimeout,
@@ -321,7 +316,7 @@ func (c *DataChannel) ProcessIncomingMessageBufferItems(
 	for {
 		// Check if there's a message with the expected sequence number
 		expectedSeq := c.expectedSequenceNumber.Load()
-		bufferedStreamMessage, exists := c.incomingMessageBuffer.Messages[expectedSeq]
+		bufferedStreamMessage, exists := c.incomingMessageBuffer.Get(expectedSeq)
 		if !exists || bufferedStreamMessage.Content == nil {
 			// No more messages to process
 			break
@@ -636,24 +631,6 @@ func (c *DataChannel) sendAcknowledgeMessage(streamDataMessage message.ClientMes
 	return nil
 }
 
-// addDataToIncomingMessageBuffer adds given message to incomingMessageBuffer if it has capacity.
-func (c *DataChannel) addDataToIncomingMessageBuffer(streamMessage StreamingMessage) {
-	if len(c.incomingMessageBuffer.Messages) == c.incomingMessageBuffer.Capacity {
-		return
-	}
-
-	c.incomingMessageBuffer.Mutex.Lock()
-	c.incomingMessageBuffer.Messages[streamMessage.SequenceNumber] = streamMessage
-	c.incomingMessageBuffer.Mutex.Unlock()
-}
-
-// removeDataFromIncomingMessageBuffer removes given sequence number message from incomingMessageBuffer.
-func (c *DataChannel) removeDataFromIncomingMessageBuffer(sequenceNumber int64) {
-	c.incomingMessageBuffer.Mutex.Lock()
-	delete(c.incomingMessageBuffer.Messages, sequenceNumber)
-	c.incomingMessageBuffer.Mutex.Unlock()
-}
-
 // calculateRetransmissionTimeout calculates message retransmission timeout value based on round trip time on given message.
 func (c *DataChannel) calculateRetransmissionTimeout(streamingMessage RoundTripTiming) {
 	newRoundTripTime := float64(streamingMessage.GetRoundTripTime())
@@ -965,7 +942,7 @@ func (c *DataChannel) handleUnexpectedSequenceMessage(outputMessage message.Clie
 	if outputMessage.SequenceNumber > expectedSeq {
 		c.logger.Debug("Received sequence number is higher than expected", "receivedSequence", outputMessage.SequenceNumber, "expectedSequence", expectedSeq)
 
-		if len(c.incomingMessageBuffer.Messages) < c.incomingMessageBuffer.Capacity {
+		if !c.incomingMessageBuffer.IsFull() {
 			if err := c.sendAcknowledgeMessage(outputMessage); err != nil {
 				return err
 			}
@@ -977,8 +954,7 @@ func (c *DataChannel) handleUnexpectedSequenceMessage(outputMessage message.Clie
 				new(int),
 			}
 
-			// Add message to buffer for future processing
-			c.addDataToIncomingMessageBuffer(streamingMessage)
+			_ = c.incomingMessageBuffer.SetUnlessFull(streamingMessage.SequenceNumber, streamingMessage)
 		}
 	}
 
@@ -1011,7 +987,8 @@ func (c *DataChannel) processBufferedMessage(outputMessage message.ClientMessage
 	}
 
 	c.expectedSequenceNumber.Add(1)
-	c.removeDataFromIncomingMessageBuffer(bufferedStreamMessage.SequenceNumber)
+
+	_, _ = c.incomingMessageBuffer.Remove(bufferedStreamMessage.SequenceNumber)
 
 	return nil
 }

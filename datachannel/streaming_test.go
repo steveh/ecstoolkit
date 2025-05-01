@@ -49,6 +49,10 @@ func mockCipherTextKey() []byte {
 	return []byte("cipher-text-key")
 }
 
+func addDataToIncomingMessageBuffer(dataChannel *DataChannel, streamingMessage StreamingMessage) {
+	_ = dataChannel.incomingMessageBuffer.SetUnlessFull(streamingMessage.SequenceNumber, streamingMessage)
+}
+
 const (
 	streamURL    = "stream-url"
 	channelToken = "channel-token"
@@ -280,29 +284,29 @@ func TestAddDataToIncomingMessageBuffer(t *testing.T) {
 	mockWsChannel := &communicatorMocks.IWebSocketChannel{}
 
 	dataChannel := getDataChannel(t, mockWsChannel)
-	dataChannel.incomingMessageBuffer.Capacity = 2
+	dataChannel.incomingMessageBuffer.capacity = 2
 
 	_, streamingMessages := getClientAndStreamingMessageList()
 
-	dataChannel.addDataToIncomingMessageBuffer(streamingMessages[0])
-	assert.Len(t, dataChannel.incomingMessageBuffer.Messages, 1)
-	bufferedStreamMessage := dataChannel.incomingMessageBuffer.Messages[0]
+	addDataToIncomingMessageBuffer(dataChannel, streamingMessages[0])
+	assert.Len(t, dataChannel.incomingMessageBuffer.messages, 1)
+	bufferedStreamMessage := dataChannel.incomingMessageBuffer.messages[0]
 	assert.Equal(t, int64(0), bufferedStreamMessage.SequenceNumber)
 
-	dataChannel.addDataToIncomingMessageBuffer(streamingMessages[1])
-	assert.Len(t, dataChannel.incomingMessageBuffer.Messages, 2)
-	bufferedStreamMessage = dataChannel.incomingMessageBuffer.Messages[0]
+	addDataToIncomingMessageBuffer(dataChannel, streamingMessages[1])
+	assert.Len(t, dataChannel.incomingMessageBuffer.messages, 2)
+	bufferedStreamMessage = dataChannel.incomingMessageBuffer.messages[0]
 	assert.Equal(t, int64(0), bufferedStreamMessage.SequenceNumber)
-	bufferedStreamMessage = dataChannel.incomingMessageBuffer.Messages[1]
+	bufferedStreamMessage = dataChannel.incomingMessageBuffer.messages[1]
 	assert.Equal(t, int64(1), bufferedStreamMessage.SequenceNumber)
 
-	dataChannel.addDataToIncomingMessageBuffer(streamingMessages[2])
-	assert.Len(t, dataChannel.incomingMessageBuffer.Messages, 2)
-	bufferedStreamMessage = dataChannel.incomingMessageBuffer.Messages[0]
+	addDataToIncomingMessageBuffer(dataChannel, streamingMessages[2])
+	assert.Len(t, dataChannel.incomingMessageBuffer.messages, 2)
+	bufferedStreamMessage = dataChannel.incomingMessageBuffer.messages[0]
 	assert.Equal(t, int64(0), bufferedStreamMessage.SequenceNumber)
-	bufferedStreamMessage = dataChannel.incomingMessageBuffer.Messages[1]
+	bufferedStreamMessage = dataChannel.incomingMessageBuffer.messages[1]
 	assert.Equal(t, int64(1), bufferedStreamMessage.SequenceNumber)
-	bufferedStreamMessage = dataChannel.incomingMessageBuffer.Messages[2]
+	bufferedStreamMessage = dataChannel.incomingMessageBuffer.messages[2]
 	assert.Nil(t, bufferedStreamMessage.Content)
 }
 
@@ -331,11 +335,11 @@ func TestRemoveDataFromIncomingMessageBuffer(t *testing.T) {
 
 	dataChannel := getDataChannel(t, mockWsChannel)
 	for i := range 3 {
-		dataChannel.addDataToIncomingMessageBuffer(streamingMessages[i])
+		addDataToIncomingMessageBuffer(dataChannel, streamingMessages[i])
 	}
 
-	dataChannel.removeDataFromIncomingMessageBuffer(0)
-	assert.Len(t, dataChannel.incomingMessageBuffer.Messages, 2)
+	_, _ = dataChannel.incomingMessageBuffer.Remove(0)
+	assert.Len(t, dataChannel.incomingMessageBuffer.messages, 2)
 }
 
 func TestResendStreamDataMessageScheduler(t *testing.T) {
@@ -411,23 +415,23 @@ func TestDataChannelIncomingMessageHandlerForExpectedInputStreamDataMessage(t *t
 	err := dataChannel.outputMessageHandler(context.TODO(), stopHandler, serializedClientMessages[0])
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), dataChannel.expectedSequenceNumber.Load())
-	assert.Empty(t, dataChannel.incomingMessageBuffer.Messages)
+	assert.Empty(t, dataChannel.incomingMessageBuffer.messages)
 	assert.Equal(t, 1, SendAcknowledgeMessageCallCount)
 
 	// Second scenario is to test when incoming message sequence number matches with expected sequence number
 	// and there are more messages found in incomingMessageBuffer to be processed
-	dataChannel.addDataToIncomingMessageBuffer(streamingMessages[2])
-	dataChannel.addDataToIncomingMessageBuffer(streamingMessages[6])
-	dataChannel.addDataToIncomingMessageBuffer(streamingMessages[4])
-	dataChannel.addDataToIncomingMessageBuffer(streamingMessages[3])
+	addDataToIncomingMessageBuffer(dataChannel, streamingMessages[2])
+	addDataToIncomingMessageBuffer(dataChannel, streamingMessages[6])
+	addDataToIncomingMessageBuffer(dataChannel, streamingMessages[4])
+	addDataToIncomingMessageBuffer(dataChannel, streamingMessages[3])
 
 	err = dataChannel.outputMessageHandler(context.TODO(), stopHandler, serializedClientMessages[1])
 	require.NoError(t, err)
 	assert.Equal(t, int64(5), dataChannel.expectedSequenceNumber.Load())
-	assert.Len(t, dataChannel.incomingMessageBuffer.Messages, 1)
+	assert.Len(t, dataChannel.incomingMessageBuffer.messages, 1)
 
 	// All messages from buffer should get processed except sequence number 6 as expected number to be processed at this time is 5
-	bufferedStreamMessage := dataChannel.incomingMessageBuffer.Messages[6]
+	bufferedStreamMessage := dataChannel.incomingMessageBuffer.messages[6]
 	assert.Equal(t, int64(6), bufferedStreamMessage.SequenceNumber)
 }
 
@@ -437,7 +441,7 @@ func TestDataChannelIncomingMessageHandlerForUnexpectedInputStreamDataMessage(t 
 	mockWsChannel := &communicatorMocks.IWebSocketChannel{}
 
 	dataChannel := getDataChannel(t, mockWsChannel)
-	dataChannel.incomingMessageBuffer.Capacity = 2
+	dataChannel.incomingMessageBuffer.capacity = 2
 
 	serializedClientMessages, _ := getClientAndStreamingMessageList()
 
@@ -464,14 +468,14 @@ func TestDataChannelIncomingMessageHandlerForUnexpectedInputStreamDataMessage(t 
 
 	// Since capacity of incomingMessageBuffer is 2, stream data with sequence number 3 should be ignored without sending acknowledgement
 	assert.Equal(t, expectedSequenceNumber, dataChannel.expectedSequenceNumber.Load())
-	assert.Len(t, dataChannel.incomingMessageBuffer.Messages, 2)
+	assert.Len(t, dataChannel.incomingMessageBuffer.messages, 2)
 	assert.Equal(t, 2, SendAcknowledgeMessageCallCount)
 
-	bufferedStreamMessage := dataChannel.incomingMessageBuffer.Messages[1]
+	bufferedStreamMessage := dataChannel.incomingMessageBuffer.messages[1]
 	assert.Equal(t, int64(1), bufferedStreamMessage.SequenceNumber)
-	bufferedStreamMessage = dataChannel.incomingMessageBuffer.Messages[2]
+	bufferedStreamMessage = dataChannel.incomingMessageBuffer.messages[2]
 	assert.Equal(t, int64(2), bufferedStreamMessage.SequenceNumber)
-	bufferedStreamMessage = dataChannel.incomingMessageBuffer.Messages[3]
+	bufferedStreamMessage = dataChannel.incomingMessageBuffer.messages[3]
 	assert.Nil(t, bufferedStreamMessage.Content)
 }
 
