@@ -78,8 +78,8 @@ func TestNewDataChannel(t *testing.T) {
 
 	assert.Equal(t, config.RolePublishSubscribe, dataChannel.role)
 	assert.Equal(t, clientID, dataChannel.clientID)
-	assert.Equal(t, int64(0), dataChannel.expectedSequenceNumber)
-	assert.Equal(t, int64(0), dataChannel.streamDataSequenceNumber)
+	assert.Equal(t, int64(0), dataChannel.expectedSequenceNumber.Load())
+	assert.Equal(t, int64(0), dataChannel.streamDataSequenceNumber.Load())
 	assert.NotNil(t, dataChannel.outgoingMessageBuffer)
 	assert.NotNil(t, dataChannel.incomingMessageBuffer)
 	assert.InDelta(t, float64(config.DefaultRoundTripTime), dataChannel.roundTripTime, 0.01)
@@ -186,7 +186,7 @@ func TestSendInputDataMessage(t *testing.T) {
 	err := dataChannel.SendInputDataMessage(message.Output, mockPayload())
 	require.NoError(t, err, "Error sending input data message")
 
-	assert.Equal(t, streamDataSequenceNumber+1, dataChannel.streamDataSequenceNumber)
+	assert.Equal(t, streamDataSequenceNumber+1, dataChannel.streamDataSequenceNumber.Load())
 	assert.Equal(t, 1, dataChannel.outgoingMessageBuffer.Messages.Len())
 	// mockWsChannel.AssertExpectations(t)
 }
@@ -367,6 +367,7 @@ func TestResendStreamDataMessageScheduler(t *testing.T) {
 	mockWsChannel.On("SendMessage", mock.Anything, mock.Anything).Return(func([]byte, int) error {
 		// Use atomic increment instead of mutex locking
 		sendMessageCallCount.Add(1)
+
 		return nil
 	})
 
@@ -409,7 +410,7 @@ func TestDataChannelIncomingMessageHandlerForExpectedInputStreamDataMessage(t *t
 	// and no message found in incomingMessageBuffer
 	err := dataChannel.outputMessageHandler(context.TODO(), stopHandler, serializedClientMessages[0])
 	require.NoError(t, err)
-	assert.Equal(t, int64(1), dataChannel.expectedSequenceNumber)
+	assert.Equal(t, int64(1), dataChannel.expectedSequenceNumber.Load())
 	assert.Empty(t, dataChannel.incomingMessageBuffer.Messages)
 	assert.Equal(t, 1, SendAcknowledgeMessageCallCount)
 
@@ -422,7 +423,7 @@ func TestDataChannelIncomingMessageHandlerForExpectedInputStreamDataMessage(t *t
 
 	err = dataChannel.outputMessageHandler(context.TODO(), stopHandler, serializedClientMessages[1])
 	require.NoError(t, err)
-	assert.Equal(t, int64(5), dataChannel.expectedSequenceNumber)
+	assert.Equal(t, int64(5), dataChannel.expectedSequenceNumber.Load())
 	assert.Len(t, dataChannel.incomingMessageBuffer.Messages, 1)
 
 	// All messages from buffer should get processed except sequence number 6 as expected number to be processed at this time is 5
@@ -462,7 +463,7 @@ func TestDataChannelIncomingMessageHandlerForUnexpectedInputStreamDataMessage(t 
 	require.NoError(t, err)
 
 	// Since capacity of incomingMessageBuffer is 2, stream data with sequence number 3 should be ignored without sending acknowledgement
-	assert.Equal(t, expectedSequenceNumber, dataChannel.expectedSequenceNumber)
+	assert.Equal(t, expectedSequenceNumber, dataChannel.expectedSequenceNumber.Load())
 	assert.Len(t, dataChannel.incomingMessageBuffer.Messages, 2)
 	assert.Equal(t, 2, SendAcknowledgeMessageCallCount)
 

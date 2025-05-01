@@ -21,6 +21,7 @@ import (
 	"os"
 	"os/signal"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"testing"
 	"time"
@@ -192,10 +193,12 @@ func TestTerminalResizeWhenSessionSizeDataIsNotEqualToActualSize(t *testing.T) {
 		wg.Done()
 	}()
 
-	SendMessageCallCount := 0
+	// Use atomic counter to avoid race condition
+	var sendMessageCallCount atomic.Int32
+
 	// Mock SendMessage on the wsChannel
 	mockWsChannel.On("SendMessage", mock.Anything, mock.Anything).Return(func([]byte, int) error {
-		SendMessageCallCount++
+		sendMessageCallCount.Add(1)
 
 		return nil
 	})
@@ -204,7 +207,7 @@ func TestTerminalResizeWhenSessionSizeDataIsNotEqualToActualSize(t *testing.T) {
 	wg.Wait()
 	// Assert that SendMessage was called on the mock channel
 	mockWsChannel.AssertExpectations(t)
-	assert.Equal(t, 1, SendMessageCallCount)
+	assert.Equal(t, int32(1), sendMessageCallCount.Load())
 }
 
 func TestProcessStreamMessagePayload(t *testing.T) {

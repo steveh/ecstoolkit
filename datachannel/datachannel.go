@@ -13,6 +13,7 @@ import (
 	"math/rand"
 	"reflect"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -47,9 +48,9 @@ type DataChannel struct {
 	sessionID string
 	targetID  string
 	// records sequence number of last acknowledged message received over data channel
-	expectedSequenceNumber int64
+	expectedSequenceNumber atomic.Int64
 	// records sequence number of last stream data message sent over data channel
-	streamDataSequenceNumber int64
+	streamDataSequenceNumber atomic.Int64
 	// buffer to store outgoing stream messages until acknowledged
 	// using linked list for this buffer as access to oldest message is required and it support faster deletion from any position of list
 	outgoingMessageBuffer ListMessageBuffer
@@ -156,7 +157,7 @@ func (c *DataChannel) Open(ctx context.Context, messageHandler DisplayMessageHan
 	}
 
 	c.wsChannel.SetOnError(func(wsErr error) {
-		c.logger.Error("Trying to reconnect session", "sequenceNumber", c.streamDataSequenceNumber, "error", wsErr)
+		c.logger.Error("Trying to reconnect session", "sequenceNumber", c.streamDataSequenceNumber.Load(), "error", wsErr) // Use Load()
 
 		retryParams.CallableFunc = func() error {
 			token, err := refreshTokenHandler(ctx)
@@ -232,6 +233,8 @@ func (c *DataChannel) SendInputDataMessage(payloadType message.PayloadType, inpu
 		}
 	}
 
+	sequenceNumber := c.streamDataSequenceNumber.Load()
+
 	clientMessage := message.ClientMessage{
 		MessageType:    message.InputStreamMessage,
 		SchemaVersion:  1,
@@ -240,14 +243,14 @@ func (c *DataChannel) SendInputDataMessage(payloadType message.PayloadType, inpu
 		MessageID:      messageUUID,
 		PayloadType:    uint32(payloadType),
 		Payload:        inputData,
-		SequenceNumber: c.streamDataSequenceNumber,
+		SequenceNumber: sequenceNumber,
 	}
 
 	if msg, err = clientMessage.SerializeClientMessage(); err != nil {
 		return fmt.Errorf("serializing client message: %w", err)
 	}
 
-	c.logger.Trace("Sending message", "sequenceNumber", c.streamDataSequenceNumber)
+	c.logger.Trace("Sending message", "sequenceNumber", sequenceNumber)
 
 	if err = c.SendMessage(msg, websocket.BinaryMessage); err != nil {
 		return fmt.Errorf("sending message: %w", err)
@@ -255,13 +258,15 @@ func (c *DataChannel) SendInputDataMessage(payloadType message.PayloadType, inpu
 
 	streamingMessage := StreamingMessage{
 		msg,
-		c.streamDataSequenceNumber,
+		sequenceNumber,
 		time.Now(),
 		new(int),
 	}
-	c.addDataToOutgoingMessageBuffer(streamingMessage)
 
-	c.streamDataSequenceNumber++
+	// Increment sequence number for next message
+	c.streamDataSequenceNumber.Add(1)
+
+	c.addDataToOutgoingMessageBuffer(streamingMessage)
 
 	return err
 }
@@ -278,8 +283,11 @@ func (c *DataChannel) HandleOutputMessage(
 	outputMessage message.ClientMessage,
 	rawMessage []byte,
 ) error {
+	// Lock for reading expectedSequenceNumber
+	expectedSeq := c.expectedSequenceNumber.Load()
+
 	// Handle unexpected sequence messages first
-	if outputMessage.SequenceNumber != c.expectedSequenceNumber {
+	if outputMessage.SequenceNumber != expectedSeq {
 		return c.handleUnexpectedSequenceMessage(outputMessage, rawMessage)
 	}
 
@@ -303,7 +311,7 @@ func (c *DataChannel) HandleOutputMessage(
 	}
 
 	// Increment the expected sequence number after successful processing
-	c.expectedSequenceNumber++
+	c.expectedSequenceNumber.Add(1)
 
 	// Process any buffered messages that are now in sequence
 	return c.ProcessIncomingMessageBufferItems(outputMessage)
@@ -317,7 +325,8 @@ func (c *DataChannel) ProcessIncomingMessageBufferItems(
 ) error {
 	for {
 		// Check if there's a message with the expected sequence number
-		bufferedStreamMessage, exists := c.incomingMessageBuffer.Messages[c.expectedSequenceNumber]
+		expectedSeq := c.expectedSequenceNumber.Load()
+		bufferedStreamMessage, exists := c.incomingMessageBuffer.Messages[expectedSeq]
 		if !exists || bufferedStreamMessage.Content == nil {
 			// No more messages to process
 			break
@@ -438,7 +447,7 @@ func (c *DataChannel) SetAgentVersion(agentVersion string) {
 
 // GetExpectedSequenceNumber returns expected sequence number of the DataChannel.
 func (c *DataChannel) GetExpectedSequenceNumber() int64 {
-	return c.expectedSequenceNumber
+	return c.expectedSequenceNumber.Load()
 }
 
 // GetTargetID returns the channel target ID.
@@ -986,12 +995,14 @@ func (c *DataChannel) handleDefaultOutputMessage(outputMessage message.ClientMes
 
 // handleUnexpectedSequenceMessage handles messages with unexpected sequence numbers.
 func (c *DataChannel) handleUnexpectedSequenceMessage(outputMessage message.ClientMessage, rawMessage []byte) error {
-	c.logger.Debug("Unexpected sequence message received", "receivedSequence", outputMessage.SequenceNumber, "expectedSequence", c.expectedSequenceNumber)
+	expectedSeq := c.expectedSequenceNumber.Load()
+
+	c.logger.Debug("Unexpected sequence message received", "receivedSequence", outputMessage.SequenceNumber, "expectedSequence", expectedSeq)
 
 	// If incoming message sequence number is greater then expected sequence number and incomingMessageBuffer has capacity,
 	// add message to incomingMessageBuffer and send acknowledgement
-	if outputMessage.SequenceNumber > c.expectedSequenceNumber {
-		c.logger.Debug("Received sequence number is higher than expected", "receivedSequence", outputMessage.SequenceNumber, "expectedSequence", c.expectedSequenceNumber)
+	if outputMessage.SequenceNumber > expectedSeq {
+		c.logger.Debug("Received sequence number is higher than expected", "receivedSequence", outputMessage.SequenceNumber, "expectedSequence", expectedSeq)
 
 		if len(c.incomingMessageBuffer.Messages) < c.incomingMessageBuffer.Capacity {
 			if err := c.sendAcknowledgeMessage(outputMessage); err != nil {
@@ -1038,7 +1049,7 @@ func (c *DataChannel) processBufferedMessage(outputMessage message.ClientMessage
 		return fmt.Errorf("processing output message with handlers: %w", err)
 	}
 
-	c.expectedSequenceNumber++
+	c.expectedSequenceNumber.Add(1)
 	c.removeDataFromIncomingMessageBuffer(bufferedStreamMessage.SequenceNumber)
 
 	return nil
