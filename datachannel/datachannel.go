@@ -2,7 +2,6 @@ package datachannel
 
 import (
 	"bytes"
-	"container/list"
 	"context"
 	"encoding/binary"
 	"encoding/hex"
@@ -53,7 +52,7 @@ type DataChannel struct {
 	streamDataSequenceNumber atomic.Int64
 	// buffer to store outgoing stream messages until acknowledged
 	// using linked list for this buffer as access to oldest message is required and it support faster deletion from any position of list
-	outgoingMessageBuffer ListMessageBuffer
+	outgoingMessageBuffer *ListMessageBuffer[StreamingMessage]
 	// buffer to store incoming stream messages if received out of sequence
 	// using map for this buffer as incoming messages can be out of order and retrieval would be faster by sequenceId
 	incomingMessageBuffer MapMessageBuffer
@@ -92,18 +91,14 @@ type DataChannel struct {
 // NewDataChannel creates a DataChannel.
 func NewDataChannel(wsChannel communicator.IWebSocketChannel, encryptorBuilder EncryptorBuilder, clientID string, sessionID string, targetID string, logger log.T) (*DataChannel, error) {
 	c := &DataChannel{
-		wsChannel:        wsChannel,
-		encryptorBuilder: encryptorBuilder,
-		logger:           logger,
-		role:             config.RolePublishSubscribe,
-		clientID:         clientID,
-		sessionID:        sessionID,
-		targetID:         targetID,
-		outgoingMessageBuffer: ListMessageBuffer{
-			list.New(),
-			config.OutgoingMessageBufferCapacity,
-			&sync.Mutex{},
-		},
+		wsChannel:             wsChannel,
+		encryptorBuilder:      encryptorBuilder,
+		logger:                logger,
+		role:                  config.RolePublishSubscribe,
+		clientID:              clientID,
+		sessionID:             sessionID,
+		targetID:              targetID,
+		outgoingMessageBuffer: NewListMessageBuffer[StreamingMessage](config.OutgoingMessageBufferCapacity),
 		incomingMessageBuffer: MapMessageBuffer{
 			make(map[int64]StreamingMessage),
 			config.IncomingMessageBufferCapacity,
@@ -266,7 +261,7 @@ func (c *DataChannel) SendInputDataMessage(payloadType message.PayloadType, inpu
 	// Increment sequence number for next message
 	c.streamDataSequenceNumber.Add(1)
 
-	c.addDataToOutgoingMessageBuffer(streamingMessage)
+	c.outgoingMessageBuffer.ForcePushBack(streamingMessage)
 
 	return err
 }
@@ -538,18 +533,9 @@ func (c *DataChannel) resendStreamDataMessageScheduler() {
 	go func() {
 		for {
 			time.Sleep(config.ResendSleepInterval)
-			c.outgoingMessageBuffer.Mutex.Lock()
-			streamMessageElement := c.outgoingMessageBuffer.Messages.Front()
-			c.outgoingMessageBuffer.Mutex.Unlock()
 
-			if streamMessageElement == nil {
-				continue
-			}
-
-			streamMessage, ok := streamMessageElement.Value.(StreamingMessage)
-			if !ok {
-				c.logger.Error("Failed to type assert streamMessageElement.Value to StreamingMessage")
-
+			streamMessage, exists := c.outgoingMessageBuffer.Front()
+			if !exists {
 				continue
 			}
 
@@ -614,22 +600,15 @@ func (c *DataChannel) finalizeDataChannelHandshake(tokenValue string) error {
 func (c *DataChannel) processAcknowledgedMessage(acknowledgeMessageContent message.AcknowledgeContent) {
 	acknowledgeSequenceNumber := acknowledgeMessageContent.SequenceNumber
 
-	for streamMessageElement := c.outgoingMessageBuffer.Messages.Front(); streamMessageElement != nil; streamMessageElement = streamMessageElement.Next() {
-		streamMessage, ok := streamMessageElement.Value.(StreamingMessage)
-		if !ok {
-			c.logger.Error("Failed to type assert streamMessageElement.Value to StreamingMessage")
+	removedMessage, removed := c.outgoingMessageBuffer.RemoveIf(func(msg StreamingMessage) bool {
+		return msg.SequenceNumber == acknowledgeSequenceNumber
+	})
 
-			continue
-		}
-
-		if streamMessage.SequenceNumber == acknowledgeSequenceNumber {
-			// Calculate retransmission timeout based on latest round trip time of message
-			c.calculateRetransmissionTimeout(streamMessage)
-
-			c.removeDataFromOutgoingMessageBuffer(streamMessageElement)
-
-			break
-		}
+	if removed {
+		// Calculate retransmission timeout based on latest round trip time of the removed message
+		c.calculateRetransmissionTimeout(removedMessage)
+	} else {
+		c.logger.Warn("Received ack for message not found in buffer or already acknowledged", "sequenceNumber", acknowledgeSequenceNumber)
 	}
 }
 
@@ -655,24 +634,6 @@ func (c *DataChannel) sendAcknowledgeMessage(streamDataMessage message.ClientMes
 	}
 
 	return nil
-}
-
-// addDataToOutgoingMessageBuffer removes first message from outgoingMessageBuffer if capacity is full and adds given message at the end.
-func (c *DataChannel) addDataToOutgoingMessageBuffer(streamMessage StreamingMessage) {
-	if c.outgoingMessageBuffer.Messages.Len() == c.outgoingMessageBuffer.Capacity {
-		c.removeDataFromOutgoingMessageBuffer(c.outgoingMessageBuffer.Messages.Front())
-	}
-
-	c.outgoingMessageBuffer.Mutex.Lock()
-	c.outgoingMessageBuffer.Messages.PushBack(streamMessage)
-	c.outgoingMessageBuffer.Mutex.Unlock()
-}
-
-// removeDataFromOutgoingMessageBuffer removes given element from outgoingMessageBuffer.
-func (c *DataChannel) removeDataFromOutgoingMessageBuffer(streamMessageElement *list.Element) {
-	c.outgoingMessageBuffer.Mutex.Lock()
-	c.outgoingMessageBuffer.Messages.Remove(streamMessageElement)
-	c.outgoingMessageBuffer.Mutex.Unlock()
 }
 
 // addDataToIncomingMessageBuffer adds given message to incomingMessageBuffer if it has capacity.

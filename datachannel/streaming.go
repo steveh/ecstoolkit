@@ -15,19 +15,11 @@
 package datachannel
 
 import (
-	"container/list"
 	"sync"
 	"time"
 
 	"github.com/steveh/ecstoolkit/message"
 )
-
-// ListMessageBuffer represents a buffer for messages using a linked list data structure.
-type ListMessageBuffer struct {
-	Messages *list.List
-	Capacity int
-	Mutex    *sync.Mutex
-}
 
 // MapMessageBuffer represents a buffer for messages using a map data structure.
 type MapMessageBuffer struct {
