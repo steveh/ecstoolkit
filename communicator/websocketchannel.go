@@ -42,7 +42,7 @@ type WebSocketChannel struct {
 	OnError      func(error)
 	channelURL   string
 	isOpen       atomic.Bool // Use atomic.Bool instead of bool for thread safety
-	writeLock    *sync.Mutex
+	writeLock    sync.Mutex
 	connection   *websocket.Conn
 	channelToken string
 	logger       log.T
@@ -124,9 +124,6 @@ func (c *WebSocketChannel) Close() error {
 
 // Open upgrades the http connection to a websocket connection.
 func (c *WebSocketChannel) Open() error {
-	// initialize the write mutex
-	c.writeLock = &sync.Mutex{}
-
 	ws, err := websocketutil.NewWebsocketUtil(c.logger, nil).OpenConnection(c.channelURL)
 	if err != nil {
 		return fmt.Errorf("opening websocket connection: %w", err)
