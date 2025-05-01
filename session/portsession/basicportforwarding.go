@@ -49,8 +49,8 @@ type AcceptConnectionFunc func(listener net.Listener) (net.Conn, error)
 // BasicPortForwarding is type of port session
 // accepts one client connection at a time.
 type BasicPortForwarding struct {
-	stream           *net.Conn
-	listener         *net.Listener
+	stream           net.Conn
+	listener         net.Listener
 	sessionID        string
 	portParameters   PortParameters
 	session          session.ISessionSubTypeSupport
@@ -88,7 +88,7 @@ func (p *BasicPortForwarding) IsStreamNotSet() bool {
 // Stop closes the stream.
 func (p *BasicPortForwarding) Stop() error {
 	if p.stream != nil {
-		if err := (*p.stream).Close(); err != nil {
+		if err := p.stream.Close(); err != nil {
 			return fmt.Errorf("closing stream: %w", err)
 		}
 	}
@@ -112,16 +112,16 @@ func (p *BasicPortForwarding) ReadStream(_ context.Context) error {
 	msg := make([]byte, config.StreamDataPayloadSize)
 
 	for {
-		numBytes, err := (*p.stream).Read(msg)
+		numBytes, err := p.stream.Read(msg)
 		if err != nil {
 			p.logger.Debug("Reading from port failed", "port", p.portParameters.PortNumber, "error", err)
 
 			// Send DisconnectToPort flag to agent when client tcp connection drops to ensure agent closes tcp connection too with server port
-			if err = p.session.SendFlag(message.DisconnectToPort); err != nil {
+			if err := p.session.SendFlag(message.DisconnectToPort); err != nil {
 				return fmt.Errorf("sending disconnect flag: %w", err)
 			}
 
-			if err = p.reconnect(); err != nil {
+			if err := p.reconnect(); err != nil {
 				return fmt.Errorf("reconnecting: %w", err)
 			}
 
@@ -131,7 +131,7 @@ func (p *BasicPortForwarding) ReadStream(_ context.Context) error {
 
 		p.logger.Trace("Received message from stdin", "size", numBytes)
 
-		if err = p.session.SendInputDataMessage(message.Output, msg[:numBytes]); err != nil {
+		if err := p.session.SendInputDataMessage(message.Output, msg[:numBytes]); err != nil {
 			p.logger.Error("sending packet", "error", err)
 
 			return fmt.Errorf("sending input data message: %w", err)
@@ -143,8 +143,7 @@ func (p *BasicPortForwarding) ReadStream(_ context.Context) error {
 
 // WriteStream writes data to stream.
 func (p *BasicPortForwarding) WriteStream(outputMessage message.ClientMessage) error {
-	_, err := (*p.stream).Write(outputMessage.Payload)
-	if err != nil {
+	if _, err := p.stream.Write(outputMessage.Payload); err != nil {
 		return fmt.Errorf("writing to stream: %w", err)
 	}
 
@@ -175,8 +174,8 @@ func (p *BasicPortForwarding) startLocalConn() error {
 
 	p.logger.Debug("Connection accepted", "sessionID", p.sessionID)
 
-	p.listener = &listener
-	p.stream = &tcpConn
+	p.listener = listener
+	p.stream = tcpConn
 
 	return nil
 }
@@ -247,18 +246,18 @@ func (p *BasicPortForwarding) handleControlSignals(ctx context.Context) {
 // reconnect closes existing connection, listens to new connection and accept it.
 func (p *BasicPortForwarding) reconnect() error {
 	// close existing connection as it is in a state from which data cannot be read
-	if err := (*p.stream).Close(); err != nil {
+	if err := p.stream.Close(); err != nil {
 		p.logger.Error("closing existing stream", "error", err)
 		// Continue even if close fails since we want to establish a new connection
 	}
 
 	// wait for new connection on listener and accept it
-	conn, err := p.acceptConnection(*p.listener)
+	conn, err := p.acceptConnection(p.listener)
 	if err != nil {
 		return fmt.Errorf("accepting connection: %w", err)
 	}
 
-	p.stream = &conn
+	p.stream = conn
 
 	return nil
 }
