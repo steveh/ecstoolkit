@@ -25,7 +25,7 @@ type StreamingMessage struct {
 	Content        []byte
 	SequenceNumber int64
 	LastSentTime   time.Time
-	ResendAttempt  *int
+	ResendAttempt  int
 }
 
 // GetRoundTripTime is a function that calculates the round trip time for a streaming message.

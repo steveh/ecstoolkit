@@ -250,7 +250,7 @@ func (c *DataChannel) SendInputDataMessage(payloadType message.PayloadType, inpu
 		msg,
 		sequenceNumber,
 		time.Now(),
-		new(int),
+		0,
 	}
 
 	// Increment sequence number for next message
@@ -535,14 +535,14 @@ func (c *DataChannel) resendStreamDataMessageScheduler() {
 			}
 
 			if time.Since(streamMessage.LastSentTime) > c.retransmissionTimeout {
-				c.logger.Debug("Resend stream data message", "sequenceNumber", streamMessage.SequenceNumber, "attempt", *streamMessage.ResendAttempt)
+				c.logger.Debug("Resend stream data message", "sequenceNumber", streamMessage.SequenceNumber, "attempt", streamMessage.ResendAttempt)
 
-				if *streamMessage.ResendAttempt >= config.ResendMaxAttempt {
+				if streamMessage.ResendAttempt >= config.ResendMaxAttempt {
 					c.logger.Warn("Message resent too many times", "sequenceNumber", streamMessage.SequenceNumber, "maxAttempts", config.ResendMaxAttempt)
 					c.isStreamMessageResendTimeout <- true
 				}
 
-				*streamMessage.ResendAttempt++
+				streamMessage.ResendAttempt++
 				if err := c.SendMessage(streamMessage.Content, websocket.BinaryMessage); err != nil {
 					c.logger.Error("Unable to send stream data message", "error", err)
 				}
@@ -951,7 +951,7 @@ func (c *DataChannel) handleUnexpectedSequenceMessage(outputMessage message.Clie
 				rawMessage,
 				outputMessage.SequenceNumber,
 				time.Now(),
-				new(int),
+				0,
 			}
 
 			_ = c.incomingMessageBuffer.SetUnlessFull(streamingMessage.SequenceNumber, streamingMessage)

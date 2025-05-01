@@ -569,7 +569,7 @@ func TestDataChannelIncomingMessageHandlerForPausePublicationessage(t *testing.T
 			serializedClientMessage[i],
 			int64(i),
 			time.Now(),
-			new(int),
+			0,
 		}
 	}
 
@@ -938,7 +938,7 @@ func getClientAndStreamingMessageList() ([][]byte, []StreamingMessage) {
 			serializedClientMessage[i],
 			int64(i),
 			time.Now(),
-			new(int),
+			0,
 		}
 	}
 
