@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/steveh/ecstoolkit/config"
@@ -57,6 +58,7 @@ type BasicPortForwarding struct {
 	logger           log.T
 	buildListener    BuildListenerFunc
 	acceptConnection AcceptConnectionFunc
+	mu               sync.Mutex
 }
 
 // NewBasicPortForwarding creates a new BasicPortForwarding instance.
@@ -82,11 +84,17 @@ var _ IPortSession = (*BasicPortForwarding)(nil)
 
 // IsStreamNotSet checks if stream is not set.
 func (p *BasicPortForwarding) IsStreamNotSet() bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	return p.stream == nil
 }
 
 // Stop closes the stream.
 func (p *BasicPortForwarding) Stop() error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	if p.stream != nil {
 		if err := p.stream.Close(); err != nil {
 			return fmt.Errorf("closing stream: %w", err)
@@ -98,6 +106,9 @@ func (p *BasicPortForwarding) Stop() error {
 
 // InitializeStreams establishes connection and initializes the stream.
 func (p *BasicPortForwarding) InitializeStreams(ctx context.Context, _ string) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	p.handleControlSignals(ctx)
 
 	if err := p.startLocalConn(); err != nil {
@@ -109,6 +120,9 @@ func (p *BasicPortForwarding) InitializeStreams(ctx context.Context, _ string) e
 
 // ReadStream reads data from the stream.
 func (p *BasicPortForwarding) ReadStream(_ context.Context) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	msg := make([]byte, config.StreamDataPayloadSize)
 
 	for {
@@ -143,6 +157,9 @@ func (p *BasicPortForwarding) ReadStream(_ context.Context) error {
 
 // WriteStream writes data to stream.
 func (p *BasicPortForwarding) WriteStream(outputMessage message.ClientMessage) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	if _, err := p.stream.Write(outputMessage.Payload); err != nil {
 		return fmt.Errorf("writing to stream: %w", err)
 	}
