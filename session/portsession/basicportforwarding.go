@@ -252,7 +252,6 @@ func (p *BasicPortForwarding) reconnect() error {
 	// close existing connection as it is in a state from which data cannot be read
 	if err := p.stream.Close(); err != nil {
 		p.logger.Error("closing existing stream", "error", err)
-		// Continue even if close fails since we want to establish a new connection
 	}
 
 	// wait for new connection on listener and accept it

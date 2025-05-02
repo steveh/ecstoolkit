@@ -33,7 +33,6 @@ func TestStartSessionForStandardStreamForwarding(t *testing.T) {
 		if err := out.Close(); err != nil {
 			t.Logf("Error closing out: %v", err)
 		}
-		// Restore original stdin
 	}()
 
 	if _, err := out.Write(getMockOutputMessage().Payload); err != nil {

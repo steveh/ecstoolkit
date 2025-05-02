@@ -178,7 +178,7 @@ func TestSendInputDataMessage(t *testing.T) {
 
 	assert.Equal(t, streamDataSequenceNumber+1, dataChannel.streamDataSequenceNumber.Load())
 	assert.Equal(t, 1, dataChannel.outgoingMessageBuffer.messages.Len())
-	// mockWsChannel.AssertExpectations(t)
+	mockWsChannel.AssertExpectations(t)
 }
 
 func TestProcessAcknowledgedMessage(t *testing.T) {
