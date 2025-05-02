@@ -16,9 +16,9 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.23'
-      - name: Install golangci-lint
-        run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.56.2
-      - name: Install mockery
-        run: go install github.com/vektra/mockery/v2@latest
-      - name: Run Makefile (generate, lint, test)
-        run: make all
+      - name: Lint with golangci-lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.1.5
+      - name: Run tests
+        run: make race

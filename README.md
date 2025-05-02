@@ -1,5 +1,8 @@
 # ecstoolkit
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/steveh/ecstoolkit.svg)](https://pkg.go.dev/github.com/steveh/ecstoolkit)
+[![CI](https://github.com/steveh/ecstoolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/steveh/ecstoolkit/actions/workflows/ci.yml)
+
 This is a hard fork of the AWS [session-manager-plugin](https://github.com/aws/session-manager-plugin) as of v1.2.707.0. The primary audience is people shaped like platform engineers who want to integrate connecting to ECS in their own Go tooling, such as an in-house CLI.
 
 It represents a significant rewrite and modernization of the original library. The main goals were to make it easy to integrate, improve code quality, remove technical debt, and address concurrency and maintainability issues. 
