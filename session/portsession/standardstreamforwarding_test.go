@@ -29,6 +29,8 @@ import (
 )
 
 // Test StartSession.
+//
+//nolint:paralleltest // mutates file descriptors, not safe for parallel
 func TestStartSessionForStandardStreamForwarding(t *testing.T) {
 	in, out, err := os.Pipe()
 	if err != nil {

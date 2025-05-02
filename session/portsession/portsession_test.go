@@ -112,6 +112,7 @@ func TestInitializePortSessionForPortForwarding(t *testing.T) {
 	assert.IsType(t, &MuxPortForwarding{}, portSession.portSessionType)
 }
 
+//nolint:paralleltest // mutates file descriptors, not safe for parallel
 func TestStartSessionWithClosedWsConn(t *testing.T) {
 	in, out, err := os.Pipe()
 	if err != nil {

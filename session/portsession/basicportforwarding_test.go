@@ -104,6 +104,8 @@ func TestSetSessionHandlers(t *testing.T) {
 }
 
 func TestStartSessionTCPLocalPortFromDocument(t *testing.T) {
+	t.Parallel()
+
 	mockLogger := log.NewMockLog()
 
 	mockWsChannel := getMockWsChannel()
@@ -129,6 +131,8 @@ func TestStartSessionTCPLocalPortFromDocument(t *testing.T) {
 }
 
 func TestStartSessionTCPAcceptFailed(t *testing.T) {
+	t.Parallel()
+
 	mockLogger := log.NewMockLog()
 	mockWsChannel := getMockWsChannel()
 
@@ -151,6 +155,8 @@ func TestStartSessionTCPAcceptFailed(t *testing.T) {
 }
 
 func TestStartSessionTCPConnectFailed(t *testing.T) {
+	t.Parallel()
+
 	mockLogger := log.NewMockLog()
 	mockWsChannel := getMockWsChannel()
 

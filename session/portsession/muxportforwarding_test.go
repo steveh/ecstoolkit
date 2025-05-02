@@ -27,7 +27,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// test readStream.
 func TestReadStream(t *testing.T) {
 	t.Parallel()
 
@@ -76,10 +75,13 @@ func TestReadStream(t *testing.T) {
 		return nil
 	})
 
+	done := make(chan struct{})
 	go func() {
 		if err := portSession.portSessionType.ReadStream(context.TODO()); err != nil {
 			t.Errorf("Failed to read stream: %v", err)
 		}
+
+		close(done)
 	}()
 
 	time.Sleep(time.Second)
