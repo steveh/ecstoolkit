@@ -22,6 +22,10 @@ It represents a significant rewrite and modernization of the original library. T
 * Removed direct printing to stdout and use of `os.Exit()`.
 * Refactored and simplified how sessions are established.
 
+## Usage
+
+See [usage_test.go](usage_test.go) for examples.
+
 ## Contributing
 
 I'm very happy to accept changes that would improve `ecstoolskit`'s usefulness as a library.
