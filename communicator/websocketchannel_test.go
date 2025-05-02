@@ -267,6 +267,7 @@ func TestReadWriteBinaryToWebSocketChannel(t *testing.T) {
 	log := log.NewMockLog()
 
 	var wg sync.WaitGroup
+
 	wg.Add(1)
 
 	onMessage := func(input []byte) {
@@ -308,17 +309,20 @@ func TestMultipleReadWriteWebSocketChannel(t *testing.T) {
 	u.Scheme = "ws"
 
 	log := log.NewMockLog()
-	
+
 	var wg sync.WaitGroup
+
 	wg.Add(2) // Expect two messages
-	
+
 	// Use atomic values to safely track message receipt
 	var message1Received atomic.Bool
+
 	var message2Received atomic.Bool
 
 	onMessage := func(input []byte) {
 		// Verify reads from websocket server
 		t.Log(input)
+
 		if string(input) == "echo channelreadwrite1" {
 			message1Received.Store(true)
 			wg.Done()
@@ -344,10 +348,10 @@ func TestMultipleReadWriteWebSocketChannel(t *testing.T) {
 	require.NoError(t, err, "Error sending message 1")
 	err = websocketchannel.SendMessage([]byte("channelreadwrite2"), websocket.TextMessage)
 	require.NoError(t, err, "Error sending message 2")
-	
+
 	// Wait for both messages to be received
 	wg.Wait()
-	
+
 	assert.True(t, message1Received.Load(), "Didn't read value 1 correctly")
 	assert.True(t, message2Received.Load(), "Didn't read value 2 correctly")
 

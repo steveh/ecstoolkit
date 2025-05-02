@@ -316,6 +316,7 @@ func (c *DataChannel) ProcessIncomingMessageBufferItems(
 	for {
 		// Check if there's a message with the expected sequence number
 		expectedSeq := c.expectedSequenceNumber.Load()
+
 		bufferedStreamMessage, exists := c.incomingMessageBuffer.Get(expectedSeq)
 		if !exists || bufferedStreamMessage.Content == nil {
 			// No more messages to process

@@ -8,6 +8,7 @@ linters:
     - exhaustruct
     - funlen
     - gocognit
+    - ireturn
     - lll
     - tagliatelle
     - testpackage
