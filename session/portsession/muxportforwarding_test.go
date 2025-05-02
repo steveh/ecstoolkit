@@ -148,6 +148,7 @@ func TestHandleDataTransferSrcToDst(t *testing.T) {
 	msg := make([]byte, 20)
 	out, in := net.Pipe()
 	out1, in1 := net.Pipe()
+	done := make(chan struct{})
 
 	defer func() {
 		if err := out1.Close(); err != nil {
@@ -175,9 +176,12 @@ func TestHandleDataTransferSrcToDst(t *testing.T) {
 		}
 
 		msg = msg[:n]
+		// Signal done after writing to msg
+		done <- struct{}{}
 	}()
 
 	handleDataTransfer(in1, out)
+	<-done // Wait for goroutine to finish writing to msg
 	assert.Equal(t, outputMessage.Payload, msg)
 }
 
@@ -189,6 +193,7 @@ func TestHandleDataTransferDstToSrc(t *testing.T) {
 	msg := make([]byte, 20)
 	out, in := net.Pipe()
 	out1, in1 := net.Pipe()
+	done := make(chan struct{})
 
 	defer func() {
 		if err := out.Close(); err != nil {
@@ -216,8 +221,10 @@ func TestHandleDataTransferDstToSrc(t *testing.T) {
 		}
 
 		msg = msg[:n]
+		// Signal done after writing to msg
+		done <- struct{}{}
 	}()
-
 	handleDataTransfer(in, out1)
+	<-done // Wait for goroutine to finish writing to msg
 	assert.Equal(t, outputMessage.Payload, msg)
 }
