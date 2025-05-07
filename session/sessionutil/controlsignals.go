@@ -1,6 +1,3 @@
-//go:build darwin || freebsd || linux || netbsd || openbsd
-// +build darwin freebsd linux netbsd openbsd
-
 // Package sessionutil contains utility methods required to start session.
 package sessionutil
 

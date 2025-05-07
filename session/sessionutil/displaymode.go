@@ -1,13 +1,8 @@
-//go:build darwin || freebsd || linux || netbsd || openbsd
-// +build darwin freebsd linux netbsd openbsd
-
-// Package sessionutil provides utility for sessions.
 package sessionutil
 
 import (
 	"fmt"
 	"io"
-	"net"
 	"os"
 
 	"github.com/steveh/ecstoolkit/log"
@@ -19,6 +14,15 @@ type DisplayMode struct {
 	logger log.T
 }
 
+// NewDisplayMode creates and initializes a new DisplayMode instance.
+func NewDisplayMode(logger log.T) DisplayMode {
+	displayMode := DisplayMode{
+		logger: logger,
+	}
+
+	return displayMode
+}
+
 // DisplayMessage function displays the output on the screen.
 func (d *DisplayMode) DisplayMessage(message message.ClientMessage) {
 	var out io.Writer = os.Stdout
@@ -26,14 +30,4 @@ func (d *DisplayMode) DisplayMessage(message message.ClientMessage) {
 	if _, err := fmt.Fprint(out, string(message.Payload)); err != nil {
 		d.logger.Error("Failed to write message to output", "error", err)
 	}
-}
-
-// NewListener starts a new socket listener on the address.
-func NewListener(address string) (net.Listener, error) {
-	listener, err := net.Listen("unix", address)
-	if err != nil {
-		return nil, fmt.Errorf("creating unix socket listener: %w", err)
-	}
-
-	return listener, nil
 }
