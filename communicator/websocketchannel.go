@@ -122,12 +122,6 @@ func (c *WebSocketChannel) Open() error {
 
 	// spin up a different routine to listen to the incoming traffic
 	go func() {
-		defer func() {
-			if msg := recover(); msg != nil {
-				c.logger.Error("WebsocketChannel listener run panic", "error", msg)
-			}
-		}()
-
 		retryCount := 0
 
 		for {
