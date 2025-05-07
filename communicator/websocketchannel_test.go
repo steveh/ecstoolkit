@@ -1,4 +1,4 @@
-package communicator_test
+package communicator
 
 import (
 	"errors"
@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/gorilla/websocket"
-	"github.com/steveh/ecstoolkit/communicator"
 	"github.com/steveh/ecstoolkit/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -92,7 +91,7 @@ func TestWebSocketChannel_GetChannelToken(t *testing.T) {
 
 	log := log.NewMockLog()
 
-	channel, err := communicator.NewWebSocketChannel(defaultStreamURL, defaultChannelToken, log)
+	channel, err := NewWebSocketChannel(defaultStreamURL, defaultChannelToken, log)
 	require.NoError(t, err)
 
 	token := channel.GetChannelToken()
@@ -106,7 +105,7 @@ func TestWebSocketChannel_SetChannelToken(t *testing.T) {
 
 	log := log.NewMockLog()
 
-	channel, err := communicator.NewWebSocketChannel(defaultStreamURL, "other", log)
+	channel, err := NewWebSocketChannel(defaultStreamURL, "other", log)
 	require.NoError(t, err)
 
 	channel.SetChannelToken(defaultChannelToken)
@@ -120,7 +119,7 @@ func TestWebSocketChannel_GetStreamURL(t *testing.T) {
 
 	log := log.NewMockLog()
 
-	channel, err := communicator.NewWebSocketChannel(defaultStreamURL, defaultChannelToken, log)
+	channel, err := NewWebSocketChannel(defaultStreamURL, defaultChannelToken, log)
 	require.NoError(t, err)
 
 	url := channel.GetStreamURL()
@@ -132,7 +131,7 @@ func TestWebSocketChannel_SetOnError(t *testing.T) {
 
 	t.Log("Starting test: webSocketChannel.SetOnError")
 
-	channel := &communicator.WebSocketChannel{}
+	channel := &WebSocketChannel{}
 	errorCallbackWrapper := &ErrorCallbackWrapper{}
 	errorCallbackWrapper.On("defaultErrorHandler", errDefault).Return()
 
@@ -148,7 +147,7 @@ func TestWebsocketChannel_SetOnMessage(t *testing.T) {
 
 	t.Log("Starting test: webSocketChannel.SetOnMessage")
 
-	channel := &communicator.WebSocketChannel{}
+	channel := &WebSocketChannel{}
 	messageCallbackWrapper := &MessageCallbackWrapper{}
 	messageCallbackWrapper.On("defaultMessageHandler", mockDefaultMessage()).Return()
 
@@ -166,7 +165,7 @@ func TestNewWebSocketChannel(t *testing.T) {
 
 	log := log.NewMockLog()
 
-	channel, err := communicator.NewWebSocketChannel(defaultStreamURL, defaultChannelToken, log)
+	channel, err := NewWebSocketChannel(defaultStreamURL, defaultChannelToken, log)
 	require.NoError(t, err)
 
 	assert.Equal(t, defaultStreamURL, channel.GetStreamURL())
@@ -184,7 +183,7 @@ func TestOpenCloseWebSocketChannel(t *testing.T) {
 
 	log := log.NewMockLog()
 
-	websocketchannel, err := communicator.NewWebSocketChannel(u.String(), defaultChannelToken, log)
+	websocketchannel, err := NewWebSocketChannel(u.String(), defaultChannelToken, log)
 	require.NoError(t, err)
 
 	err = websocketchannel.Open()
@@ -219,7 +218,7 @@ func TestReadWriteTextToWebSocketChannel(t *testing.T) {
 		assert.Equal(t, "echo channelreadwrite", string(input))
 	}
 
-	websocketchannel, err := communicator.NewWebSocketChannel(u.String(), defaultChannelToken, log)
+	websocketchannel, err := NewWebSocketChannel(u.String(), defaultChannelToken, log)
 	require.NoError(t, err)
 
 	websocketchannel.OnMessage = onMessage
@@ -263,7 +262,7 @@ func TestReadWriteBinaryToWebSocketChannel(t *testing.T) {
 		assert.Equal(t, "echo channelreadwrite", string(input))
 	}
 
-	websocketchannel, err := communicator.NewWebSocketChannel(u.String(), defaultChannelToken, log)
+	websocketchannel, err := NewWebSocketChannel(u.String(), defaultChannelToken, log)
 	require.NoError(t, err)
 
 	websocketchannel.OnMessage = onMessage
@@ -320,7 +319,7 @@ func TestMultipleReadWriteWebSocketChannel(t *testing.T) {
 		}
 	}
 
-	websocketchannel, err := communicator.NewWebSocketChannel(u.String(), defaultChannelToken, log)
+	websocketchannel, err := NewWebSocketChannel(u.String(), defaultChannelToken, log)
 	require.NoError(t, err)
 
 	websocketchannel.OnMessage = onMessage
