@@ -118,41 +118,13 @@ func (c *WebSocketChannel) Open() error {
 
 	c.connection = ws
 	c.isOpen.Store(true)
-	c.startPings(config.PingTimeInterval)
 
-	// spin up a different routine to listen to the incoming traffic
 	go func() {
-		retryCount := 0
+		c.startPings(config.PingTimeInterval)
+	}()
 
-		for {
-			if !c.isOpen.Load() {
-				c.logger.Debug("Ending the channel listening routine since the channel is closed", "url", c.channelURL)
-
-				break
-			}
-
-			messageType, rawMessage, err := c.connection.ReadMessage()
-
-			switch {
-			case err != nil:
-				retryCount++
-				if retryCount >= config.RetryAttempt {
-					c.logger.Error("Reached retry limit for receiving messages", "retryLimit", config.RetryAttempt)
-					c.OnError(err)
-
-					break
-				}
-
-				c.logger.Warn("Error receiving message", "retryCount", retryCount, "error", err.Error(), "messageType", messageType)
-			case messageType != websocket.TextMessage && messageType != websocket.BinaryMessage:
-				// We only accept text messages which are interpreted as UTF-8 or binary encoded text.
-				c.logger.Error("Invalid message type", "messageType", messageType, "reason", "Only UTF-8 or binary encoded text accepted")
-			default:
-				retryCount = 0
-
-				c.OnMessage(rawMessage)
-			}
-		}
+	go func() {
+		c.startListener()
 	}()
 
 	return nil
@@ -163,26 +135,65 @@ func (c *WebSocketChannel) IsOpen() bool {
 	return c.isOpen.Load()
 }
 
+// Listen to the incoming traffic.
+func (c *WebSocketChannel) startListener() {
+	retryCount := 0
+
+	for {
+		if !c.isOpen.Load() {
+			c.logger.Debug("Ending the channel listening routine since the channel is closed", "url", c.channelURL)
+
+			break
+		}
+
+		messageType, rawMessage, err := c.connection.ReadMessage()
+
+		switch {
+		case err != nil:
+			retryCount++
+			if retryCount >= config.RetryAttempt {
+				c.logger.Error("Reached retry limit for receiving messages", "retryLimit", config.RetryAttempt)
+				c.OnError(err)
+
+				break
+			}
+
+			c.logger.Warn("Error receiving message", "retryCount", retryCount, "error", err.Error(), "messageType", messageType)
+		case messageType != websocket.TextMessage && messageType != websocket.BinaryMessage:
+			// We only accept text messages which are interpreted as UTF-8 or binary encoded text.
+			c.logger.Error("Invalid message type", "messageType", messageType, "reason", "Only UTF-8 or binary encoded text accepted")
+		default:
+			retryCount = 0
+
+			c.OnMessage(rawMessage)
+		}
+	}
+}
+
 // startPings starts the pinging process to keep the websocket channel alive.
 func (c *WebSocketChannel) startPings(pingInterval time.Duration) {
-	go func() {
-		for {
-			if !c.isOpen.Load() {
-				return
-			}
-
-			c.logger.Debug("WebsocketChannel: Send ping. Message.")
-			c.writeLock.Lock()
-			err := c.connection.WriteMessage(websocket.PingMessage, []byte("keepalive"))
-			c.writeLock.Unlock()
-
-			if err != nil {
-				c.logger.Error("Error sending websocket ping", "error", err)
-
-				return
-			}
-
-			time.Sleep(pingInterval)
+	for {
+		if !c.isOpen.Load() {
+			return
 		}
-	}()
+
+		if err := c.ping(); err != nil {
+			c.logger.Error("Error pinging websocket channel", "error", err)
+		}
+
+		time.Sleep(pingInterval)
+	}
+}
+
+func (c *WebSocketChannel) ping() error {
+	c.writeLock.Lock()
+	defer c.writeLock.Unlock()
+
+	c.logger.Debug("WebsocketChannel: Sending ping")
+
+	if err := c.connection.WriteMessage(websocket.PingMessage, []byte("keepalive")); err != nil {
+		return fmt.Errorf("sending ping message: %w", err)
+	}
+
+	return nil
 }
