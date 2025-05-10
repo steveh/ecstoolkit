@@ -1,8 +1,6 @@
 package session
 
 import (
-	"context"
-
 	"github.com/steveh/ecstoolkit/datachannel"
 	"github.com/steveh/ecstoolkit/message"
 )
@@ -13,7 +11,7 @@ type ISessionTypeSupport interface {
 	GetSessionID() string
 	GetSessionProperties() any
 	RegisterOutputStreamHandler(handler datachannel.OutputStreamDataMessageHandler, isSessionSpecificHandler bool)
-	RegisterIncomingMessageHandler(ctx context.Context, handler datachannel.IncomingMessageHandler)
+	RegisterIncomingMessageHandler(handler datachannel.IncomingMessageHandler)
 	RegisterStopHandler(handler datachannel.StopHandler)
 	DisplayMessage(message message.ClientMessage)
 	SendInputDataMessage(payloadType message.PayloadType, inputData []byte) error

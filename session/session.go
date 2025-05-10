@@ -120,8 +120,8 @@ func (s *Session) RegisterOutputStreamHandler(handler datachannel.OutputStreamDa
 }
 
 // RegisterIncomingMessageHandler sets the message handler for the DataChannel.
-func (s *Session) RegisterIncomingMessageHandler(ctx context.Context, handler datachannel.IncomingMessageHandler) {
-	s.dataChannel.RegisterIncomingMessageHandler(ctx, handler)
+func (s *Session) RegisterIncomingMessageHandler(handler datachannel.IncomingMessageHandler) {
+	s.dataChannel.RegisterIncomingMessageHandler(handler)
 }
 
 // RegisterStopHandler sets the message handler for the DataChannel.

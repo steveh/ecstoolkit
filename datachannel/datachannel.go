@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"math/rand"
 	"reflect"
@@ -83,9 +84,10 @@ type DataChannel struct {
 
 	logger log.T
 
-	displayHandler   func(message.ClientMessage)
-	encryptorBuilder EncryptorBuilder
-	stopHandler      StopHandler
+	displayHandler         func(message.ClientMessage)
+	encryptorBuilder       EncryptorBuilder
+	incomingMessageHandler IncomingMessageHandler
+	stopHandler            StopHandler
 }
 
 // NewDataChannel creates a DataChannel.
@@ -107,6 +109,9 @@ func NewDataChannel(wsChannel communicator.IWebSocketChannel, encryptorBuilder E
 		isStreamMessageResendTimeout: make(chan bool, 1),
 	}
 
+	c.RegisterIncomingMessageHandler(func(_ []byte) {})
+	c.RegisterStopHandler(func() error { return nil })
+
 	return c, nil
 }
 
@@ -124,8 +129,6 @@ func (c *DataChannel) SendMessage(input []byte, inputType int) error {
 func (c *DataChannel) Open(ctx context.Context, messageHandler DisplayMessageHandler, refreshTokenHandler RefreshTokenHandler, timeoutHandler TimeoutHandler) (string, error) {
 	c.displayHandler = messageHandler
 
-	c.RegisterIncomingMessageHandler(ctx, func(_ []byte) {})
-	c.RegisterStopHandler(func() error { return nil })
 	c.RegisterOutputStreamHandler(c.firstMessageHandler, false)
 
 	openRetrier := retry.RepeatableExponentialRetryer{
@@ -171,18 +174,48 @@ func (c *DataChannel) Open(ctx context.Context, messageHandler DisplayMessageHan
 		}
 	}
 
-	c.wsChannel.SetOnError(func(err error) {
-		c.logger.Warn("Trying to reconnect session", "sequenceNumber", c.streamDataSequenceNumber.Load(), "error", err)
+	// Listen for errors from the websocket channel and handle reconnection
+	go func() {
+		for {
+			rawMessage, err := c.wsChannel.ReadMessage()
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					c.logger.Trace("ReadMessage EOF", "error", err)
 
-		if err := errorRetrier.Call(); err != nil {
-			c.logger.Error("Reconnect error", "error", err)
+					return
+				}
+
+				c.logger.Warn("Trying to reconnect session", "sequenceNumber", c.streamDataSequenceNumber.Load(), "error", err)
+
+				if err := errorRetrier.Call(); err != nil {
+					c.logger.Warn("Reconnect error", "error", err)
+
+					if err := c.Close(); err != nil {
+						c.logger.Error("Closing data channel failed", "error", err)
+						panic("what now?")
+					}
+				}
+			}
+
+			c.incomingMessageHandler(rawMessage)
+
+			if err := c.outputMessageHandler(ctx, rawMessage); err != nil {
+				c.logger.Error("Failed to handle output message", "error", err)
+
+				if err := c.Close(); err != nil {
+					c.logger.Error("Closing data channel failed", "error", err)
+					panic("what now?")
+				}
+			}
 		}
-	})
+	}()
 
 	// Scheduler for resending of data
 	go func() {
 		if err := c.resendStreamDataMessageScheduler(); err != nil {
 			c.logger.Error("Resend stream data message scheduler error", "error", err)
+
+			c.isStreamMessageResendTimeout <- true
 		}
 	}()
 
@@ -354,14 +387,8 @@ func (c *DataChannel) GetSessionProperties() any {
 }
 
 // RegisterIncomingMessageHandler sets the message handler for the DataChannel.
-func (c *DataChannel) RegisterIncomingMessageHandler(ctx context.Context, handler IncomingMessageHandler) {
-	c.wsChannel.SetOnMessage(func(input []byte) {
-		handler(input)
-
-		if err := c.outputMessageHandler(ctx, input); err != nil {
-			c.logger.Error("Failed to handle output message", "error", err)
-		}
-	})
+func (c *DataChannel) RegisterIncomingMessageHandler(handler IncomingMessageHandler) {
+	c.incomingMessageHandler = handler
 }
 
 // RegisterStopHandler sets the message handler for the DataChannel.
@@ -546,7 +573,6 @@ func (c *DataChannel) resendStreamDataMessageScheduler() error {
 
 			if streamMessage.ResendAttempt >= config.ResendMaxAttempt {
 				c.logger.Warn("Message resent too many times", "sequenceNumber", streamMessage.SequenceNumber, "maxAttempts", config.ResendMaxAttempt)
-				c.isStreamMessageResendTimeout <- true
 
 				return ErrTimedOut
 			}

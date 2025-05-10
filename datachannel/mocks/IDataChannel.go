@@ -265,9 +265,9 @@ func (_c *IDataChannel_Open_Call) RunAndReturn(run func(context.Context, datacha
 	return _c
 }
 
-// RegisterIncomingMessageHandler provides a mock function with given fields: ctx, handler
-func (_m *IDataChannel) RegisterIncomingMessageHandler(ctx context.Context, handler datachannel.IncomingMessageHandler) {
-	_m.Called(ctx, handler)
+// RegisterIncomingMessageHandler provides a mock function with given fields: handler
+func (_m *IDataChannel) RegisterIncomingMessageHandler(handler datachannel.IncomingMessageHandler) {
+	_m.Called(handler)
 }
 
 // IDataChannel_RegisterIncomingMessageHandler_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RegisterIncomingMessageHandler'
@@ -276,15 +276,14 @@ type IDataChannel_RegisterIncomingMessageHandler_Call struct {
 }
 
 // RegisterIncomingMessageHandler is a helper method to define mock.On call
-//   - ctx context.Context
 //   - handler datachannel.IncomingMessageHandler
-func (_e *IDataChannel_Expecter) RegisterIncomingMessageHandler(ctx interface{}, handler interface{}) *IDataChannel_RegisterIncomingMessageHandler_Call {
-	return &IDataChannel_RegisterIncomingMessageHandler_Call{Call: _e.mock.On("RegisterIncomingMessageHandler", ctx, handler)}
+func (_e *IDataChannel_Expecter) RegisterIncomingMessageHandler(handler interface{}) *IDataChannel_RegisterIncomingMessageHandler_Call {
+	return &IDataChannel_RegisterIncomingMessageHandler_Call{Call: _e.mock.On("RegisterIncomingMessageHandler", handler)}
 }
 
-func (_c *IDataChannel_RegisterIncomingMessageHandler_Call) Run(run func(ctx context.Context, handler datachannel.IncomingMessageHandler)) *IDataChannel_RegisterIncomingMessageHandler_Call {
+func (_c *IDataChannel_RegisterIncomingMessageHandler_Call) Run(run func(handler datachannel.IncomingMessageHandler)) *IDataChannel_RegisterIncomingMessageHandler_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(datachannel.IncomingMessageHandler))
+		run(args[0].(datachannel.IncomingMessageHandler))
 	})
 	return _c
 }
@@ -294,7 +293,7 @@ func (_c *IDataChannel_RegisterIncomingMessageHandler_Call) Return() *IDataChann
 	return _c
 }
 
-func (_c *IDataChannel_RegisterIncomingMessageHandler_Call) RunAndReturn(run func(context.Context, datachannel.IncomingMessageHandler)) *IDataChannel_RegisterIncomingMessageHandler_Call {
+func (_c *IDataChannel_RegisterIncomingMessageHandler_Call) RunAndReturn(run func(datachannel.IncomingMessageHandler)) *IDataChannel_RegisterIncomingMessageHandler_Call {
 	_c.Run(run)
 	return _c
 }

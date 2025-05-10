@@ -177,9 +177,9 @@ func (e *Executor) initSession(ctx context.Context, sess *session.Session) error
 
 	switch sessionType {
 	case config.ShellPluginName:
-		sessionSubType, err = shellsession.NewShellSession(ctx, e.logger, sess)
+		sessionSubType, err = shellsession.NewShellSession(e.logger, sess)
 	case config.PortPluginName:
-		sessionSubType, err = portsession.NewPortSession(ctx, e.logger, sess)
+		sessionSubType, err = portsession.NewPortSession(e.logger, sess)
 	default:
 		return fmt.Errorf("%w: %s", ErrInvalidSessionType, sessionType)
 	}

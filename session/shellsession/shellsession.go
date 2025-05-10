@@ -46,7 +46,7 @@ var _ session.ISessionPlugin = (*ShellSession)(nil)
 type TerminalSizer = func(fd int) (width, height int, err error)
 
 // NewShellSession creates a new shell session.
-func NewShellSession(ctx context.Context, logger log.T, sess session.ISessionSupport) (*ShellSession, error) {
+func NewShellSession(logger log.T, sess session.ISessionSupport) (*ShellSession, error) {
 	s := &ShellSession{
 		session:       sess,
 		logger:        logger,
@@ -57,7 +57,7 @@ func NewShellSession(ctx context.Context, logger log.T, sess session.ISessionSup
 
 	sess.RegisterStopHandler(s.Stop)
 
-	sess.RegisterIncomingMessageHandler(ctx, func(_ []byte) {})
+	sess.RegisterIncomingMessageHandler(func(_ []byte) {})
 
 	return s, nil
 }

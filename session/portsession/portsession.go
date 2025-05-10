@@ -47,7 +47,7 @@ type PortParameters struct {
 }
 
 // NewPortSession initializes a new port session.
-func NewPortSession(ctx context.Context, logger log.T, sess session.ISessionSupport) (*PortSession, error) {
+func NewPortSession(logger log.T, sess session.ISessionSupport) (*PortSession, error) {
 	s := &PortSession{
 		session: sess,
 		logger:  logger,
@@ -71,7 +71,7 @@ func NewPortSession(ctx context.Context, logger log.T, sess session.ISessionSupp
 
 	sess.RegisterStopHandler(s.Stop)
 
-	sess.RegisterIncomingMessageHandler(ctx, func(input []byte) {
+	sess.RegisterIncomingMessageHandler(func(input []byte) {
 		if !s.portSessionType.IsStreamNotSet() {
 			return
 		}

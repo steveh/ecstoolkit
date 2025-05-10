@@ -4,6 +4,7 @@ package communicator
 import (
 	"errors"
 	"fmt"
+	"io"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -16,7 +17,7 @@ import (
 
 var (
 	// ErrConnectionClosed is returned when the connection is closed.
-	ErrConnectionClosed = errors.New("connection is closed")
+	ErrConnectionClosed = fmt.Errorf("%w: connection closed", io.EOF)
 
 	// ErrEmptyInput is returned when the input is empty.
 	ErrEmptyInput = errors.New("input is empty")
@@ -24,9 +25,6 @@ var (
 
 // WebSocketChannel parent class for DataChannel.
 type WebSocketChannel struct {
-	IWebSocketChannel
-	OnMessage    func([]byte)
-	OnError      func(error)
 	channelURL   string
 	isOpen       atomic.Bool // Use atomic.Bool instead of bool for thread safety
 	writeLock    sync.Mutex
@@ -57,16 +55,6 @@ func (c *WebSocketChannel) SetChannelToken(channelToken string) {
 // GetStreamURL gets stream url.
 func (c *WebSocketChannel) GetStreamURL() string {
 	return c.channelURL
-}
-
-// SetOnError sets OnError field of websocket channel.
-func (c *WebSocketChannel) SetOnError(onErrorHandler func(error)) {
-	c.OnError = onErrorHandler
-}
-
-// SetOnMessage sets OnMessage field of websocket channel.
-func (c *WebSocketChannel) SetOnMessage(onMessageHandler func([]byte)) {
-	c.OnMessage = onMessageHandler
 }
 
 // SendMessage sends a byte message through the websocket connection.
@@ -117,14 +105,11 @@ func (c *WebSocketChannel) Open() error {
 	}
 
 	c.connection = ws
+
 	c.isOpen.Store(true)
 
 	go func() {
 		c.startPings(config.PingTimeInterval)
-	}()
-
-	go func() {
-		c.startListener()
 	}()
 
 	return nil
@@ -135,37 +120,31 @@ func (c *WebSocketChannel) IsOpen() bool {
 	return c.isOpen.Load()
 }
 
-// Listen to the incoming traffic.
-func (c *WebSocketChannel) startListener() {
+// ReadMessage reads a message from the websocket connection.
+func (c *WebSocketChannel) ReadMessage() ([]byte, error) {
 	retryCount := 0
 
 	for {
 		if !c.isOpen.Load() {
-			c.logger.Debug("Ending the channel listening routine since the channel is closed", "url", c.channelURL)
-
-			break
+			return nil, ErrConnectionClosed
 		}
 
 		messageType, rawMessage, err := c.connection.ReadMessage()
 
 		switch {
 		case err != nil:
-			retryCount++
-			if retryCount >= config.RetryAttempt {
-				c.logger.Warn("Reached retry limit for receiving messages", "retryLimit", config.RetryAttempt)
-				c.OnError(err)
-
-				break
-			}
-
 			c.logger.Warn("Error receiving message", "retryCount", retryCount, "error", err.Error(), "messageType", messageType)
+
+			retryCount++
+
+			if retryCount >= config.RetryAttempt {
+				return nil, fmt.Errorf("reached retry limit for receiving messages: %w", err)
+			}
 		case messageType != websocket.TextMessage && messageType != websocket.BinaryMessage:
 			// We only accept text messages which are interpreted as UTF-8 or binary encoded text.
-			c.logger.Error("Invalid message type", "messageType", messageType, "reason", "Only UTF-8 or binary encoded text accepted")
+			return nil, fmt.Errorf("invalid message type: %w", err)
 		default:
-			retryCount = 0
-
-			c.OnMessage(rawMessage)
+			return rawMessage, nil
 		}
 	}
 }
@@ -178,7 +157,7 @@ func (c *WebSocketChannel) startPings(pingInterval time.Duration) {
 		}
 
 		if err := c.ping(); err != nil {
-			c.logger.Error("Pinging websocket channel", "error", err)
+			c.logger.Error(err.Error())
 		}
 
 		time.Sleep(pingInterval)

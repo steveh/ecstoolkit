@@ -2,7 +2,6 @@
 package shellsession
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"os"
@@ -59,7 +58,7 @@ func TestInitialize(t *testing.T) {
 	mockDataChannel.On("RegisterIncomingMessageHandler", mock.Anything, mock.Anything)
 	mockDataChannel.On("RegisterStopHandler", mock.Anything)
 
-	shellSession, err := NewShellSession(context.TODO(), mockLogger, session)
+	shellSession, err := NewShellSession(mockLogger, session)
 	require.NoError(t, err, "Initialize port session")
 
 	assert.Equal(t, shellSession.session, session)

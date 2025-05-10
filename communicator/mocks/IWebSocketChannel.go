@@ -197,6 +197,63 @@ func (_c *IWebSocketChannel_Open_Call) RunAndReturn(run func() error) *IWebSocke
 	return _c
 }
 
+// ReadMessage provides a mock function with no fields
+func (_m *IWebSocketChannel) ReadMessage() ([]byte, error) {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReadMessage")
+	}
+
+	var r0 []byte
+	var r1 error
+	if rf, ok := ret.Get(0).(func() ([]byte, error)); ok {
+		return rf()
+	}
+	if rf, ok := ret.Get(0).(func() []byte); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]byte)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// IWebSocketChannel_ReadMessage_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReadMessage'
+type IWebSocketChannel_ReadMessage_Call struct {
+	*mock.Call
+}
+
+// ReadMessage is a helper method to define mock.On call
+func (_e *IWebSocketChannel_Expecter) ReadMessage() *IWebSocketChannel_ReadMessage_Call {
+	return &IWebSocketChannel_ReadMessage_Call{Call: _e.mock.On("ReadMessage")}
+}
+
+func (_c *IWebSocketChannel_ReadMessage_Call) Run(run func()) *IWebSocketChannel_ReadMessage_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *IWebSocketChannel_ReadMessage_Call) Return(_a0 []byte, _a1 error) *IWebSocketChannel_ReadMessage_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *IWebSocketChannel_ReadMessage_Call) RunAndReturn(run func() ([]byte, error)) *IWebSocketChannel_ReadMessage_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SendMessage provides a mock function with given fields: input, inputType
 func (_m *IWebSocketChannel) SendMessage(input []byte, inputType int) error {
 	ret := _m.Called(input, inputType)
@@ -273,72 +330,6 @@ func (_c *IWebSocketChannel_SetChannelToken_Call) Return() *IWebSocketChannel_Se
 }
 
 func (_c *IWebSocketChannel_SetChannelToken_Call) RunAndReturn(run func(string)) *IWebSocketChannel_SetChannelToken_Call {
-	_c.Run(run)
-	return _c
-}
-
-// SetOnError provides a mock function with given fields: onErrorHandler
-func (_m *IWebSocketChannel) SetOnError(onErrorHandler func(error)) {
-	_m.Called(onErrorHandler)
-}
-
-// IWebSocketChannel_SetOnError_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetOnError'
-type IWebSocketChannel_SetOnError_Call struct {
-	*mock.Call
-}
-
-// SetOnError is a helper method to define mock.On call
-//   - onErrorHandler func(error)
-func (_e *IWebSocketChannel_Expecter) SetOnError(onErrorHandler interface{}) *IWebSocketChannel_SetOnError_Call {
-	return &IWebSocketChannel_SetOnError_Call{Call: _e.mock.On("SetOnError", onErrorHandler)}
-}
-
-func (_c *IWebSocketChannel_SetOnError_Call) Run(run func(onErrorHandler func(error))) *IWebSocketChannel_SetOnError_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(func(error)))
-	})
-	return _c
-}
-
-func (_c *IWebSocketChannel_SetOnError_Call) Return() *IWebSocketChannel_SetOnError_Call {
-	_c.Call.Return()
-	return _c
-}
-
-func (_c *IWebSocketChannel_SetOnError_Call) RunAndReturn(run func(func(error))) *IWebSocketChannel_SetOnError_Call {
-	_c.Run(run)
-	return _c
-}
-
-// SetOnMessage provides a mock function with given fields: onMessageHandler
-func (_m *IWebSocketChannel) SetOnMessage(onMessageHandler func([]byte)) {
-	_m.Called(onMessageHandler)
-}
-
-// IWebSocketChannel_SetOnMessage_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetOnMessage'
-type IWebSocketChannel_SetOnMessage_Call struct {
-	*mock.Call
-}
-
-// SetOnMessage is a helper method to define mock.On call
-//   - onMessageHandler func([]byte)
-func (_e *IWebSocketChannel_Expecter) SetOnMessage(onMessageHandler interface{}) *IWebSocketChannel_SetOnMessage_Call {
-	return &IWebSocketChannel_SetOnMessage_Call{Call: _e.mock.On("SetOnMessage", onMessageHandler)}
-}
-
-func (_c *IWebSocketChannel_SetOnMessage_Call) Run(run func(onMessageHandler func([]byte))) *IWebSocketChannel_SetOnMessage_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(func([]byte)))
-	})
-	return _c
-}
-
-func (_c *IWebSocketChannel_SetOnMessage_Call) Return() *IWebSocketChannel_SetOnMessage_Call {
-	_c.Call.Return()
-	return _c
-}
-
-func (_c *IWebSocketChannel_SetOnMessage_Call) RunAndReturn(run func(func([]byte))) *IWebSocketChannel_SetOnMessage_Call {
 	_c.Run(run)
 	return _c
 }

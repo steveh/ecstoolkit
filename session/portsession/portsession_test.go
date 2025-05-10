@@ -38,10 +38,9 @@ func TestInitializePortSession(t *testing.T) {
 	mockLogger := log.NewMockLog()
 
 	mockWsChannel := getMockWsChannel()
-	mockWsChannel.On("SetOnMessage", mock.Anything)
 
 	sess := getSessionMock(t, mockWsChannel)
-	portSession, err := NewPortSession(context.TODO(), mockLogger, sess)
+	portSession, err := NewPortSession(mockLogger, sess)
 	require.NoError(t, err, "Initialize port session")
 
 	mockWsChannel.AssertExpectations(t)
@@ -63,10 +62,9 @@ func TestInitializePortSessionForPortForwardingWithOldAgent(t *testing.T) {
 	mockLogger := log.NewMockLog()
 
 	mockWsChannel := getMockWsChannel()
-	mockWsChannel.On("SetOnMessage", mock.Anything)
 
 	sess := getSessionMockWithParams(t, mockWsChannel, portParameters, "2.2.0.0")
-	portSession, err := NewPortSession(context.TODO(), mockLogger, sess)
+	portSession, err := NewPortSession(mockLogger, sess)
 	require.NoError(t, err, "Initialize port session")
 
 	mockWsChannel.AssertExpectations(t)
@@ -88,10 +86,9 @@ func TestInitializePortSessionForPortForwarding(t *testing.T) {
 	mockLogger := log.NewMockLog()
 
 	mockWsChannel := getMockWsChannel()
-	mockWsChannel.On("SetOnMessage", mock.Anything)
 
 	sess := getSessionMockWithParams(t, mockWsChannel, portParameters, "3.1.0.0")
-	portSession, err := NewPortSession(context.TODO(), mockLogger, sess)
+	portSession, err := NewPortSession(mockLogger, sess)
 	require.NoError(t, err, "Initialize port session")
 
 	mockWsChannel.AssertExpectations(t)

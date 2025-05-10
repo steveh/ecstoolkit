@@ -37,6 +37,6 @@ type IDataChannel interface {
 	GetAgentVersion() string
 	GetTargetID() string
 	RegisterOutputStreamHandler(handler OutputStreamDataMessageHandler, sessionSpecific bool)
-	RegisterIncomingMessageHandler(ctx context.Context, handler IncomingMessageHandler)
+	RegisterIncomingMessageHandler(handler IncomingMessageHandler)
 	RegisterStopHandler(handler StopHandler)
 }

@@ -812,12 +812,11 @@ func TestOpenWithRetryWithError(t *testing.T) {
 	// First reconnection failed when open data channel, success after retry
 	mockWsChannel.On("Open").Return(errMock).Once()
 	mockWsChannel.On("Open").Return(nil).Once()
-	mockWsChannel.On("SetOnMessage", mock.Anything)
-	mockWsChannel.On("SetOnError", mock.Anything)
 	mockWsChannel.On("GetStreamURL").Return(streamURL)
 	mockWsChannel.On("GetChannelToken").Return(channelToken)
 	mockWsChannel.On("Close").Return(nil)
 	mockWsChannel.On("SendMessage", mock.Anything, mock.Anything).Return(nil)
+	mockWsChannel.On("ReadMessage").Return(nil, nil)
 
 	_, err = dataChannel.Open(
 		context.TODO(),

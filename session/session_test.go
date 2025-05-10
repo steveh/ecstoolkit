@@ -15,7 +15,6 @@ func getMockDataChannel() *dataChannelMock.IDataChannel {
 	mockDataChannel := dataChannelMock.IDataChannel{}
 
 	mockDataChannel.On("Open", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return("", nil)
-	mockDataChannel.On("SetOnMessage", mock.Anything)
 	mockDataChannel.On("RegisterOutputStreamHandler", mock.Anything, mock.Anything)
 	mockDataChannel.On("RegisterIncomingMessageHandler", mock.Anything, mock.Anything)
 	mockDataChannel.On("RegisterStopHandler", mock.Anything)
