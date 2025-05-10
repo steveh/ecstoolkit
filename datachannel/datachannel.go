@@ -349,7 +349,7 @@ func (c *DataChannel) RegisterIncomingMessageHandler(ctx context.Context, handle
 	c.wsChannel.SetOnMessage(func(input []byte) {
 		handler(input)
 
-		if err := c.outputMessageHandler(ctx, c.stopHandler, input); err != nil {
+		if err := c.outputMessageHandler(ctx, input); err != nil {
 			c.logger.Error("Failed to handle output message", "error", err)
 		}
 	})
@@ -435,15 +435,15 @@ func (c *DataChannel) handleAcknowledgeMessage(
 }
 
 // handleChannelClosedMessage handles the channel closed message and exits the shell.
-func (c *DataChannel) handleChannelClosedMessage(stopHandler StopHandler, sessionID string, outputMessage message.ClientMessage) error {
+func (c *DataChannel) handleChannelClosedMessage(outputMessage message.ClientMessage) error {
 	channelClosedMessage, err := outputMessage.DeserializeChannelClosedMessage()
 	if err != nil {
 		return fmt.Errorf("deserializing channel closed message: %w", err)
 	}
 
-	c.logger.Debug("Session message", "sessionID", sessionID, "output", channelClosedMessage.Output)
+	c.logger.Debug("Session message", "sessionID", c.sessionID, "output", channelClosedMessage.Output)
 
-	if err := stopHandler(); err != nil {
+	if err := c.stopHandler(); err != nil {
 		return fmt.Errorf("calling stop handler: %w", err)
 	}
 
@@ -656,7 +656,7 @@ func (c *DataChannel) calculateRetransmissionTimeout(streamingMessage RoundTripT
 }
 
 // outputMessageHandler gets output on the data channel.
-func (c *DataChannel) outputMessageHandler(ctx context.Context, stopHandler StopHandler, rawMessage []byte) error {
+func (c *DataChannel) outputMessageHandler(ctx context.Context, rawMessage []byte) error {
 	var outputMessage message.ClientMessage
 	if err := outputMessage.DeserializeClientMessage(rawMessage); err != nil {
 		return fmt.Errorf("could not deserialize rawMessage, %s : %w", rawMessage, err)
@@ -674,7 +674,7 @@ func (c *DataChannel) outputMessageHandler(ctx context.Context, stopHandler Stop
 	case message.AcknowledgeMessage:
 		return c.handleAcknowledgeMessage(outputMessage)
 	case message.ChannelClosedMessage:
-		return c.handleChannelClosedMessage(stopHandler, c.sessionID, outputMessage)
+		return c.handleChannelClosedMessage(outputMessage)
 	case message.StartPublicationMessage, message.PausePublicationMessage:
 		return nil
 	default:
