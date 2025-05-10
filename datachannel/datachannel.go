@@ -171,8 +171,8 @@ func (c *DataChannel) Open(ctx context.Context, messageHandler DisplayMessageHan
 		}
 	}
 
-	c.wsChannel.SetOnError(func(wsErr error) {
-		c.logger.Warn("Trying to reconnect session", "sequenceNumber", c.streamDataSequenceNumber.Load(), "error", wsErr) // Use Load()
+	c.wsChannel.SetOnError(func(err error) {
+		c.logger.Warn("Trying to reconnect session", "sequenceNumber", c.streamDataSequenceNumber.Load(), "error", err)
 
 		if err := errorRetrier.Call(); err != nil {
 			c.logger.Error("Reconnect error", "error", err)
@@ -465,7 +465,7 @@ func (c *DataChannel) establishSessionType(ctx context.Context, timeoutHandler T
 
 	select {
 	case <-c.isStreamMessageResendTimeout:
-		c.logger.Error("Stream data timeout", "sessionID", c.sessionID)
+		c.logger.Warn("Stream data timeout", "sessionID", c.sessionID)
 
 		if err := timeoutHandler(ctx); err != nil {
 			return "", fmt.Errorf("calling timeout handler: %w", err)
@@ -829,7 +829,7 @@ func (c *DataChannel) sendEncryptionChallengeResponse(response message.Encryptio
 func (c *DataChannel) sendHandshakeResponse(response message.HandshakeResponsePayload) error {
 	resultBytes, err := json.Marshal(response)
 	if err != nil {
-		c.logger.Error("Could not serialize HandshakeResponse message", "response", response, "error", err)
+		return fmt.Errorf("serializing HandshakeResponse message: %v, err: %w", response, err)
 	}
 
 	c.logger.Trace("Sending HandshakeResponse message")

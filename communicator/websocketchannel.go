@@ -152,7 +152,7 @@ func (c *WebSocketChannel) startListener() {
 		case err != nil:
 			retryCount++
 			if retryCount >= config.RetryAttempt {
-				c.logger.Error("Reached retry limit for receiving messages", "retryLimit", config.RetryAttempt)
+				c.logger.Warn("Reached retry limit for receiving messages", "retryLimit", config.RetryAttempt)
 				c.OnError(err)
 
 				break
@@ -178,7 +178,7 @@ func (c *WebSocketChannel) startPings(pingInterval time.Duration) {
 		}
 
 		if err := c.ping(); err != nil {
-			c.logger.Error("Error pinging websocket channel", "error", err)
+			c.logger.Error("Pinging websocket channel", "error", err)
 		}
 
 		time.Sleep(pingInterval)
