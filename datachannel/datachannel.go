@@ -128,29 +128,22 @@ func (c *DataChannel) Open(ctx context.Context, messageHandler DisplayMessageHan
 	c.RegisterStopHandler(func() error { return nil })
 	c.RegisterOutputStreamHandler(c.firstMessageHandler, false)
 
-	retryParams := retry.RepeatableExponentialRetryer{
+	openRetrier := retry.RepeatableExponentialRetryer{
 		GeometricRatio:      config.RetryBase,
 		InitialDelayInMilli: rand.Intn(config.DataChannelRetryInitialDelayMillis) + config.DataChannelRetryInitialDelayMillis, //nolint:gosec
 		MaxDelayInMilli:     config.DataChannelRetryMaxIntervalMillis,
 		MaxAttempts:         config.DataChannelNumMaxRetries,
-	}
-
-	if err := c.open(); err != nil {
-		c.logger.Error("Retrying connection failed", "sessionID", c.sessionID, "error", err)
-
-		retryParams.CallableFunc = func() error {
+		CallableFunc: func() error {
 			return c.reconnect()
-		}
-
-		if err := retryParams.Call(); err != nil {
-			c.logger.Error("Failed to call retry parameters", "error", err)
-		}
+		},
 	}
 
-	c.wsChannel.SetOnError(func(wsErr error) {
-		c.logger.Error("Trying to reconnect session", "sequenceNumber", c.streamDataSequenceNumber.Load(), "error", wsErr) // Use Load()
-
-		retryParams.CallableFunc = func() error {
+	errorRetrier := retry.RepeatableExponentialRetryer{
+		GeometricRatio:      config.RetryBase,
+		InitialDelayInMilli: rand.Intn(config.DataChannelRetryInitialDelayMillis) + config.DataChannelRetryInitialDelayMillis, //nolint:gosec
+		MaxDelayInMilli:     config.DataChannelRetryMaxIntervalMillis,
+		MaxAttempts:         config.DataChannelNumMaxRetries,
+		CallableFunc: func() error {
 			token, err := refreshTokenHandler(ctx)
 			if err != nil {
 				return fmt.Errorf("getting reconnection token: %w", err)
@@ -167,9 +160,21 @@ func (c *DataChannel) Open(ctx context.Context, messageHandler DisplayMessageHan
 			}
 
 			return nil
-		}
+		},
+	}
 
-		if err := retryParams.Call(); err != nil {
+	if err := c.open(); err != nil {
+		c.logger.Warn("Retrying connection failed", "sessionID", c.sessionID, "error", err)
+
+		if err := openRetrier.Call(); err != nil {
+			return "", fmt.Errorf("retrying open data channel: %w", err)
+		}
+	}
+
+	c.wsChannel.SetOnError(func(wsErr error) {
+		c.logger.Warn("Trying to reconnect session", "sequenceNumber", c.streamDataSequenceNumber.Load(), "error", wsErr) // Use Load()
+
+		if err := errorRetrier.Call(); err != nil {
 			c.logger.Error("Reconnect error", "error", err)
 		}
 	})
