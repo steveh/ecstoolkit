@@ -33,7 +33,7 @@ func NewStandardStreamForwarding(
 	return &StandardStreamForwarding{
 		session:        sess,
 		portParameters: portParameters,
-		logger:         logger,
+		logger:         logger.With("subsystem", "StandardStreamForwarding"),
 	}
 }
 

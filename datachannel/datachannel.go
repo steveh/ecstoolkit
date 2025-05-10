@@ -95,7 +95,7 @@ func NewDataChannel(wsChannel communicator.IWebSocketChannel, encryptorBuilder E
 	c := &DataChannel{
 		wsChannel:                    wsChannel,
 		encryptorBuilder:             encryptorBuilder,
-		logger:                       logger,
+		logger:                       logger.With("subsystem", "DataChannel"),
 		role:                         config.RolePublishSubscribe,
 		clientID:                     clientID,
 		sessionID:                    sessionID,

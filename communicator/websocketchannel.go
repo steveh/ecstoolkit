@@ -38,7 +38,7 @@ func NewWebSocketChannel(channelURL string, channelToken string, logger log.T) (
 	return &WebSocketChannel{
 		channelToken: channelToken,
 		channelURL:   channelURL,
-		logger:       logger,
+		logger:       logger.With("subsystem", "WebSocketChannel"),
 	}, nil
 }
 
@@ -81,7 +81,7 @@ func (c *WebSocketChannel) SendMessage(input []byte, inputType int) error {
 
 // Close closes the corresponding connection.
 func (c *WebSocketChannel) Close() error {
-	c.logger.Debug("Closing websocket channel connection", "url", c.channelURL)
+	c.logger.Debug("Closing", "url", c.channelURL)
 
 	// Use CompareAndSwap to safely transition from open to closed state
 	if c.isOpen.CompareAndSwap(true, false) {
@@ -92,7 +92,7 @@ func (c *WebSocketChannel) Close() error {
 		return nil
 	}
 
-	c.logger.Warn("Websocket channel connection is already Closed!", "url", c.channelURL)
+	c.logger.Warn("Connection already closed", "url", c.channelURL)
 
 	return nil
 }
@@ -153,6 +153,8 @@ func (c *WebSocketChannel) ReadMessage() ([]byte, error) {
 func (c *WebSocketChannel) startPings(pingInterval time.Duration) {
 	for {
 		if !c.isOpen.Load() {
+			c.logger.Debug("Connection closed, stopping pinging")
+
 			return
 		}
 
@@ -168,7 +170,7 @@ func (c *WebSocketChannel) ping() error {
 	c.writeLock.Lock()
 	defer c.writeLock.Unlock()
 
-	c.logger.Debug("WebsocketChannel: Sending ping")
+	c.logger.Debug("Sending ping")
 
 	if err := c.connection.WriteMessage(websocket.PingMessage, []byte("keepalive")); err != nil {
 		return fmt.Errorf("sending ping message: %w", err)

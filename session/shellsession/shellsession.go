@@ -49,7 +49,7 @@ type TerminalSizer = func(fd int) (width, height int, err error)
 func NewShellSession(logger log.T, sess session.ISessionSupport) (*ShellSession, error) {
 	s := &ShellSession{
 		session:       sess,
-		logger:        logger,
+		logger:        logger.With("subsystem", "ShellSession"),
 		terminalSizer: term.GetSize,
 	}
 

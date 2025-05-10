@@ -68,7 +68,7 @@ func NewCluster(awsCfg aws.Config, clusterName string, logger log.T) *Cluster {
 		stsClient:   stsClient,
 		clusterName: clusterName,
 		executor:    exec,
-		logger:      logger,
+		logger:      logger.With("subsystem", "Cluster"),
 	}
 }
 

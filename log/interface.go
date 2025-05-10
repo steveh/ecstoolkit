@@ -24,4 +24,7 @@ type T interface {
 
 	// Error logs a message at Error level.
 	Error(msg string, args ...any)
+
+	// With creates a new logger with additional context.
+	With(args ...any) T
 }

@@ -61,7 +61,7 @@ func NewMuxPortForwarding(
 		portParameters: portParameters,
 		session:        sess,
 		sessionID:      sess.GetSessionID(),
-		logger:         logger,
+		logger:         logger.With("subsystem", "MuxPortForwarding"),
 	}
 }
 

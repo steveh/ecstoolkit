@@ -30,3 +30,8 @@ func (m MockLog) Warn(_ string, _ ...any) {
 // Error does nothing.
 func (m MockLog) Error(_ string, _ ...any) {
 }
+
+// With returns T.
+func (m MockLog) With(_ ...any) T {
+	return m
+}

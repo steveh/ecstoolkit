@@ -23,7 +23,7 @@ type KMSEncryptorBuilder struct {
 // NewKMSEncryptorBuilder creates a new KMSEncryptorBuilder with the provided KMS client and logger.
 func NewKMSEncryptorBuilder(kmsClient *kms.Client, logger log.T) (*KMSEncryptorBuilder, error) {
 	return &KMSEncryptorBuilder{
-		logger:    logger,
+		logger:    logger.With("subsystem", "KMSEncryptorBuilder"),
 		kmsClient: kmsClient,
 	}, nil
 }

@@ -31,7 +31,7 @@ func NewSession(ssmClient *ssm.Client, dataChannel datachannel.IDataChannel, ses
 		sessionID:   sessionID,
 		displayMode: sessionutil.NewDisplayMode(logger),
 		ssmClient:   ssmClient,
-		logger:      logger,
+		logger:      logger.With("subsystem", "Session"),
 	}
 
 	return session, nil

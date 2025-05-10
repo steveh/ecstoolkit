@@ -48,7 +48,7 @@ func NewEncrypter(ctx context.Context, logger log.T, kmsKeyID string, encryption
 	e := Encrypter{
 		kmsKeyID:   kmsKeyID,
 		KMSService: kmsService,
-		logger:     logger,
+		logger:     logger.With("subsystem", "Encrypter"),
 	}
 
 	err := e.generateEncryptionKey(ctx, kmsKeyID, encryptionContext)

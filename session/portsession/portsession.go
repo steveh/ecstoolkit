@@ -50,7 +50,7 @@ type PortParameters struct {
 func NewPortSession(logger log.T, sess session.ISessionSupport) (*PortSession, error) {
 	s := &PortSession{
 		session: sess,
-		logger:  logger,
+		logger:  logger.With("subsystem", "PortSession"),
 	}
 
 	if err := jsonutil.Remarshal(sess.GetSessionProperties(), &s.portParameters); err != nil {

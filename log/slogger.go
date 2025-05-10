@@ -44,3 +44,8 @@ func (s Slogger) Warn(msg string, args ...any) {
 func (s Slogger) Error(msg string, args ...any) {
 	s.logger.Error(msg, args...)
 }
+
+// With returns a new Slogger with the provided key-value pairs.
+func (s Slogger) With(args ...any) T {
+	return NewSlogger(s.logger.With(args...))
+}

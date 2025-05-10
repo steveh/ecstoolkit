@@ -17,7 +17,7 @@ type DisplayMode struct {
 // NewDisplayMode creates and initializes a new DisplayMode instance.
 func NewDisplayMode(logger log.T) DisplayMode {
 	displayMode := DisplayMode{
-		logger: logger,
+		logger: logger.With("subsystem", "DisplayMode"),
 	}
 
 	return displayMode

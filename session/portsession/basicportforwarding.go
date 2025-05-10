@@ -58,7 +58,7 @@ func NewBasicPortForwarding(
 		portParameters: portParameters,
 		session:        sess,
 		sessionID:      sess.GetSessionID(),
-		logger:         logger,
+		logger:         logger.With("subsystem", "BasicPortForwarding"),
 		buildListener:  net.Listen,
 		acceptConnection: func(listener net.Listener) (net.Conn, error) {
 			return listener.Accept()
