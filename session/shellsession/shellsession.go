@@ -93,7 +93,7 @@ func (s *ShellSession) SetSessionHandlers(ctx context.Context) (err error) {
 
 	// handle control signals
 	eg.Go(func() error {
-		return s.handleControlSignals(ctx)
+		return s.HandleControlSignals(ctx)
 	})
 
 	// handles keyboard input
@@ -127,8 +127,8 @@ func (s *ShellSession) Stop() error {
 	return nil
 }
 
-// handleControlSignals handles control signals when given by user.
-func (s *ShellSession) handleControlSignals(ctx context.Context) error {
+// HandleControlSignals handles control signals when given by user.
+func (s *ShellSession) HandleControlSignals(ctx context.Context) error {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, sessionutil.ControlSignals...)
 

@@ -92,15 +92,9 @@ func (p *BasicPortForwarding) Stop() error {
 }
 
 // InitializeStreams establishes connection and initializes the stream.
-func (p *BasicPortForwarding) InitializeStreams(ctx context.Context, _ string) error {
+func (p *BasicPortForwarding) InitializeStreams(_ string) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-
-	go func() {
-		if err := p.handleControlSignals(ctx); err != nil {
-			p.logger.Error("handling control signals", "error", err)
-		}
-	}()
 
 	if err := p.startLocalConn(); err != nil {
 		return err
@@ -156,6 +150,37 @@ func (p *BasicPortForwarding) WriteStream(outputMessage message.ClientMessage) e
 	}
 
 	return nil
+}
+
+// HandleControlSignals handles terminate signals.
+func (p *BasicPortForwarding) HandleControlSignals(ctx context.Context) error {
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, sessionutil.ControlSignals...)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-signals:
+			p.logger.Debug("Terminate signal received, exiting.")
+
+			if version.DoesAgentSupportTerminateSessionFlag(p.logger, p.session.GetAgentVersion()) {
+				if err := p.session.SendFlag(message.TerminateSession); err != nil {
+					return fmt.Errorf("sending terminate session flag: %w", err)
+				}
+
+				p.logger.Debug("Exiting session", "sessionID", p.sessionID)
+
+				if err := p.Stop(); err != nil {
+					return fmt.Errorf("stopping session: %w", err)
+				}
+			} else {
+				if err := p.session.TerminateSession(ctx); err != nil {
+					return fmt.Errorf("terminating session: %w", err)
+				}
+			}
+		}
+	}
 }
 
 // startLocalConn establishes a new local connection to forward remote server packets to.
@@ -222,37 +247,6 @@ func (p *BasicPortForwarding) startLocalListener(portNumber string) (net.Listene
 	p.logger.Debug(displayMessage)
 
 	return listener, nil
-}
-
-// handleControlSignals handles terminate signals.
-func (p *BasicPortForwarding) handleControlSignals(ctx context.Context) error {
-	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, sessionutil.ControlSignals...)
-
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		case <-signals:
-			p.logger.Debug("Terminate signal received, exiting.")
-
-			if version.DoesAgentSupportTerminateSessionFlag(p.logger, p.session.GetAgentVersion()) {
-				if err := p.session.SendFlag(message.TerminateSession); err != nil {
-					return fmt.Errorf("sending terminate session flag: %w", err)
-				}
-
-				p.logger.Debug("Exiting session", "sessionID", p.sessionID)
-
-				if err := p.Stop(); err != nil {
-					return fmt.Errorf("stopping session: %w", err)
-				}
-			} else {
-				if err := p.session.TerminateSession(ctx); err != nil {
-					return fmt.Errorf("terminating session: %w", err)
-				}
-			}
-		}
-	}
 }
 
 // reconnect closes existing connection, listens to new connection and accept it.

@@ -135,13 +135,7 @@ func (p *MuxPortForwarding) Stop() error {
 }
 
 // InitializeStreams initializes i/o streams.
-func (p *MuxPortForwarding) InitializeStreams(ctx context.Context, agentVersion string) error {
-	go func() {
-		if err := p.handleControlSignals(ctx); err != nil {
-			p.logger.Error("Error handling control signals", "error", err)
-		}
-	}()
-
+func (p *MuxPortForwarding) InitializeStreams(agentVersion string) error {
 	socketFile, err := getUnixSocketPath(p.sessionID, os.TempDir(), "session_manager_plugin_mux.sock")
 	if err != nil {
 		return fmt.Errorf("getting unix socket path: %w", err)
@@ -208,6 +202,33 @@ func (p *MuxPortForwarding) WriteStream(outputMessage message.ClientMessage) err
 	return nil
 }
 
+// HandleControlSignals handles terminate signals.
+func (p *MuxPortForwarding) HandleControlSignals(ctx context.Context) error {
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, sessionutil.ControlSignals...)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-signals:
+			p.logger.Debug("Terminate signal received, exiting.")
+
+			if err := p.session.SendFlag(message.TerminateSession); err != nil {
+				return fmt.Errorf("sending TerminateSession flag: %w", err)
+			}
+
+			p.logger.Debug("Exiting session", "sessionID", p.sessionID)
+
+			if err := p.Stop(); err != nil {
+				return fmt.Errorf("stopping session: %w", err)
+			}
+
+			return nil
+		}
+	}
+}
+
 // cleanUp deletes unix socket file.
 func (p *MuxPortForwarding) cleanUp() error {
 	if err := os.Remove(p.socketFile); err != nil && !os.IsNotExist(err) {
@@ -266,33 +287,6 @@ func (p *MuxPortForwarding) initialize(agentVersion string) error {
 	}
 
 	return nil
-}
-
-// handleControlSignals handles terminate signals.
-func (p *MuxPortForwarding) handleControlSignals(ctx context.Context) error {
-	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, sessionutil.ControlSignals...)
-
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		case <-signals:
-			p.logger.Debug("Terminate signal received, exiting.")
-
-			if err := p.session.SendFlag(message.TerminateSession); err != nil {
-				return fmt.Errorf("sending TerminateSession flag: %w", err)
-			}
-
-			p.logger.Debug("Exiting session", "sessionID", p.sessionID)
-
-			if err := p.Stop(); err != nil {
-				return fmt.Errorf("stopping session: %w", err)
-			}
-
-			return nil
-		}
-	}
 }
 
 // transferDataToServer reads from smux client connection and sends on data channel.

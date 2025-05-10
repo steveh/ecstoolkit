@@ -99,7 +99,7 @@ func TestHandleControlSignals(t *testing.T) {
 		signal.Notify(signalCh, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTSTP)
 
 		go func() {
-			err := shellSession.handleControlSignals(context.TODO())
+			err := shellSession.HandleControlSignals(context.TODO())
 			assert.ErrorIs(t, err, errMock)
 		}()
 

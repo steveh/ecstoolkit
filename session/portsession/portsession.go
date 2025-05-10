@@ -31,7 +31,8 @@ var _ session.ISessionPlugin = (*PortSession)(nil)
 // IPortSession defines the interface for port session operations.
 type IPortSession interface {
 	IsStreamNotSet() (status bool)
-	InitializeStreams(ctx context.Context, agentVersion string) (err error)
+	HandleControlSignals(ctx context.Context) (err error)
+	InitializeStreams(agentVersion string) (err error)
 	ReadStream(ctx context.Context) (err error)
 	WriteStream(outputMessage message.ClientMessage) (err error)
 	Stop() error
@@ -113,12 +114,17 @@ func (s *PortSession) Stop() error {
 
 // SetSessionHandlers redirects inputStream/outputStream data to datachannel.
 func (s *PortSession) SetSessionHandlers(ctx context.Context) error {
-	var err error
-	if err = s.portSessionType.InitializeStreams(ctx, s.session.GetAgentVersion()); err != nil {
+	go func() {
+		if err := s.portSessionType.HandleControlSignals(ctx); err != nil {
+			s.logger.Error("handling control signals", "error", err)
+		}
+	}()
+
+	if err := s.portSessionType.InitializeStreams(s.session.GetAgentVersion()); err != nil {
 		return fmt.Errorf("initializing streams: %w", err)
 	}
 
-	if err = s.portSessionType.ReadStream(ctx); err != nil {
+	if err := s.portSessionType.ReadStream(ctx); err != nil {
 		return fmt.Errorf("reading stream: %w", err)
 	}
 

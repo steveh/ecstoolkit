@@ -64,8 +64,13 @@ func (p *StandardStreamForwarding) Stop() error {
 	return nil
 }
 
+// HandleControlSignals does nothing in this implementation.
+func (p *StandardStreamForwarding) HandleControlSignals(_ context.Context) error {
+	return nil
+}
+
 // InitializeStreams initializes the streams with its file descriptors.
-func (p *StandardStreamForwarding) InitializeStreams(_ context.Context, _ string) error {
+func (p *StandardStreamForwarding) InitializeStreams(_ string) error {
 	p.inputStream = os.Stdin
 	p.outputStream = os.Stdout
 
