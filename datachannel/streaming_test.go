@@ -679,7 +679,7 @@ func TestHandleOutputMessageForDefaultTypeWithError(t *testing.T) {
 
 	dataChannel.RegisterOutputStreamHandler(handler, true)
 
-	err := dataChannel.HandleOutputMessage(context.TODO(), clientMessage, rawMessage)
+	err := dataChannel.handleOutputMessage(context.TODO(), clientMessage, rawMessage)
 	require.Error(t, err)
 }
 
@@ -700,7 +700,7 @@ func TestHandleOutputMessageForExitCodePayloadTypeWithError(t *testing.T) {
 
 	rawMessage := []byte("rawMessage")
 
-	err := dataChannel.HandleOutputMessage(context.TODO(), clientMessage, rawMessage)
+	err := dataChannel.handleOutputMessage(context.TODO(), clientMessage, rawMessage)
 	require.ErrorIs(t, err, errMock)
 }
 

@@ -267,46 +267,6 @@ func (c *DataChannel) RegisterOutputStreamHandler(handler OutputStreamDataMessag
 	c.outputStreamHandlers = append(c.outputStreamHandlers, handler)
 }
 
-// HandleOutputMessage handles incoming stream data message by processing the payload and updating expectedSequenceNumber.
-func (c *DataChannel) HandleOutputMessage(
-	ctx context.Context,
-	outputMessage message.ClientMessage,
-	rawMessage []byte,
-) error {
-	// Lock for reading expectedSequenceNumber
-	expectedSeq := c.expectedSequenceNumber.Load()
-
-	// Handle unexpected sequence messages first
-	if outputMessage.SequenceNumber != expectedSeq {
-		return c.handleUnexpectedSequenceMessage(outputMessage, rawMessage)
-	}
-
-	var err error
-
-	// Process the message based on its payload type
-	//nolint:exhaustive
-	switch message.PayloadType(outputMessage.PayloadType) {
-	case message.HandshakeRequestPayloadType:
-		err = c.handleHandshakeRequestOutputMessage(ctx, outputMessage)
-	case message.HandshakeCompletePayloadType:
-		err = c.handleHandshakeCompleteOutputMessage(outputMessage)
-	case message.EncChallengeRequest:
-		err = c.handleEncryptionChallengeRequestOutputMessage(outputMessage)
-	default:
-		err = c.handleDefaultOutputMessage(outputMessage)
-	}
-
-	if err != nil {
-		return err
-	}
-
-	// Increment the expected sequence number after successful processing
-	c.expectedSequenceNumber.Add(1)
-
-	// Process any buffered messages that are now in sequence
-	return c.ProcessIncomingMessageBufferItems(outputMessage)
-}
-
 // ProcessIncomingMessageBufferItems checks if new expected sequence stream data is present in incomingMessageBuffer.
 // If so, processes it and increments the expected sequence number.
 // Repeats until expected sequence stream data is not found in incomingMessageBuffer.
@@ -330,38 +290,6 @@ func (c *DataChannel) ProcessIncomingMessageBufferItems(
 	}
 
 	return nil
-}
-
-// HandleAcknowledgeMessage deserializes acknowledge content and processes it.
-func (c *DataChannel) HandleAcknowledgeMessage(
-	outputMessage message.ClientMessage,
-) error {
-	acknowledgeMessage, err := outputMessage.DeserializeDataStreamAcknowledgeContent()
-	if err != nil {
-		return fmt.Errorf("deserializing data stream acknowledge content: %w", err)
-	}
-
-	c.processAcknowledgedMessage(acknowledgeMessage)
-
-	return nil
-}
-
-// HandleChannelClosedMessage handles the channel closed message and exits the shell.
-func (c *DataChannel) HandleChannelClosedMessage(stopHandler StopHandler, sessionID string, outputMessage message.ClientMessage) {
-	var (
-		channelClosedMessage message.ChannelClosed
-		err                  error
-	)
-
-	if channelClosedMessage, err = outputMessage.DeserializeChannelClosedMessage(); err != nil {
-		c.logger.Error("Cannot deserialize payload to ChannelClosedMessage", "error", err)
-	}
-
-	c.logger.Debug("Session message", "sessionID", sessionID, "output", channelClosedMessage.Output)
-
-	if err := stopHandler(); err != nil {
-		c.logger.Error("Failed to stop handler", "error", err)
-	}
 }
 
 // ProcessKMSEncryptionHandshakeAction sets up the encrypter and calls KMS to generate a new data key. This is triggered
@@ -444,6 +372,76 @@ func (c *DataChannel) GetExpectedSequenceNumber() int64 {
 // GetTargetID returns the channel target ID.
 func (c *DataChannel) GetTargetID() string {
 	return c.targetID
+}
+
+// handleOutputMessage handles incoming stream data message by processing the payload and updating expectedSequenceNumber.
+func (c *DataChannel) handleOutputMessage(
+	ctx context.Context,
+	outputMessage message.ClientMessage,
+	rawMessage []byte,
+) error {
+	// Lock for reading expectedSequenceNumber
+	expectedSeq := c.expectedSequenceNumber.Load()
+
+	// Handle unexpected sequence messages first
+	if outputMessage.SequenceNumber != expectedSeq {
+		return c.handleUnexpectedSequenceMessage(outputMessage, rawMessage)
+	}
+
+	var err error
+
+	// Process the message based on its payload type
+	//nolint:exhaustive
+	switch message.PayloadType(outputMessage.PayloadType) {
+	case message.HandshakeRequestPayloadType:
+		err = c.handleHandshakeRequestOutputMessage(ctx, outputMessage)
+	case message.HandshakeCompletePayloadType:
+		err = c.handleHandshakeCompleteOutputMessage(outputMessage)
+	case message.EncChallengeRequest:
+		err = c.handleEncryptionChallengeRequestOutputMessage(outputMessage)
+	default:
+		err = c.handleDefaultOutputMessage(outputMessage)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	// Increment the expected sequence number after successful processing
+	c.expectedSequenceNumber.Add(1)
+
+	// Process any buffered messages that are now in sequence
+	return c.ProcessIncomingMessageBufferItems(outputMessage)
+}
+
+// handleAcknowledgeMessage deserializes acknowledge content and processes it.
+func (c *DataChannel) handleAcknowledgeMessage(
+	outputMessage message.ClientMessage,
+) error {
+	acknowledgeMessage, err := outputMessage.DeserializeDataStreamAcknowledgeContent()
+	if err != nil {
+		return fmt.Errorf("deserializing data stream acknowledge content: %w", err)
+	}
+
+	c.processAcknowledgedMessage(acknowledgeMessage)
+
+	return nil
+}
+
+// handleChannelClosedMessage handles the channel closed message and exits the shell.
+func (c *DataChannel) handleChannelClosedMessage(stopHandler StopHandler, sessionID string, outputMessage message.ClientMessage) error {
+	channelClosedMessage, err := outputMessage.DeserializeChannelClosedMessage()
+	if err != nil {
+		return fmt.Errorf("deserializing channel closed message: %w", err)
+	}
+
+	c.logger.Debug("Session message", "sessionID", sessionID, "output", channelClosedMessage.Output)
+
+	if err := stopHandler(); err != nil {
+		return fmt.Errorf("calling stop handler: %w", err)
+	}
+
+	return nil
 }
 
 // establishSessionType establishes the session type for the DataChannel.
@@ -666,11 +664,11 @@ func (c *DataChannel) outputMessageHandler(ctx context.Context, stopHandler Stop
 
 	switch outputMessage.MessageType {
 	case message.OutputStreamMessage:
-		return c.HandleOutputMessage(ctx, outputMessage, rawMessage)
+		return c.handleOutputMessage(ctx, outputMessage, rawMessage)
 	case message.AcknowledgeMessage:
-		return c.HandleAcknowledgeMessage(outputMessage)
+		return c.handleAcknowledgeMessage(outputMessage)
 	case message.ChannelClosedMessage:
-		c.HandleChannelClosedMessage(stopHandler, c.sessionID, outputMessage)
+		return c.handleChannelClosedMessage(stopHandler, c.sessionID, outputMessage)
 	case message.StartPublicationMessage, message.PausePublicationMessage:
 		return nil
 	default:
