@@ -458,29 +458,23 @@ func (c *DataChannel) handleChannelClosedMessage(outputMessage message.ClientMes
 func (c *DataChannel) establishSessionType(ctx context.Context, timeoutHandler TimeoutHandler) (string, error) {
 	c.setSessionType(config.ShellPluginName)
 
-	go func() {
-		for {
-			// Repeat this loop for every 200ms
-			time.Sleep(config.ResendSleepInterval)
+	select {
+	case <-c.isStreamMessageResendTimeout:
+		c.logger.Error("Stream data timeout", "sessionID", c.sessionID)
 
-			if <-c.isStreamMessageResendTimeout {
-				c.logger.Error("Stream data timeout", "sessionID", c.sessionID)
-
-				if err := timeoutHandler(ctx); err != nil {
-					c.logger.Error("Unable to terminate session upon stream data timeout", "error", err)
-				}
-
-				return
-			}
+		if err := timeoutHandler(ctx); err != nil {
+			return "", fmt.Errorf("calling timeout handler: %w", err)
 		}
-	}()
 
-	// The session type is set either by handshake or the first packet received.
-	if !<-c.isSessionTypeSet {
 		return "", ErrUnknownSessionType
-	}
+	case set := <-c.isSessionTypeSet:
+		// The session type is set either by handshake or the first packet received.
+		if !set {
+			return "", ErrUnknownSessionType
+		}
 
-	return c.sessionType, nil
+		return c.sessionType, nil
+	}
 }
 
 // reconnect calls ResumeSession API to reconnect datachannel when connection is lost.
