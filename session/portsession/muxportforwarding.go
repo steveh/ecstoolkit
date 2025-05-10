@@ -135,8 +135,12 @@ func (p *MuxPortForwarding) Stop() error {
 }
 
 // InitializeStreams initializes i/o streams.
-func (p *MuxPortForwarding) InitializeStreams(_ context.Context, agentVersion string) error {
-	p.handleControlSignals()
+func (p *MuxPortForwarding) InitializeStreams(ctx context.Context, agentVersion string) error {
+	go func() {
+		if err := p.handleControlSignals(ctx); err != nil {
+			p.logger.Error("Error handling control signals", "error", err)
+		}
+	}()
 
 	socketFile, err := getUnixSocketPath(p.sessionID, os.TempDir(), "session_manager_plugin_mux.sock")
 	if err != nil {
@@ -265,24 +269,30 @@ func (p *MuxPortForwarding) initialize(agentVersion string) error {
 }
 
 // handleControlSignals handles terminate signals.
-func (p *MuxPortForwarding) handleControlSignals() {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, sessionutil.ControlSignals...)
+func (p *MuxPortForwarding) handleControlSignals(ctx context.Context) error {
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, sessionutil.ControlSignals...)
 
-	go func() {
-		<-c
-		p.logger.Debug("Terminate signal received, exiting.")
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-signals:
+			p.logger.Debug("Terminate signal received, exiting.")
 
-		if err := p.session.SendFlag(message.TerminateSession); err != nil {
-			p.logger.Error("sending TerminateSession flag", "error", err)
+			if err := p.session.SendFlag(message.TerminateSession); err != nil {
+				return fmt.Errorf("sending TerminateSession flag: %w", err)
+			}
+
+			p.logger.Debug("Exiting session", "sessionID", p.sessionID)
+
+			if err := p.Stop(); err != nil {
+				return fmt.Errorf("stopping session: %w", err)
+			}
+
+			return nil
 		}
-
-		p.logger.Debug("Exiting session", "sessionID", p.sessionID)
-
-		if err := p.Stop(); err != nil {
-			p.logger.Error("Failed to stop session", "error", err)
-		}
-	}()
+	}
 }
 
 // transferDataToServer reads from smux client connection and sends on data channel.

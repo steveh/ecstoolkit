@@ -96,7 +96,11 @@ func (p *BasicPortForwarding) InitializeStreams(ctx context.Context, _ string) e
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	p.handleControlSignals(ctx)
+	go func() {
+		if err := p.handleControlSignals(ctx); err != nil {
+			p.logger.Error("handling control signals", "error", err)
+		}
+	}()
 
 	if err := p.startLocalConn(); err != nil {
 		return err
@@ -221,30 +225,34 @@ func (p *BasicPortForwarding) startLocalListener(portNumber string) (net.Listene
 }
 
 // handleControlSignals handles terminate signals.
-func (p *BasicPortForwarding) handleControlSignals(ctx context.Context) {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, sessionutil.ControlSignals...)
+func (p *BasicPortForwarding) handleControlSignals(ctx context.Context) error {
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, sessionutil.ControlSignals...)
 
-	go func() {
-		<-c
-		p.logger.Debug("Terminate signal received, exiting.")
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-signals:
+			p.logger.Debug("Terminate signal received, exiting.")
 
-		if version.DoesAgentSupportTerminateSessionFlag(p.logger, p.session.GetAgentVersion()) {
-			if err := p.session.SendFlag(message.TerminateSession); err != nil {
-				p.logger.Error("sending TerminateSession flag", "error", err)
-			}
+			if version.DoesAgentSupportTerminateSessionFlag(p.logger, p.session.GetAgentVersion()) {
+				if err := p.session.SendFlag(message.TerminateSession); err != nil {
+					return fmt.Errorf("sending terminate session flag: %w", err)
+				}
 
-			p.logger.Debug("Exiting session", "sessionID", p.sessionID)
+				p.logger.Debug("Exiting session", "sessionID", p.sessionID)
 
-			if err := p.Stop(); err != nil {
-				p.logger.Error("stopping session", "error", err)
-			}
-		} else {
-			if err := p.session.TerminateSession(ctx); err != nil {
-				p.logger.Error("terminating session", "error", err)
+				if err := p.Stop(); err != nil {
+					return fmt.Errorf("stopping session: %w", err)
+				}
+			} else {
+				if err := p.session.TerminateSession(ctx); err != nil {
+					return fmt.Errorf("terminating session: %w", err)
+				}
 			}
 		}
-	}()
+	}
 }
 
 // reconnect closes existing connection, listens to new connection and accept it.
