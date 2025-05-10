@@ -361,7 +361,10 @@ func TestResendStreamDataMessageScheduler(t *testing.T) {
 		return nil
 	})
 
-	dataChannel.resendStreamDataMessageScheduler()
+	go func() {
+		err := dataChannel.resendStreamDataMessageScheduler()
+		assert.NoError(t, err)
+	}()
 
 	wg.Wait()
 	// Assert that SendMessage was called on the mock channel

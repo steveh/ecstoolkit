@@ -175,7 +175,11 @@ func (c *DataChannel) Open(ctx context.Context, messageHandler DisplayMessageHan
 	})
 
 	// Scheduler for resending of data
-	c.resendStreamDataMessageScheduler()
+	go func() {
+		if err := c.resendStreamDataMessageScheduler(); err != nil {
+			c.logger.Error("Resend stream data message scheduler error", "error", err)
+		}
+	}()
 
 	return c.establishSessionType(ctx, timeoutHandler)
 }
@@ -529,33 +533,33 @@ func (c *DataChannel) firstMessageHandler(outputMessage message.ClientMessage) (
 
 // resendStreamDataMessageScheduler spawns a separate go thread which keeps checking outgoingMessageBuffer at fixed interval
 // and resends first message if time elapsed since lastSentTime of the message is more than acknowledge wait time.
-func (c *DataChannel) resendStreamDataMessageScheduler() {
-	go func() {
-		for {
-			time.Sleep(config.ResendSleepInterval)
+func (c *DataChannel) resendStreamDataMessageScheduler() error {
+	for {
+		time.Sleep(config.ResendSleepInterval)
 
-			streamMessage, exists := c.outgoingMessageBuffer.Front()
-			if !exists {
-				continue
-			}
-
-			if time.Since(streamMessage.LastSentTime) > c.retransmissionTimeout {
-				c.logger.Debug("Resend stream data message", "sequenceNumber", streamMessage.SequenceNumber, "attempt", streamMessage.ResendAttempt)
-
-				if streamMessage.ResendAttempt >= config.ResendMaxAttempt {
-					c.logger.Warn("Message resent too many times", "sequenceNumber", streamMessage.SequenceNumber, "maxAttempts", config.ResendMaxAttempt)
-					c.isStreamMessageResendTimeout <- true
-				}
-
-				streamMessage.ResendAttempt++
-				if err := c.SendMessage(streamMessage.Content, websocket.BinaryMessage); err != nil {
-					c.logger.Error("Unable to send stream data message", "error", err)
-				}
-
-				streamMessage.LastSentTime = time.Now()
-			}
+		streamMessage, exists := c.outgoingMessageBuffer.Front()
+		if !exists {
+			continue
 		}
-	}()
+
+		if time.Since(streamMessage.LastSentTime) > c.retransmissionTimeout {
+			c.logger.Debug("Resend stream data message", "sequenceNumber", streamMessage.SequenceNumber, "attempt", streamMessage.ResendAttempt)
+
+			if streamMessage.ResendAttempt >= config.ResendMaxAttempt {
+				c.logger.Warn("Message resent too many times", "sequenceNumber", streamMessage.SequenceNumber, "maxAttempts", config.ResendMaxAttempt)
+				c.isStreamMessageResendTimeout <- true
+
+				return ErrTimedOut
+			}
+
+			streamMessage.ResendAttempt++
+			if err := c.SendMessage(streamMessage.Content, websocket.BinaryMessage); err != nil {
+				c.logger.Warn("Unable to send stream data message", "error", err)
+			}
+
+			streamMessage.LastSentTime = time.Now()
+		}
+	}
 }
 
 // deregisterOutputStreamHandler deregisters a handler previously registered using RegisterOutputStreamHandler.
