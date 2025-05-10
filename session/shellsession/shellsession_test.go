@@ -2,6 +2,7 @@
 package shellsession
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"os"
@@ -96,7 +97,11 @@ func TestHandleControlSignals(t *testing.T) {
 		}
 
 		signal.Notify(signalCh, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTSTP)
-		shellSession.handleControlSignals()
+
+		go func() {
+			err := shellSession.handleControlSignals(context.TODO())
+			assert.ErrorIs(t, err, errMock)
+		}()
 
 		if err := p.Signal(syscall.SIGINT); err != nil {
 			t.Errorf("Failed to send signal: %v", err)
@@ -190,7 +195,11 @@ func TestTerminalResizeWhenSessionSizeDataIsNotEqualToActualSize(t *testing.T) {
 		return nil
 	})
 
-	go shellSession.handleTerminalResize()
+	go func() {
+		err := shellSession.handleTerminalResize(context.TODO())
+		assert.NoError(t, err)
+	}()
+
 	wg.Wait()
 	// Assert that SendMessage was called on the mock channel
 	mockWsChannel.AssertExpectations(t)

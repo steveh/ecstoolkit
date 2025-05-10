@@ -18,6 +18,7 @@ import (
 	"github.com/steveh/ecstoolkit/session"
 	"github.com/steveh/ecstoolkit/session/sessionutil"
 	"github.com/steveh/ecstoolkit/util"
+	"golang.org/x/sync/errgroup"
 	"golang.org/x/term"
 )
 
@@ -68,15 +69,43 @@ func (s *ShellSession) Name() string {
 }
 
 // SetSessionHandlers sets up handlers for terminal input, resizing, and control signals.
-func (s *ShellSession) SetSessionHandlers(ctx context.Context) error {
+func (s *ShellSession) SetSessionHandlers(ctx context.Context) (err error) {
+	ctx, cancel := context.WithCancel(ctx)
+	s.shutdown = cancel
+
+	// handle double echo and disable input buffering
+	if err := s.disableEchoAndInputBuffering(); err != nil {
+		return fmt.Errorf("disabling echo and input buffering: %w", err)
+	}
+
+	defer func() {
+		if enableErr := s.enableEchoAndInputBuffering(); enableErr != nil && err == nil {
+			err = fmt.Errorf("enabling echo and input buffering: %w", enableErr)
+		}
+	}()
+
+	eg, ctx := errgroup.WithContext(ctx)
+
 	// handle re-size
-	s.handleTerminalResize()
+	eg.Go(func() error {
+		return s.handleTerminalResize(ctx)
+	})
 
 	// handle control signals
-	s.handleControlSignals()
+	eg.Go(func() error {
+		return s.handleControlSignals(ctx)
+	})
 
 	// handles keyboard input
-	return s.handleKeyboardInput(ctx)
+	eg.Go(func() error {
+		return s.handleKeyboardInput(ctx)
+	})
+
+	if err := eg.Wait(); err != nil {
+		return fmt.Errorf("waiting for goroutines: %w", err)
+	}
+
+	return nil
 }
 
 // ProcessStreamMessagePayload prints payload received on datachannel to console.
@@ -99,26 +128,31 @@ func (s *ShellSession) Stop() error {
 }
 
 // handleControlSignals handles control signals when given by user.
-func (s *ShellSession) handleControlSignals() {
-	go func() {
-		signals := make(chan os.Signal, 1)
-		signal.Notify(signals, sessionutil.ControlSignals...)
+func (s *ShellSession) handleControlSignals(ctx context.Context) error {
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, sessionutil.ControlSignals...)
 
-		for {
-			sig := <-signals
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case sig := <-signals:
 			if b, ok := sessionutil.SignalsByteMap[sig]; ok {
 				if err := s.session.SendInputDataMessage(message.Output, []byte{b}); err != nil {
-					s.logger.Error("sending control signals", "error", err)
+					return fmt.Errorf("sending control signal: %w", err)
 				}
 			}
 		}
-	}()
+	}
 }
 
 // handleTerminalResize checks size of terminal every 500ms and sends size data.
-func (s *ShellSession) handleTerminalResize() {
-	go func() {
-		for {
+func (s *ShellSession) handleTerminalResize(ctx context.Context) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
 			width, height := s.getTerminalSize()
 
 			if s.SizeData.Rows != height || s.SizeData.Cols != width {
@@ -126,23 +160,24 @@ func (s *ShellSession) handleTerminalResize() {
 					Cols: width,
 					Rows: height,
 				}
+
 				s.SizeData = sizeData
 
 				inputSizeData, err := json.Marshal(sizeData)
 				if err != nil {
-					s.logger.Error("Cannot marshal size data", "error", err)
+					return fmt.Errorf("marshalling size data: %w", err)
 				}
 
 				s.logger.Debug("Sending input size data", "data", string(inputSizeData))
 
 				if err = s.session.SendInputDataMessage(message.Size, inputSizeData); err != nil {
-					s.logger.Error("sending size data", "error", err)
+					return fmt.Errorf("sending size data: %w", err)
 				}
 			}
-			// repeating this loop for every 500ms
+
 			time.Sleep(ResizeSleepInterval)
 		}
-	}()
+	}
 }
 
 // If running from IDE GetTerminalSizeCall will not work. Supply a fixed width and height value.
@@ -213,55 +248,27 @@ func (s *ShellSession) enableEchoAndInputBuffering() error {
 
 // handleKeyboardInput handles input entered by customer on terminal.
 func (s *ShellSession) handleKeyboardInput(ctx context.Context) error {
-	ctx, cancelFunc := context.WithCancel(ctx)
-	s.shutdown = cancelFunc
+	stdinBytes := make([]byte, StdinBufferLimit)
+	reader := bufio.NewReader(os.Stdin)
 
-	// handle double echo and disable input buffering
-	if err := s.disableEchoAndInputBuffering(); err != nil {
-		return fmt.Errorf("disabling echo and input buffering: %w", err)
-	}
-
-	defer func() {
-		if enableErr := s.enableEchoAndInputBuffering(); enableErr != nil {
-			s.logger.Error("Failed to enable echo and input buffering", "error", enableErr)
-		}
-	}()
-
-	go func() {
-		stdinBytes := make([]byte, StdinBufferLimit)
-		reader := bufio.NewReader(os.Stdin)
-
-		var err error
-
-		var stdinBytesLen int
-
-		for {
-			if stdinBytesLen, err = reader.Read(stdinBytes); err != nil {
-				s.logger.Error("Unable to read from Stdin", "error", err)
-
-				break
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+			stdinBytesLen, err := reader.Read(stdinBytes)
+			if err != nil {
+				return fmt.Errorf("reading from stdin: %w", err)
 			}
 
-			if err = s.session.SendInputDataMessage(message.Output, stdinBytes[:stdinBytesLen]); err != nil {
-				s.logger.Error("sending UTF8 char", "error", err)
-
-				break
+			if err := s.session.SendInputDataMessage(message.Output, stdinBytes[:stdinBytesLen]); err != nil {
+				return fmt.Errorf("sending input data: %w", err)
 			}
+
 			// sleep to limit the rate of data transfer
 			time.Sleep(time.Millisecond)
 		}
-
-		s.shutdown()
-	}()
-
-	// Wait for context to be canceled by a call to Stop(), or stdin closing
-	<-ctx.Done()
-
-	if err := ctx.Err(); err != nil {
-		return nil // not an error
 	}
-
-	return nil
 }
 
 // getState gets current state of terminal.
