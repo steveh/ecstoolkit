@@ -69,7 +69,9 @@ func NewPortSession(ctx context.Context, logger log.T, sess session.ISessionSupp
 
 	sess.RegisterOutputStreamHandler(s.ProcessStreamMessagePayload, true)
 
-	sess.RegisterOutputMessageHandler(ctx, s.Stop, func(input []byte) {
+	sess.RegisterStopHandler(s.Stop)
+
+	sess.RegisterIncomingMessageHandler(ctx, func(input []byte) {
 		if !s.portSessionType.IsStreamNotSet() {
 			return
 		}

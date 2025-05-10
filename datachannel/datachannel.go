@@ -85,6 +85,7 @@ type DataChannel struct {
 
 	displayHandler   func(message.ClientMessage)
 	encryptorBuilder EncryptorBuilder
+	stopHandler      StopHandler
 }
 
 // NewDataChannel creates a DataChannel.
@@ -121,10 +122,10 @@ func (c *DataChannel) SendMessage(input []byte, inputType int) error {
 
 // Open opens the data channel and registers the message handler.
 func (c *DataChannel) Open(ctx context.Context, messageHandler DisplayMessageHandler, refreshTokenHandler RefreshTokenHandler, timeoutHandler TimeoutHandler) (string, error) {
-	c.RegisterOutputMessageHandler(ctx, func() error { return nil }, func(_ []byte) {})
-
 	c.displayHandler = messageHandler
 
+	c.RegisterIncomingMessageHandler(ctx, func(_ []byte) {})
+	c.RegisterStopHandler(func() error { return nil })
 	c.RegisterOutputStreamHandler(c.firstMessageHandler, false)
 
 	retryParams := retry.RepeatableExponentialRetryer{
@@ -343,15 +344,20 @@ func (c *DataChannel) GetSessionProperties() any {
 	return c.sessionProperties
 }
 
-// RegisterOutputMessageHandler sets the message handler for the DataChannel.
-func (c *DataChannel) RegisterOutputMessageHandler(ctx context.Context, stopHandler StopHandler, onMessageHandler OnMessageHandler) {
+// RegisterIncomingMessageHandler sets the message handler for the DataChannel.
+func (c *DataChannel) RegisterIncomingMessageHandler(ctx context.Context, handler IncomingMessageHandler) {
 	c.wsChannel.SetOnMessage(func(input []byte) {
-		onMessageHandler(input)
+		handler(input)
 
-		if err := c.outputMessageHandler(ctx, stopHandler, input); err != nil {
+		if err := c.outputMessageHandler(ctx, c.stopHandler, input); err != nil {
 			c.logger.Error("Failed to handle output message", "error", err)
 		}
 	})
+}
+
+// RegisterStopHandler sets the message handler for the DataChannel.
+func (c *DataChannel) RegisterStopHandler(handler StopHandler) {
+	c.stopHandler = handler
 }
 
 // GetAgentVersion returns agent version of the target instance.

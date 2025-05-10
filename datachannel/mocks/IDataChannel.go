@@ -265,37 +265,36 @@ func (_c *IDataChannel_Open_Call) RunAndReturn(run func(context.Context, datacha
 	return _c
 }
 
-// RegisterOutputMessageHandler provides a mock function with given fields: ctx, stopHandler, onMessageHandler
-func (_m *IDataChannel) RegisterOutputMessageHandler(ctx context.Context, stopHandler datachannel.StopHandler, onMessageHandler datachannel.OnMessageHandler) {
-	_m.Called(ctx, stopHandler, onMessageHandler)
+// RegisterIncomingMessageHandler provides a mock function with given fields: ctx, handler
+func (_m *IDataChannel) RegisterIncomingMessageHandler(ctx context.Context, handler datachannel.IncomingMessageHandler) {
+	_m.Called(ctx, handler)
 }
 
-// IDataChannel_RegisterOutputMessageHandler_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RegisterOutputMessageHandler'
-type IDataChannel_RegisterOutputMessageHandler_Call struct {
+// IDataChannel_RegisterIncomingMessageHandler_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RegisterIncomingMessageHandler'
+type IDataChannel_RegisterIncomingMessageHandler_Call struct {
 	*mock.Call
 }
 
-// RegisterOutputMessageHandler is a helper method to define mock.On call
+// RegisterIncomingMessageHandler is a helper method to define mock.On call
 //   - ctx context.Context
-//   - stopHandler datachannel.StopHandler
-//   - onMessageHandler datachannel.OnMessageHandler
-func (_e *IDataChannel_Expecter) RegisterOutputMessageHandler(ctx interface{}, stopHandler interface{}, onMessageHandler interface{}) *IDataChannel_RegisterOutputMessageHandler_Call {
-	return &IDataChannel_RegisterOutputMessageHandler_Call{Call: _e.mock.On("RegisterOutputMessageHandler", ctx, stopHandler, onMessageHandler)}
+//   - handler datachannel.IncomingMessageHandler
+func (_e *IDataChannel_Expecter) RegisterIncomingMessageHandler(ctx interface{}, handler interface{}) *IDataChannel_RegisterIncomingMessageHandler_Call {
+	return &IDataChannel_RegisterIncomingMessageHandler_Call{Call: _e.mock.On("RegisterIncomingMessageHandler", ctx, handler)}
 }
 
-func (_c *IDataChannel_RegisterOutputMessageHandler_Call) Run(run func(ctx context.Context, stopHandler datachannel.StopHandler, onMessageHandler datachannel.OnMessageHandler)) *IDataChannel_RegisterOutputMessageHandler_Call {
+func (_c *IDataChannel_RegisterIncomingMessageHandler_Call) Run(run func(ctx context.Context, handler datachannel.IncomingMessageHandler)) *IDataChannel_RegisterIncomingMessageHandler_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(datachannel.StopHandler), args[2].(datachannel.OnMessageHandler))
+		run(args[0].(context.Context), args[1].(datachannel.IncomingMessageHandler))
 	})
 	return _c
 }
 
-func (_c *IDataChannel_RegisterOutputMessageHandler_Call) Return() *IDataChannel_RegisterOutputMessageHandler_Call {
+func (_c *IDataChannel_RegisterIncomingMessageHandler_Call) Return() *IDataChannel_RegisterIncomingMessageHandler_Call {
 	_c.Call.Return()
 	return _c
 }
 
-func (_c *IDataChannel_RegisterOutputMessageHandler_Call) RunAndReturn(run func(context.Context, datachannel.StopHandler, datachannel.OnMessageHandler)) *IDataChannel_RegisterOutputMessageHandler_Call {
+func (_c *IDataChannel_RegisterIncomingMessageHandler_Call) RunAndReturn(run func(context.Context, datachannel.IncomingMessageHandler)) *IDataChannel_RegisterIncomingMessageHandler_Call {
 	_c.Run(run)
 	return _c
 }
@@ -330,6 +329,39 @@ func (_c *IDataChannel_RegisterOutputStreamHandler_Call) Return() *IDataChannel_
 }
 
 func (_c *IDataChannel_RegisterOutputStreamHandler_Call) RunAndReturn(run func(datachannel.OutputStreamDataMessageHandler, bool)) *IDataChannel_RegisterOutputStreamHandler_Call {
+	_c.Run(run)
+	return _c
+}
+
+// RegisterStopHandler provides a mock function with given fields: handler
+func (_m *IDataChannel) RegisterStopHandler(handler datachannel.StopHandler) {
+	_m.Called(handler)
+}
+
+// IDataChannel_RegisterStopHandler_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RegisterStopHandler'
+type IDataChannel_RegisterStopHandler_Call struct {
+	*mock.Call
+}
+
+// RegisterStopHandler is a helper method to define mock.On call
+//   - handler datachannel.StopHandler
+func (_e *IDataChannel_Expecter) RegisterStopHandler(handler interface{}) *IDataChannel_RegisterStopHandler_Call {
+	return &IDataChannel_RegisterStopHandler_Call{Call: _e.mock.On("RegisterStopHandler", handler)}
+}
+
+func (_c *IDataChannel_RegisterStopHandler_Call) Run(run func(handler datachannel.StopHandler)) *IDataChannel_RegisterStopHandler_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(datachannel.StopHandler))
+	})
+	return _c
+}
+
+func (_c *IDataChannel_RegisterStopHandler_Call) Return() *IDataChannel_RegisterStopHandler_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *IDataChannel_RegisterStopHandler_Call) RunAndReturn(run func(datachannel.StopHandler)) *IDataChannel_RegisterStopHandler_Call {
 	_c.Run(run)
 	return _c
 }

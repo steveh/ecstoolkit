@@ -114,14 +114,19 @@ func (s *Session) GetSessionProperties() any {
 	return s.dataChannel.GetSessionProperties()
 }
 
-// RegisterOutputMessageHandler registers a handler for output messages.
-func (s *Session) RegisterOutputMessageHandler(ctx context.Context, stopHandler datachannel.StopHandler, onMessageHandler func(input []byte)) {
-	s.dataChannel.RegisterOutputMessageHandler(ctx, stopHandler, onMessageHandler)
-}
-
 // RegisterOutputStreamHandler registers a handler for output stream messages.
 func (s *Session) RegisterOutputStreamHandler(handler datachannel.OutputStreamDataMessageHandler, sessionSpecific bool) {
 	s.dataChannel.RegisterOutputStreamHandler(handler, sessionSpecific)
+}
+
+// RegisterIncomingMessageHandler sets the message handler for the DataChannel.
+func (s *Session) RegisterIncomingMessageHandler(ctx context.Context, handler datachannel.IncomingMessageHandler) {
+	s.dataChannel.RegisterIncomingMessageHandler(ctx, handler)
+}
+
+// RegisterStopHandler sets the message handler for the DataChannel.
+func (s *Session) RegisterStopHandler(handler datachannel.StopHandler) {
+	s.dataChannel.RegisterStopHandler(handler)
 }
 
 // getResumeSessionParams calls ResumeSession API and gets tokenvalue for reconnecting.

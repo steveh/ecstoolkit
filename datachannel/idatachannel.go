@@ -18,13 +18,15 @@ type RefreshTokenHandler func(context.Context) (string, error)
 // DisplayMessageHandler is a function that handles display messages.
 type DisplayMessageHandler func(message message.ClientMessage)
 
-// OnMessageHandler is a function that handles incoming messages.
-type OnMessageHandler func(input []byte)
+// IncomingMessageHandler is a function that handles incoming messages.
+type IncomingMessageHandler func(input []byte)
 
 // TimeoutHandler is a function that handles timeout events.
 type TimeoutHandler func(ctx context.Context) error
 
 // IDataChannel defines the interface for data channel operations.
+//
+//nolint:interfacebloat
 type IDataChannel interface {
 	Open(ctx context.Context, displayMessageHandler DisplayMessageHandler, refreshTokenHandler RefreshTokenHandler, timeoutHandler TimeoutHandler) (string, error)
 	Close() error
@@ -35,5 +37,6 @@ type IDataChannel interface {
 	GetAgentVersion() string
 	GetTargetID() string
 	RegisterOutputStreamHandler(handler OutputStreamDataMessageHandler, sessionSpecific bool)
-	RegisterOutputMessageHandler(ctx context.Context, stopHandler StopHandler, onMessageHandler OnMessageHandler)
+	RegisterIncomingMessageHandler(ctx context.Context, handler IncomingMessageHandler)
+	RegisterStopHandler(handler StopHandler)
 }

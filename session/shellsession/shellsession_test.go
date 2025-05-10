@@ -56,7 +56,8 @@ func TestInitialize(t *testing.T) {
 	require.NoError(t, err)
 
 	mockDataChannel.On("RegisterOutputStreamHandler", mock.Anything, true).Times(1)
-	mockDataChannel.On("RegisterOutputMessageHandler", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	mockDataChannel.On("RegisterIncomingMessageHandler", mock.Anything, mock.Anything)
+	mockDataChannel.On("RegisterStopHandler", mock.Anything)
 
 	shellSession, err := NewShellSession(context.TODO(), mockLogger, session)
 	require.NoError(t, err, "Initialize port session")

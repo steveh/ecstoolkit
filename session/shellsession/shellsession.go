@@ -54,7 +54,10 @@ func NewShellSession(ctx context.Context, logger log.T, sess session.ISessionSup
 	}
 
 	sess.RegisterOutputStreamHandler(s.ProcessStreamMessagePayload, true)
-	sess.RegisterOutputMessageHandler(ctx, s.Stop, func(_ []byte) {})
+
+	sess.RegisterStopHandler(s.Stop)
+
+	sess.RegisterIncomingMessageHandler(ctx, func(_ []byte) {})
 
 	return s, nil
 }

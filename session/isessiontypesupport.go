@@ -13,7 +13,8 @@ type ISessionTypeSupport interface {
 	GetSessionID() string
 	GetSessionProperties() any
 	RegisterOutputStreamHandler(handler datachannel.OutputStreamDataMessageHandler, isSessionSpecificHandler bool)
-	RegisterOutputMessageHandler(ctx context.Context, stopHandler datachannel.StopHandler, onMessageHandler func(input []byte))
+	RegisterIncomingMessageHandler(ctx context.Context, handler datachannel.IncomingMessageHandler)
+	RegisterStopHandler(handler datachannel.StopHandler)
 	DisplayMessage(message message.ClientMessage)
 	SendInputDataMessage(payloadType message.PayloadType, inputData []byte) error
 	Close() error
