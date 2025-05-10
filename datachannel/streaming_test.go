@@ -786,8 +786,6 @@ func TestProcessFirstMessageOutputMessageFirst(t *testing.T) {
 	dataChannel, err := NewDataChannel(mockWsChannel, mockEncryptorBuilder, clientID, sessionID, instanceID, mockLogger)
 	require.NoError(t, err)
 
-	dataChannel.displayHandler = func(_ message.ClientMessage) {}
-
 	_, err = dataChannel.firstMessageHandler(outputMessage)
 	if err != nil {
 		t.Errorf("Failed to process first message: %v", err)
@@ -820,7 +818,6 @@ func TestOpenWithRetryWithError(t *testing.T) {
 
 	_, err = dataChannel.Open(
 		context.TODO(),
-		func(_ message.ClientMessage) {},
 		func(_ context.Context) (string, error) { return "", nil },
 		func(_ context.Context) error { return nil },
 	)

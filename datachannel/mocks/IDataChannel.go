@@ -114,6 +114,53 @@ func (_c *IDataChannel_GetAgentVersion_Call) RunAndReturn(run func() string) *ID
 	return _c
 }
 
+// GetDisplayMessages provides a mock function with no fields
+func (_m *IDataChannel) GetDisplayMessages() <-chan message.ClientMessage {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetDisplayMessages")
+	}
+
+	var r0 <-chan message.ClientMessage
+	if rf, ok := ret.Get(0).(func() <-chan message.ClientMessage); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(<-chan message.ClientMessage)
+		}
+	}
+
+	return r0
+}
+
+// IDataChannel_GetDisplayMessages_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDisplayMessages'
+type IDataChannel_GetDisplayMessages_Call struct {
+	*mock.Call
+}
+
+// GetDisplayMessages is a helper method to define mock.On call
+func (_e *IDataChannel_Expecter) GetDisplayMessages() *IDataChannel_GetDisplayMessages_Call {
+	return &IDataChannel_GetDisplayMessages_Call{Call: _e.mock.On("GetDisplayMessages")}
+}
+
+func (_c *IDataChannel_GetDisplayMessages_Call) Run(run func()) *IDataChannel_GetDisplayMessages_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *IDataChannel_GetDisplayMessages_Call) Return(_a0 <-chan message.ClientMessage) *IDataChannel_GetDisplayMessages_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *IDataChannel_GetDisplayMessages_Call) RunAndReturn(run func() <-chan message.ClientMessage) *IDataChannel_GetDisplayMessages_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetSessionProperties provides a mock function with no fields
 func (_m *IDataChannel) GetSessionProperties() interface{} {
 	ret := _m.Called()
@@ -206,9 +253,9 @@ func (_c *IDataChannel_GetTargetID_Call) RunAndReturn(run func() string) *IDataC
 	return _c
 }
 
-// Open provides a mock function with given fields: ctx, displayMessageHandler, refreshTokenHandler, timeoutHandler
-func (_m *IDataChannel) Open(ctx context.Context, displayMessageHandler datachannel.DisplayMessageHandler, refreshTokenHandler datachannel.RefreshTokenHandler, timeoutHandler datachannel.TimeoutHandler) (string, error) {
-	ret := _m.Called(ctx, displayMessageHandler, refreshTokenHandler, timeoutHandler)
+// Open provides a mock function with given fields: ctx, refreshTokenHandler, timeoutHandler
+func (_m *IDataChannel) Open(ctx context.Context, refreshTokenHandler datachannel.RefreshTokenHandler, timeoutHandler datachannel.TimeoutHandler) (string, error) {
+	ret := _m.Called(ctx, refreshTokenHandler, timeoutHandler)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Open")
@@ -216,17 +263,17 @@ func (_m *IDataChannel) Open(ctx context.Context, displayMessageHandler datachan
 
 	var r0 string
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, datachannel.DisplayMessageHandler, datachannel.RefreshTokenHandler, datachannel.TimeoutHandler) (string, error)); ok {
-		return rf(ctx, displayMessageHandler, refreshTokenHandler, timeoutHandler)
+	if rf, ok := ret.Get(0).(func(context.Context, datachannel.RefreshTokenHandler, datachannel.TimeoutHandler) (string, error)); ok {
+		return rf(ctx, refreshTokenHandler, timeoutHandler)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, datachannel.DisplayMessageHandler, datachannel.RefreshTokenHandler, datachannel.TimeoutHandler) string); ok {
-		r0 = rf(ctx, displayMessageHandler, refreshTokenHandler, timeoutHandler)
+	if rf, ok := ret.Get(0).(func(context.Context, datachannel.RefreshTokenHandler, datachannel.TimeoutHandler) string); ok {
+		r0 = rf(ctx, refreshTokenHandler, timeoutHandler)
 	} else {
 		r0 = ret.Get(0).(string)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, datachannel.DisplayMessageHandler, datachannel.RefreshTokenHandler, datachannel.TimeoutHandler) error); ok {
-		r1 = rf(ctx, displayMessageHandler, refreshTokenHandler, timeoutHandler)
+	if rf, ok := ret.Get(1).(func(context.Context, datachannel.RefreshTokenHandler, datachannel.TimeoutHandler) error); ok {
+		r1 = rf(ctx, refreshTokenHandler, timeoutHandler)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -241,16 +288,15 @@ type IDataChannel_Open_Call struct {
 
 // Open is a helper method to define mock.On call
 //   - ctx context.Context
-//   - displayMessageHandler datachannel.DisplayMessageHandler
 //   - refreshTokenHandler datachannel.RefreshTokenHandler
 //   - timeoutHandler datachannel.TimeoutHandler
-func (_e *IDataChannel_Expecter) Open(ctx interface{}, displayMessageHandler interface{}, refreshTokenHandler interface{}, timeoutHandler interface{}) *IDataChannel_Open_Call {
-	return &IDataChannel_Open_Call{Call: _e.mock.On("Open", ctx, displayMessageHandler, refreshTokenHandler, timeoutHandler)}
+func (_e *IDataChannel_Expecter) Open(ctx interface{}, refreshTokenHandler interface{}, timeoutHandler interface{}) *IDataChannel_Open_Call {
+	return &IDataChannel_Open_Call{Call: _e.mock.On("Open", ctx, refreshTokenHandler, timeoutHandler)}
 }
 
-func (_c *IDataChannel_Open_Call) Run(run func(ctx context.Context, displayMessageHandler datachannel.DisplayMessageHandler, refreshTokenHandler datachannel.RefreshTokenHandler, timeoutHandler datachannel.TimeoutHandler)) *IDataChannel_Open_Call {
+func (_c *IDataChannel_Open_Call) Run(run func(ctx context.Context, refreshTokenHandler datachannel.RefreshTokenHandler, timeoutHandler datachannel.TimeoutHandler)) *IDataChannel_Open_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(datachannel.DisplayMessageHandler), args[2].(datachannel.RefreshTokenHandler), args[3].(datachannel.TimeoutHandler))
+		run(args[0].(context.Context), args[1].(datachannel.RefreshTokenHandler), args[2].(datachannel.TimeoutHandler))
 	})
 	return _c
 }
@@ -260,7 +306,7 @@ func (_c *IDataChannel_Open_Call) Return(_a0 string, _a1 error) *IDataChannel_Op
 	return _c
 }
 
-func (_c *IDataChannel_Open_Call) RunAndReturn(run func(context.Context, datachannel.DisplayMessageHandler, datachannel.RefreshTokenHandler, datachannel.TimeoutHandler) (string, error)) *IDataChannel_Open_Call {
+func (_c *IDataChannel_Open_Call) RunAndReturn(run func(context.Context, datachannel.RefreshTokenHandler, datachannel.TimeoutHandler) (string, error)) *IDataChannel_Open_Call {
 	_c.Call.Return(run)
 	return _c
 }

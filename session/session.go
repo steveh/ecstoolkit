@@ -39,7 +39,16 @@ func NewSession(ssmClient *ssm.Client, dataChannel datachannel.IDataChannel, ses
 
 // OpenDataChannel initializes datachannel.
 func (s *Session) OpenDataChannel(ctx context.Context) (string, error) {
-	sessionType, err := s.dataChannel.Open(ctx, s.DisplayMessage, s.getResumeSessionParams, s.TerminateSession)
+	go func() {
+		select {
+		case <-ctx.Done():
+			return
+		case msg := <-s.dataChannel.GetDisplayMessages():
+			s.DisplayMessage(msg)
+		}
+	}()
+
+	sessionType, err := s.dataChannel.Open(ctx, s.getResumeSessionParams, s.TerminateSession)
 	if err != nil {
 		return "", fmt.Errorf("opening data channel: %w", err)
 	}

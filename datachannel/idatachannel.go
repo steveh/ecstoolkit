@@ -15,9 +15,6 @@ type RoundTripTiming interface {
 // RefreshTokenHandler is a function that retrieves a reconnection token.
 type RefreshTokenHandler func(context.Context) (string, error)
 
-// DisplayMessageHandler is a function that handles display messages.
-type DisplayMessageHandler func(message message.ClientMessage)
-
 // IncomingMessageHandler is a function that handles incoming messages.
 type IncomingMessageHandler func(input []byte)
 
@@ -28,7 +25,7 @@ type TimeoutHandler func(ctx context.Context) error
 //
 //nolint:interfacebloat
 type IDataChannel interface {
-	Open(ctx context.Context, displayMessageHandler DisplayMessageHandler, refreshTokenHandler RefreshTokenHandler, timeoutHandler TimeoutHandler) (string, error)
+	Open(ctx context.Context, refreshTokenHandler RefreshTokenHandler, timeoutHandler TimeoutHandler) (string, error)
 	Close() error
 	SendFlag(flagType message.PayloadTypeFlag) error
 	SendInputDataMessage(payloadType message.PayloadType, inputData []byte) error
@@ -39,4 +36,5 @@ type IDataChannel interface {
 	RegisterOutputStreamHandler(handler OutputStreamDataMessageHandler, sessionSpecific bool)
 	RegisterIncomingMessageHandler(handler IncomingMessageHandler)
 	RegisterStopHandler(handler StopHandler)
+	GetDisplayMessages() <-chan message.ClientMessage
 }

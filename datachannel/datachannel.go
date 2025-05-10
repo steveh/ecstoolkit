@@ -84,7 +84,8 @@ type DataChannel struct {
 
 	logger log.T
 
-	displayHandler         func(message.ClientMessage)
+	displayMessages chan message.ClientMessage
+
 	encryptorBuilder       EncryptorBuilder
 	incomingMessageHandler IncomingMessageHandler
 	stopHandler            StopHandler
@@ -107,12 +108,18 @@ func NewDataChannel(wsChannel communicator.IWebSocketChannel, encryptorBuilder E
 		retransmissionTimeout:        config.DefaultTransmissionTimeout,
 		isSessionTypeSet:             make(chan bool, 1),
 		isStreamMessageResendTimeout: make(chan bool, 1),
+		displayMessages:              make(chan message.ClientMessage, 1),
 	}
 
 	c.RegisterIncomingMessageHandler(func(_ []byte) {})
 	c.RegisterStopHandler(func() error { return nil })
 
 	return c, nil
+}
+
+// GetDisplayMessages returns a channel for messages to be displayed.
+func (c *DataChannel) GetDisplayMessages() <-chan message.ClientMessage {
+	return c.displayMessages
 }
 
 // SendMessage sends a message to the service through datachannel.
@@ -126,9 +133,7 @@ func (c *DataChannel) SendMessage(input []byte, inputType int) error {
 }
 
 // Open opens the data channel and registers the message handler.
-func (c *DataChannel) Open(ctx context.Context, messageHandler DisplayMessageHandler, refreshTokenHandler RefreshTokenHandler, timeoutHandler TimeoutHandler) (string, error) {
-	c.displayHandler = messageHandler
-
+func (c *DataChannel) Open(ctx context.Context, refreshTokenHandler RefreshTokenHandler, timeoutHandler TimeoutHandler) (string, error) {
 	c.RegisterOutputStreamHandler(c.firstMessageHandler, false)
 
 	openRetrier := retry.RepeatableExponentialRetryer{
@@ -555,7 +560,7 @@ func (c *DataChannel) firstMessageHandler(outputMessage message.ClientMessage) (
 
 			c.setSessionType(config.ShellPluginName)
 
-			c.displayHandler(outputMessage)
+			c.displayMessages <- outputMessage
 		}
 	}
 
