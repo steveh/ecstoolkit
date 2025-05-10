@@ -11,6 +11,7 @@ import (
 	"github.com/steveh/ecstoolkit/message"
 	"github.com/steveh/ecstoolkit/session"
 	"github.com/steveh/ecstoolkit/version"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -114,18 +115,30 @@ func (s *PortSession) Stop() error {
 
 // SetSessionHandlers redirects inputStream/outputStream data to datachannel.
 func (s *PortSession) SetSessionHandlers(ctx context.Context) error {
-	go func() {
+	eg, ctx := errgroup.WithContext(ctx)
+
+	eg.Go(func() error {
 		if err := s.portSessionType.HandleControlSignals(ctx); err != nil {
-			s.logger.Error("handling control signals", "error", err)
+			return fmt.Errorf("handling control signals: %w", err)
 		}
-	}()
 
-	if err := s.portSessionType.InitializeStreams(s.session.GetAgentVersion()); err != nil {
-		return fmt.Errorf("initializing streams: %w", err)
-	}
+		return nil
+	})
 
-	if err := s.portSessionType.ReadStream(ctx); err != nil {
-		return fmt.Errorf("reading stream: %w", err)
+	eg.Go(func() error {
+		if err := s.portSessionType.InitializeStreams(s.session.GetAgentVersion()); err != nil {
+			return fmt.Errorf("initializing streams: %w", err)
+		}
+
+		if err := s.portSessionType.ReadStream(ctx); err != nil {
+			return fmt.Errorf("reading stream: %w", err)
+		}
+
+		return nil
+	})
+
+	if err := eg.Wait(); err != nil {
+		return fmt.Errorf("waiting for goroutines: %w", err)
 	}
 
 	return nil
