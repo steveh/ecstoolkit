@@ -141,31 +141,6 @@ func (c *DataChannel) Open(ctx context.Context, messageHandler DisplayMessageHan
 		},
 	}
 
-	errorRetrier := retry.RepeatableExponentialRetryer{
-		GeometricRatio:      config.RetryBase,
-		InitialDelayInMilli: rand.Intn(config.DataChannelRetryInitialDelayMillis) + config.DataChannelRetryInitialDelayMillis, //nolint:gosec
-		MaxDelayInMilli:     config.DataChannelRetryMaxIntervalMillis,
-		MaxAttempts:         config.DataChannelNumMaxRetries,
-		CallableFunc: func() error {
-			token, err := refreshTokenHandler(ctx)
-			if err != nil {
-				return fmt.Errorf("getting reconnection token: %w", err)
-			}
-
-			if token == "" {
-				return ErrTimedOut
-			}
-
-			c.wsChannel.SetChannelToken(token)
-
-			if err := c.reconnect(); err != nil {
-				return fmt.Errorf("reconnecting data channel: %w", err)
-			}
-
-			return nil
-		},
-	}
-
 	if err := c.open(); err != nil {
 		c.logger.Warn("Retrying connection failed", "sessionID", c.sessionID, "error", err)
 
@@ -176,36 +151,10 @@ func (c *DataChannel) Open(ctx context.Context, messageHandler DisplayMessageHan
 
 	// Listen for errors from the websocket channel and handle reconnection
 	go func() {
-		for {
-			rawMessage, err := c.wsChannel.ReadMessage()
-			if err != nil {
-				if errors.Is(err, io.EOF) {
-					c.logger.Trace("ReadMessage EOF", "error", err)
-
-					return
-				}
-
-				c.logger.Warn("Trying to reconnect session", "sequenceNumber", c.streamDataSequenceNumber.Load(), "error", err)
-
-				if err := errorRetrier.Call(); err != nil {
-					c.logger.Warn("Reconnect error", "error", err)
-
-					if err := c.Close(); err != nil {
-						c.logger.Error("Closing data channel failed", "error", err)
-						panic("what now?")
-					}
-				}
-			}
-
-			c.incomingMessageHandler(rawMessage)
-
-			if err := c.outputMessageHandler(ctx, rawMessage); err != nil {
-				c.logger.Error("Failed to handle output message", "error", err)
-
-				if err := c.Close(); err != nil {
-					c.logger.Error("Closing data channel failed", "error", err)
-					panic("what now?")
-				}
+		if err := c.listen(ctx, refreshTokenHandler); err != nil {
+			if !errors.Is(err, io.EOF) {
+				c.logger.Error("Listening for messages error", "error", err)
+				panic("what now?")
 			}
 		}
 	}()
@@ -414,6 +363,62 @@ func (c *DataChannel) GetExpectedSequenceNumber() int64 {
 // GetTargetID returns the channel target ID.
 func (c *DataChannel) GetTargetID() string {
 	return c.targetID
+}
+
+func (c *DataChannel) listen(ctx context.Context, refreshTokenHandler RefreshTokenHandler) error {
+	errorRetrier := retry.RepeatableExponentialRetryer{
+		GeometricRatio:      config.RetryBase,
+		InitialDelayInMilli: rand.Intn(config.DataChannelRetryInitialDelayMillis) + config.DataChannelRetryInitialDelayMillis, //nolint:gosec
+		MaxDelayInMilli:     config.DataChannelRetryMaxIntervalMillis,
+		MaxAttempts:         config.DataChannelNumMaxRetries,
+		CallableFunc: func() error {
+			token, err := refreshTokenHandler(ctx)
+			if err != nil {
+				return fmt.Errorf("getting reconnection token: %w", err)
+			}
+
+			if token == "" {
+				return ErrTimedOut
+			}
+
+			c.wsChannel.SetChannelToken(token)
+
+			if err := c.reconnect(); err != nil {
+				return fmt.Errorf("reconnecting data channel: %w", err)
+			}
+
+			return nil
+		},
+	}
+
+	for {
+		rawMessage, err := c.wsChannel.ReadMessage()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return err //nolint:wrapcheck
+			}
+
+			c.logger.Warn("Trying to reconnect session", "sequenceNumber", c.streamDataSequenceNumber.Load(), "error", err)
+
+			if err := errorRetrier.Call(); err != nil {
+				c.logger.Warn("Reconnect error", "error", err)
+
+				if err := c.Close(); err != nil {
+					return fmt.Errorf("closing data channel: %w", err)
+				}
+			}
+		}
+
+		c.incomingMessageHandler(rawMessage)
+
+		if err := c.outputMessageHandler(ctx, rawMessage); err != nil {
+			c.logger.Error("Failed to handle output message", "error", err)
+
+			if err := c.Close(); err != nil {
+				return fmt.Errorf("closing data channel: %w", err)
+			}
+		}
+	}
 }
 
 // handleOutputMessage handles incoming stream data message by processing the payload and updating expectedSequenceNumber.
