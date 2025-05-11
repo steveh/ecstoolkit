@@ -156,19 +156,19 @@ func (p *MuxPortForwarding) InitializeStreams(agentVersion string) error {
 
 // ReadStream reads data from different connections.
 func (p *MuxPortForwarding) ReadStream(ctx context.Context) error {
-	g, ctx := errgroup.WithContext(ctx)
+	eg, ctx := errgroup.WithContext(ctx)
 
 	// reads data from smux client and transfers to server over datachannel
-	g.Go(func() error {
+	eg.Go(func() error {
 		return p.transferDataToServer(ctx)
 	})
 
 	// set up network listener on SSM port and handle client connections
-	g.Go(func() error {
+	eg.Go(func() error {
 		return p.handleClientConnections(ctx)
 	})
 
-	if err := g.Wait(); err != nil {
+	if err := eg.Wait(); err != nil && !errors.Is(err, io.EOF) {
 		return fmt.Errorf("waiting for goroutine group: %w", err)
 	}
 
@@ -298,11 +298,12 @@ func (p *MuxPortForwarding) transferDataToServer(ctx context.Context) error {
 		case <-ctx.Done():
 			return fmt.Errorf("context cancelled: %w", ctx.Err())
 		default:
-			var numBytes int
+			numBytes, err := p.mgsConn.conn.Read(msg)
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					return fmt.Errorf("connection closed: %w", err)
+				}
 
-			var err error
-
-			if numBytes, err = p.mgsConn.conn.Read(msg); err != nil {
 				p.logger.Debug("Reading from port failed", "error", err)
 
 				return fmt.Errorf("reading from MGS connection: %w", err)
@@ -313,6 +314,7 @@ func (p *MuxPortForwarding) transferDataToServer(ctx context.Context) error {
 			if err = p.session.SendInputDataMessage(message.Output, msg[:numBytes]); err != nil {
 				return fmt.Errorf("sending input data message: %w", err)
 			}
+
 			// sleep to process more data
 			time.Sleep(time.Millisecond)
 		}
@@ -384,35 +386,68 @@ func (p *MuxPortForwarding) handleClientConnections(ctx context.Context) (err er
 	p.logger.Debug(displayMsg)
 	p.logger.Debug("Waiting for connections")
 
-	var once sync.Once
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
-	for {
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("context cancelled: %w", ctx.Err())
-		default:
-			if conn, err := listener.Accept(); err != nil {
-				p.logger.Error("Error while accepting connection", "error", err)
-			} else {
-				p.logger.Debug("Connection accepted", "remoteAddr", conn.RemoteAddr(), "sessionID", p.sessionID)
+	eg, ctx := errgroup.WithContext(ctx)
 
-				once.Do(func() {
-					p.logger.Debug("Connection accepted", "sessionID", p.sessionID)
-				})
-
-				stream, err := p.muxClient.session.OpenStream()
-				if err != nil {
-					p.logger.Error("opening stream", "error", err)
-
-					continue
-				}
-
-				p.logger.Debug("Client stream opened", "streamId", stream.ID())
-
-				go handleDataTransfer(stream, conn)
-			}
+	// Accept connections from clients and handle them
+	eg.Go(func() error {
+		if err := p.serve(listener, cancel); err != nil {
+			return fmt.Errorf("serving connections: %w", err)
 		}
+
+		return nil
+	})
+
+	// Close the listener when the context is done
+	eg.Go(func() error {
+		<-ctx.Done()
+
+		if err := listener.Close(); err != nil {
+			return fmt.Errorf("closing listener: %w", err)
+		}
+
+		return nil
+	})
+
+	if err := eg.Wait(); err != nil && !errors.Is(err, io.EOF) {
+		return fmt.Errorf("waiting for goroutine group: %w", err)
 	}
+
+	return nil
+}
+
+func (p *MuxPortForwarding) serve(listener net.Listener, cancel context.CancelFunc) error {
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			return fmt.Errorf("accepting connection: %w", err)
+		}
+
+		go func() {
+			if err := p.acceptConnection(conn); err != nil {
+				p.logger.Error("Error accepting connection", "error", err)
+
+				cancel()
+			}
+		}()
+	}
+}
+
+func (p *MuxPortForwarding) acceptConnection(conn net.Conn) error {
+	p.logger.Debug("Connection accepted", "remoteAddr", conn.RemoteAddr(), "sessionID", p.sessionID)
+
+	stream, err := p.muxClient.session.OpenStream()
+	if err != nil {
+		return fmt.Errorf("opening stream: %w", err)
+	}
+
+	p.logger.Debug("Client stream opened", "streamId", stream.ID())
+
+	handleDataTransfer(stream, conn)
+
+	return nil
 }
 
 // handleDataTransfer launches routines to transfer data between source and destination.
