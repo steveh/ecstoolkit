@@ -169,7 +169,8 @@ func TestHandleDataTransferSrcToDst(t *testing.T) {
 		done <- struct{}{}
 	}()
 
-	handleDataTransfer(in1, out)
+	err := handleDataTransfer(context.TODO(), in1, out)
+	require.NoError(t, err)
 	<-done // Wait for goroutine to finish writing to msg
 	assert.Equal(t, outputMessage.Payload, msg)
 }
@@ -213,7 +214,10 @@ func TestHandleDataTransferDstToSrc(t *testing.T) {
 		// Signal done after writing to msg
 		done <- struct{}{}
 	}()
-	handleDataTransfer(in, out1)
+
+	err := handleDataTransfer(context.TODO(), in, out1)
+	require.NoError(t, err)
+
 	<-done // Wait for goroutine to finish writing to msg
 	assert.Equal(t, outputMessage.Payload, msg)
 }

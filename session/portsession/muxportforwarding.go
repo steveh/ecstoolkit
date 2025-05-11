@@ -14,7 +14,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/steveh/ecstoolkit/config"
@@ -393,7 +392,7 @@ func (p *MuxPortForwarding) handleClientConnections(ctx context.Context) (err er
 
 	// Accept connections from clients and handle them
 	eg.Go(func() error {
-		if err := p.serve(listener, cancel); err != nil {
+		if err := p.serve(ctx, listener, cancel); err != nil {
 			return fmt.Errorf("serving connections: %w", err)
 		}
 
@@ -418,7 +417,7 @@ func (p *MuxPortForwarding) handleClientConnections(ctx context.Context) (err er
 	return nil
 }
 
-func (p *MuxPortForwarding) serve(listener net.Listener, cancel context.CancelFunc) error {
+func (p *MuxPortForwarding) serve(ctx context.Context, listener net.Listener, cancel context.CancelFunc) error {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -426,7 +425,7 @@ func (p *MuxPortForwarding) serve(listener net.Listener, cancel context.CancelFu
 		}
 
 		go func() {
-			if err := p.acceptConnection(conn); err != nil {
+			if err := p.acceptConnection(ctx, conn); err != nil {
 				p.logger.Error("Error accepting connection", "error", err)
 
 				cancel()
@@ -435,7 +434,7 @@ func (p *MuxPortForwarding) serve(listener net.Listener, cancel context.CancelFu
 	}
 }
 
-func (p *MuxPortForwarding) acceptConnection(conn net.Conn) error {
+func (p *MuxPortForwarding) acceptConnection(ctx context.Context, conn net.Conn) error {
 	p.logger.Debug("Connection accepted", "remoteAddr", conn.RemoteAddr(), "sessionID", p.sessionID)
 
 	stream, err := p.muxClient.session.OpenStream()
@@ -445,49 +444,50 @@ func (p *MuxPortForwarding) acceptConnection(conn net.Conn) error {
 
 	p.logger.Debug("Client stream opened", "streamId", stream.ID())
 
-	handleDataTransfer(stream, conn)
-
-	return nil
+	return handleDataTransfer(ctx, stream, conn)
 }
 
 // handleDataTransfer launches routines to transfer data between source and destination.
-func handleDataTransfer(dst io.ReadWriteCloser, src io.ReadWriteCloser) {
-	var wait sync.WaitGroup
+func handleDataTransfer(ctx context.Context, dst io.ReadWriteCloser, src io.ReadWriteCloser) error {
+	eg, _ := errgroup.WithContext(ctx)
 
-	errChan := make(chan error, 2) //nolint:mnd
-
-	wait.Add(2) //nolint:mnd
-
-	go func() {
-		defer wait.Done()
-
+	eg.Go(func() error {
 		if _, err := io.Copy(dst, src); err != nil {
-			errChan <- fmt.Errorf("error copying from src to dst: %w", err)
-
-			return
+			if !errors.Is(err, io.EOF) && !errors.Is(err, io.ErrClosedPipe) {
+				return fmt.Errorf("copying from src to dst: %w", err)
+			}
 		}
 
 		if err := dst.Close(); err != nil {
-			errChan <- fmt.Errorf("error closing dst: %w", err)
+			if !errors.Is(err, io.EOF) {
+				return fmt.Errorf("closing dst: %w", err)
+			}
 		}
-	}()
 
-	go func() {
-		defer wait.Done()
+		return nil
+	})
 
+	eg.Go(func() error {
 		if _, err := io.Copy(src, dst); err != nil {
-			errChan <- fmt.Errorf("error copying from dst to src: %w", err)
-
-			return
+			if !errors.Is(err, io.EOF) && !errors.Is(err, io.ErrClosedPipe) {
+				return fmt.Errorf("copying from dst to src: %w", err)
+			}
 		}
 
 		if err := src.Close(); err != nil {
-			errChan <- fmt.Errorf("error closing src: %w", err)
+			if !errors.Is(err, io.EOF) {
+				return fmt.Errorf("closing src: %w", err)
+			}
 		}
-	}()
 
-	wait.Wait()
-	close(errChan)
+		return nil
+	})
+
+	if err := eg.Wait(); err != nil {
+		return fmt.Errorf("waiting for goroutine group: %w", err)
+	}
+
+	return nil
 }
 
 // getUnixSocketPath generates the unix socket file name based on sessionID and returns the path.
