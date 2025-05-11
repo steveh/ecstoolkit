@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -249,7 +250,7 @@ func (s *ShellSession) enableEchoAndInputBuffering() error {
 // handleKeyboardInput handles input entered by customer on terminal.
 func (s *ShellSession) handleKeyboardInput(ctx context.Context) error {
 	stdinBytes := make([]byte, StdinBufferLimit)
-	reader := bufio.NewReader(os.Stdin)
+	reader := newContextReader(ctx, bufio.NewReader(os.Stdin))
 
 	for {
 		select {
@@ -258,6 +259,10 @@ func (s *ShellSession) handleKeyboardInput(ctx context.Context) error {
 		default:
 			stdinBytesLen, err := reader.Read(stdinBytes)
 			if err != nil {
+				if errors.Is(err, context.Canceled) {
+					return nil
+				}
+
 				return fmt.Errorf("reading from stdin: %w", err)
 			}
 
