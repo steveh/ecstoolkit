@@ -143,8 +143,8 @@ func (p *MuxPortForwarding) InitializeStreams(agentVersion string) error {
 	p.socketFile = socketFile
 
 	if err := p.initialize(agentVersion); err != nil {
-		if cleanErr := p.cleanUp(); cleanErr != nil {
-			p.logger.Error("Failed to clean up after initialization error", "error", cleanErr)
+		if cErr := p.cleanUp(); cErr != nil {
+			p.logger.Error("Error cleaning up after initialization error", "error", cErr)
 		}
 
 		return fmt.Errorf("initializing streams: %w", err)
@@ -321,51 +321,50 @@ func (p *MuxPortForwarding) transferDataToServer(ctx context.Context) error {
 }
 
 // setupUnixListener sets up a Unix socket listener.
-func (p *MuxPortForwarding) setupUnixListener() (net.Listener, string, error) {
+func (p *MuxPortForwarding) setupUnixListener() (net.Listener, error) {
 	listener, err := net.Listen(p.portParameters.LocalConnectionType, p.portParameters.LocalUnixSocket)
 	if err != nil {
-		return nil, "", fmt.Errorf("listening on unix socket: %w", err)
+		return nil, fmt.Errorf("listening on unix socket: %w", err)
 	}
 
-	displayMsg := fmt.Sprintf("Unix socket %s opened for sessionID %s.", p.portParameters.LocalUnixSocket, p.sessionID)
+	p.logger.Info("Unix socket opened", "socket", p.portParameters.LocalUnixSocket)
 
-	return listener, displayMsg, nil
+	return listener, nil
 }
 
 // setupTCPListener sets up a TCP listener.
-func (p *MuxPortForwarding) setupTCPListener() (net.Listener, string, error) {
+func (p *MuxPortForwarding) setupTCPListener() (net.Listener, error) {
 	localPortNumber := p.portParameters.LocalPortNumber
 	if p.portParameters.LocalPortNumber == "" {
 		localPortNumber = "0"
 	}
 
-	listener, err := net.Listen("tcp", "localhost:"+localPortNumber)
+	listener, err := net.Listen("tcp", net.JoinHostPort("localhost", localPortNumber))
 	if err != nil {
-		return nil, "", fmt.Errorf("listening on TCP port: %w", err)
+		return nil, fmt.Errorf("listening on TCP port: %w", err)
 	}
 
 	tcpAddr, ok := listener.Addr().(*net.TCPAddr)
 	if !ok {
-		return nil, "", ErrNotTCPListener
+		return nil, ErrNotTCPListener
 	}
 
 	p.portParameters.LocalPortNumber = strconv.Itoa(tcpAddr.Port)
-	displayMsg := fmt.Sprintf("Port %s opened for sessionID %s.", p.portParameters.LocalPortNumber, p.sessionID)
 
-	return listener, displayMsg, nil
+	p.logger.Info("TCP port opened", "port", p.portParameters.LocalPortNumber)
+
+	return listener, nil
 }
 
 // handleClientConnections sets up network server on local ssm port to accept connections from clients (browser/terminal).
-func (p *MuxPortForwarding) handleClientConnections(ctx context.Context) (err error) {
-	var (
-		listener   net.Listener
-		displayMsg string
-	)
+func (p *MuxPortForwarding) handleClientConnections(ctx context.Context) error {
+	var listener net.Listener
 
+	var err error
 	if p.portParameters.LocalConnectionType == "unix" {
-		listener, displayMsg, err = p.setupUnixListener()
+		listener, err = p.setupUnixListener()
 	} else {
-		listener, displayMsg, err = p.setupTCPListener()
+		listener, err = p.setupTCPListener()
 	}
 
 	if err != nil {
@@ -373,16 +372,11 @@ func (p *MuxPortForwarding) handleClientConnections(ctx context.Context) (err er
 	}
 
 	defer func() {
-		if closeErr := listener.Close(); closeErr != nil {
-			p.logger.Error("Failed to close listener", "error", closeErr)
-
-			if err == nil {
-				err = closeErr
-			}
+		if cErr := listener.Close(); cErr != nil && !errors.Is(cErr, net.ErrClosed) {
+			p.logger.Error("Error closing listener", "error", cErr)
 		}
 	}()
 
-	p.logger.Debug(displayMsg)
 	p.logger.Debug("Waiting for connections")
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -435,14 +429,14 @@ func (p *MuxPortForwarding) serve(ctx context.Context, listener net.Listener, ca
 }
 
 func (p *MuxPortForwarding) acceptConnection(ctx context.Context, conn net.Conn) error {
-	p.logger.Debug("Connection accepted", "remoteAddr", conn.RemoteAddr(), "sessionID", p.sessionID)
+	p.logger.Trace("Connection accepted", "remoteAddr", conn.RemoteAddr(), "sessionID", p.sessionID)
 
 	stream, err := p.muxClient.session.OpenStream()
 	if err != nil {
 		return fmt.Errorf("opening stream: %w", err)
 	}
 
-	p.logger.Debug("Client stream opened", "streamId", stream.ID())
+	p.logger.Trace("Client stream opened", "streamId", stream.ID())
 
 	return handleDataTransfer(ctx, stream, conn)
 }

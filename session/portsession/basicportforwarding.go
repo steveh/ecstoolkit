@@ -209,25 +209,22 @@ func (p *BasicPortForwarding) startLocalConn() error {
 
 // startLocalListener starts a local listener to given address.
 func (p *BasicPortForwarding) startLocalListener(portNumber string) (net.Listener, error) {
-	var displayMessage string
-
-	var listener net.Listener
-
-	var err error
-
 	switch p.portParameters.LocalConnectionType {
 	case "unix":
-		listener, err = p.buildListener(p.portParameters.LocalConnectionType, p.portParameters.LocalUnixSocket)
+		listener, err := p.buildListener(p.portParameters.LocalConnectionType, p.portParameters.LocalUnixSocket)
 		if err != nil {
 			return nil, err
 		}
 
-		displayMessage = fmt.Sprintf("Unix socket %s opened for sessionID %s.", p.portParameters.LocalUnixSocket, p.sessionID)
+		p.logger.Info("Unix socket opened", "socket", p.portParameters.LocalUnixSocket, "sessionID", p.sessionID)
+
+		return listener, nil
 	default:
-		listener, err = p.buildListener("tcp", "localhost:"+portNumber)
+		listener, err := p.buildListener("tcp", net.JoinHostPort("localhost", portNumber))
 		if err != nil {
 			return nil, err
 		}
+
 		// get port number the TCP listener opened
 		tcpAddr, ok := listener.Addr().(*net.TCPAddr)
 		if !ok {
@@ -235,19 +232,18 @@ func (p *BasicPortForwarding) startLocalListener(portNumber string) (net.Listene
 		}
 
 		p.portParameters.LocalPortNumber = strconv.Itoa(tcpAddr.Port)
-		displayMessage = fmt.Sprintf("Port %s opened for sessionID %s.", p.portParameters.LocalPortNumber, p.sessionID)
+
+		p.logger.Info("TCP socket opened", "port", p.portParameters.LocalPortNumber, "sessionID", p.sessionID)
+
+		return listener, nil
 	}
-
-	p.logger.Debug(displayMessage)
-
-	return listener, nil
 }
 
 // reconnect closes existing connection, listens to new connection and accept it.
 func (p *BasicPortForwarding) reconnect() error {
 	// close existing connection as it is in a state from which data cannot be read
 	if err := p.stream.Close(); err != nil {
-		p.logger.Error("closing existing stream", "error", err)
+		return fmt.Errorf("closing existing stream: %w", err)
 	}
 
 	// wait for new connection on listener and accept it
