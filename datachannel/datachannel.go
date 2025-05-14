@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"math"
 	"math/rand"
 	"reflect"
@@ -421,20 +422,22 @@ func (c *DataChannel) listen(ctx context.Context, refreshTokenHandler RefreshTok
 			if err := errorRetrier.Call(); err != nil {
 				c.logger.Warn("Reconnect error", "error", err)
 
-				if err := c.Close(); err != nil {
-					return fmt.Errorf("closing data channel: %w", err)
+				if closeErr := c.Close(); closeErr != nil {
+					slog.Error("Closing data channel failed", "error", closeErr)
 				}
+
+				return fmt.Errorf("reconnecting websocket channel: %w", err)
 			}
 		}
 
 		c.incomingMessageHandler(rawMessage)
 
 		if err := c.outputMessageHandler(ctx, rawMessage); err != nil {
-			c.logger.Error("Failed to handle output message", "error", err)
-
-			if err := c.Close(); err != nil {
-				return fmt.Errorf("closing data channel: %w", err)
+			if closeErr := c.Close(); closeErr != nil {
+				slog.Error("Closing data channel failed", "error", closeErr)
 			}
+
+			return err
 		}
 	}
 }
@@ -511,8 +514,6 @@ func (c *DataChannel) handleChannelClosedMessage(outputMessage message.ClientMes
 
 // establishSessionType establishes the session type for the DataChannel.
 func (c *DataChannel) establishSessionType(ctx context.Context, timeoutHandler TimeoutHandler) (string, error) {
-	c.setSessionType(config.ShellPluginName)
-
 	select {
 	case <-c.isStreamMessageResendTimeout:
 		c.logger.Warn("Stream data timeout", "sessionID", c.sessionID)
@@ -521,13 +522,13 @@ func (c *DataChannel) establishSessionType(ctx context.Context, timeoutHandler T
 			return "", fmt.Errorf("calling timeout handler: %w", err)
 		}
 
-		return "", ErrUnknownSessionType
+		return "", fmt.Errorf("%w: timeout", ErrUnknownSessionType)
 	case set := <-c.isSessionTypeSet:
 		c.logger.Debug("Session type set", "sessionType", c.sessionType)
 
 		// The session type is set either by handshake or the first packet received.
 		if !set {
-			return "", ErrUnknownSessionType
+			return "", fmt.Errorf("%w: session type not set", ErrUnknownSessionType)
 		}
 
 		return c.sessionType, nil
@@ -573,8 +574,8 @@ func (c *DataChannel) firstMessageHandler(outputMessage message.ClientMessage) (
 		if outputMessage.PayloadType == uint32(message.Output) {
 			c.logger.Warn("Setting session type to shell based on PayloadType!")
 
-			c.setSessionType(config.ShellPluginName)
-
+			c.sessionType = config.ShellPluginName
+			c.isSessionTypeSet <- true
 			c.displayMessages <- outputMessage
 		}
 	}
@@ -622,11 +623,6 @@ func (c *DataChannel) deregisterOutputStreamHandler(handler OutputStreamDataMess
 			break
 		}
 	}
-}
-
-func (c *DataChannel) setSessionType(sessionType string) {
-	c.sessionType = sessionType
-	c.isSessionTypeSet <- true
 }
 
 // finalizeDataChannelHandshake sends the token for service to acknowledge the connection.

@@ -807,6 +807,17 @@ func TestOpenWithRetryWithError(t *testing.T) {
 	dataChannel, err := NewDataChannel(mockWsChannel, mockEncryptorBuilder, clientID, sessionID, instanceID, mockLogger)
 	require.NoError(t, err)
 
+	handshakeRequestBytes, err := json.Marshal(buildHandshakeRequest(t))
+	if err != nil {
+		t.Fatalf("marshaling handshake request: %v", err)
+	}
+
+	clientMessage := getClientMessage(0, message.OutputStreamMessage,
+		uint32(message.HandshakeCompletePayloadType), handshakeRequestBytes)
+
+	serializedClientMessage, err := clientMessage.SerializeClientMessage()
+	require.NoError(t, err)
+
 	// First reconnection failed when open data channel, success after retry
 	mockWsChannel.On("Open").Return(errMock).Once()
 	mockWsChannel.On("Open").Return(nil).Once()
@@ -814,14 +825,14 @@ func TestOpenWithRetryWithError(t *testing.T) {
 	mockWsChannel.On("GetChannelToken").Return(channelToken)
 	mockWsChannel.On("Close").Return(nil)
 	mockWsChannel.On("SendMessage", mock.Anything, mock.Anything).Return(nil)
-	mockWsChannel.On("ReadMessage").Return(nil, nil)
+	mockWsChannel.On("ReadMessage").Return(serializedClientMessage, nil)
 
 	_, err = dataChannel.Open(
 		context.TODO(),
 		func(_ context.Context) (string, error) { return "", nil },
 		func(_ context.Context) error { return nil },
 	)
-	require.NoError(t, err)
+	require.ErrorAs(t, err, &ErrUnknownSessionType)
 }
 
 func buildHandshakeRequest(t *testing.T) message.HandshakeRequestPayload {
