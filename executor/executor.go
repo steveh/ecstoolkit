@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
+	"strconv"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -30,8 +32,17 @@ var (
 	ErrInvalidSessionType = errors.New("invalid session type")
 )
 
-// ExecuteSessionOptions contains the configuration options for executing a session.
-type ExecuteSessionOptions struct {
+// PortForwardSessionOptions contains the configuration options for port forwarding sessions.
+type PortForwardSessionOptions struct {
+	ClusterName        string
+	TaskARN            string
+	ContainerRuntimeID string
+	PortNumber         int
+	LocalPortNumber    int
+}
+
+// ShellSessionOptions contains the configuration options for executing a shell session.
+type ShellSessionOptions struct {
 	ClusterName        string
 	TaskARN            string
 	ContainerName      string
@@ -66,14 +77,28 @@ func NewFromConfig(cfg aws.Config, logger log.T) *Executor {
 	return NewExecutor(ecsClient, kmsClient, ssmClient, logger)
 }
 
-// ExecuteSession executes a session with the provided options.
-func (e *Executor) ExecuteSession(ctx context.Context, options *ExecuteSessionOptions) error {
-	execute, err := e.executeCommand(ctx, options)
+// PortForwardSession starts a port forwarding session with the provided options.
+func (e *Executor) PortForwardSession(ctx context.Context, options *PortForwardSessionOptions) error {
+	targetID, err := buildTargetID(options.ClusterName, options.TaskARN, options.ContainerRuntimeID)
 	if err != nil {
 		return err
 	}
 
-	sess, err := e.newSession(options, execute)
+	params := map[string][]string{
+		"portNumber":      {strconv.Itoa(options.PortNumber)},
+		"localPortNumber": {strconv.Itoa(options.LocalPortNumber)},
+	}
+
+	ss, err := e.ssmClient.StartSession(ctx, &ssm.StartSessionInput{
+		Target:       aws.String(targetID),
+		DocumentName: aws.String("AWS-StartPortForwardingSession"),
+		Parameters:   params,
+	})
+	if err != nil {
+		return fmt.Errorf("start session: %w", err)
+	}
+
+	sess, err := e.newSession(targetID, *ss.SessionId, *ss.StreamUrl, *ss.TokenValue)
 	if err != nil {
 		return err
 	}
@@ -85,25 +110,14 @@ func (e *Executor) ExecuteSession(ctx context.Context, options *ExecuteSessionOp
 	return nil
 }
 
-func (e *Executor) parseTaskID(taskARN string) (string, error) {
-	parsedARN, err := arn.Parse(taskARN)
+// ShellSession starts a shell session with the provided options.
+func (e *Executor) ShellSession(ctx context.Context, options *ShellSessionOptions) error {
+	targetID, err := buildTargetID(options.ClusterName, options.TaskARN, options.ContainerRuntimeID)
 	if err != nil {
-		return "", fmt.Errorf("%w: %w", ErrInvalidARN, err)
+		return err
 	}
 
-	// if we could guarantee the task ARN was in the newer long format we could extract the cluster name from there
-	taskResourceParts := strings.Split(parsedARN.Resource, "/")
-	if len(taskResourceParts) < 3 { //nolint:mnd
-		return "", fmt.Errorf("%w: invalid resource ID: %s", ErrInvalidARN, parsedARN.Resource)
-	}
-
-	taskID := taskResourceParts[2]
-
-	return taskID, nil
-}
-
-func (e *Executor) executeCommand(ctx context.Context, options *ExecuteSessionOptions) (*ecs.ExecuteCommandOutput, error) {
-	execute, err := e.ecsClient.ExecuteCommand(ctx, &ecs.ExecuteCommandInput{
+	ex, err := e.ecsClient.ExecuteCommand(ctx, &ecs.ExecuteCommandInput{
 		Cluster:     aws.String(options.ClusterName),
 		Task:        aws.String(options.TaskARN),
 		Container:   aws.String(options.ContainerName),
@@ -111,28 +125,26 @@ func (e *Executor) executeCommand(ctx context.Context, options *ExecuteSessionOp
 		Interactive: true,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("execute command: %w", err)
+		return fmt.Errorf("execute command: %w", err)
 	}
 
-	return execute, nil
+	sess, err := e.newSession(targetID, *ex.Session.SessionId, *ex.Session.StreamUrl, *ex.Session.TokenValue)
+	if err != nil {
+		return err
+	}
+
+	if err := e.initSession(ctx, sess); err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func (e *Executor) newSession(options *ExecuteSessionOptions, execute *ecs.ExecuteCommandOutput) (*session.Session, error) {
-	taskID, err := e.parseTaskID(options.TaskARN)
-	if err != nil {
-		return nil, err
-	}
-
+func (e *Executor) newSession(targetID, sessionID, streamURL, tokenValue string) (*session.Session, error) {
 	clientID, err := uuid.NewRandom()
 	if err != nil {
 		return nil, fmt.Errorf("generate UUID: %w", err)
 	}
-
-	targetID := fmt.Sprintf("ecs:%s_%s_%s", options.ClusterName, taskID, options.ContainerRuntimeID)
-
-	sessionID := *execute.Session.SessionId
-	streamURL := *execute.Session.StreamUrl
-	tokenValue := *execute.Session.TokenValue
 
 	wsChannel, err := communicator.NewWebSocketChannel(streamURL, tokenValue, e.logger)
 	if err != nil {
@@ -168,12 +180,16 @@ func (e *Executor) newSession(options *ExecuteSessionOptions, execute *ecs.Execu
 }
 
 func (e *Executor) initSession(ctx context.Context, sess *session.Session) error {
+	e.logger.Debug("Opening data channel")
+
 	sessionType, err := sess.OpenDataChannel(ctx)
 	if err != nil {
 		return fmt.Errorf("opening data channel: %w", err)
 	}
 
 	var sessionSubType session.ISessionPlugin
+
+	e.logger.Debug("Initializing session", "sessionType", sessionType)
 
 	switch sessionType {
 	case config.ShellPluginName:
@@ -189,8 +205,27 @@ func (e *Executor) initSession(ctx context.Context, sess *session.Session) error
 	}
 
 	if err := sessionSubType.SetSessionHandlers(ctx); err != nil {
-		return fmt.Errorf("ending with error: %w", err)
+		if !errors.Is(err, net.ErrClosed) {
+			return fmt.Errorf("ending with error: %w", err)
+		}
 	}
 
 	return nil
+}
+
+func buildTargetID(clusterName, taskARN, containerRuntimeID string) (string, error) {
+	parsedARN, err := arn.Parse(taskARN)
+	if err != nil {
+		return "", fmt.Errorf("%w: %w", ErrInvalidARN, err)
+	}
+
+	// if we could guarantee the task ARN was in the newer long format we could extract the cluster name from there
+	taskResourceParts := strings.Split(parsedARN.Resource, "/")
+	if len(taskResourceParts) < 3 { //nolint:mnd
+		return "", fmt.Errorf("%w: invalid resource ID: %s", ErrInvalidARN, parsedARN.Resource)
+	}
+
+	taskID := taskResourceParts[2]
+
+	return fmt.Sprintf("ecs:%s_%s_%s", clusterName, taskID, containerRuntimeID), nil
 }

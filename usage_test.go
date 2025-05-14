@@ -14,7 +14,7 @@ import (
 	"github.com/steveh/ecstoolkit/log"
 )
 
-//nolint:govet,testableexamples
+//nolint:govet,testableexamples,goconst
 func ExampleWithoutClusterWrapper() {
 	ctx := context.Background()
 	logger := slog.Default()
@@ -32,7 +32,7 @@ func ExampleWithoutClusterWrapper() {
 	shellCmd := "bash"
 	containerRuntimeID := "abcdef1234567890"
 
-	_ = exec.ExecuteSession(ctx, &executor.ExecuteSessionOptions{
+	_ = exec.ShellSession(ctx, &executor.ShellSessionOptions{
 		ClusterName:        clusterName,
 		TaskARN:            taskARN,
 		ContainerName:      containerName,
@@ -42,7 +42,7 @@ func ExampleWithoutClusterWrapper() {
 }
 
 //nolint:govet,testableexamples
-func ExampleWithClusterWrapper() {
+func ExampleAttachShellSession() {
 	ctx := context.Background()
 	logger := slog.Default()
 	cfg, _ := config.LoadDefaultConfig(ctx)
@@ -52,5 +52,18 @@ func ExampleWithClusterWrapper() {
 	containerName := "mycontainer"
 	shellCmd := []string{"bash"}
 
-	_ = clus.Attach(ctx, taskARN, containerName, shellCmd)
+	_ = clus.AttachShellSession(ctx, taskARN, containerName, shellCmd)
+}
+
+//nolint:govet,testableexamples
+func ExampleAttachPortForwardingSession() {
+	ctx := context.Background()
+	logger := slog.Default()
+	cfg, _ := config.LoadDefaultConfig(ctx)
+
+	clus := cluster.NewCluster(cfg, "mycluster", log.NewSlogger(logger))
+	taskARN, _ := arn.Parse("arn:aws:ecs:us-east-1:123456789012:task/mycluster/1234567890abcdef")
+	containerName := "mycontainer"
+
+	_ = clus.AttachPortForwardingSession(ctx, taskARN, containerName, 8080, 8080)
 }

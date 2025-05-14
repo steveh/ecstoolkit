@@ -254,33 +254,41 @@ func (c *Cluster) ReplaceTaskDefinitionTag(ctx context.Context, taskDefinitionAR
 	return replacementARN, nil
 }
 
-// Attach attaches to a running container and executes a command.
-func (c *Cluster) Attach(ctx context.Context, taskARN arn.ARN, containerName string, command []string) error {
-	describe, err := c.ecsClient.DescribeTasks(ctx, &ecs.DescribeTasksInput{
-		Cluster: aws.String(c.clusterName),
-		Tasks:   []string{taskARN.String()},
-	})
-	if err != nil {
-		return fmt.Errorf("describing tasks: %w", err)
-	}
-
-	if len(describe.Tasks) == 0 {
-		return ErrTaskNotFound
-	}
-
-	containerRuntimeID, err := detectContainerRuntimeID(describe.Tasks, containerName)
+// AttachPortForwardingSession attaches to a running container and forwards a port to the local machine.
+func (c *Cluster) AttachPortForwardingSession(ctx context.Context, taskARN arn.ARN, containerName string, portNumber int, localPortNumber int) error {
+	containerRuntimeID, err := c.getContainerRuntimeID(ctx, taskARN, containerName)
 	if err != nil {
 		return err
 	}
 
-	if err := c.executor.ExecuteSession(ctx, &executor.ExecuteSessionOptions{
+	if err := c.executor.PortForwardSession(ctx, &executor.PortForwardSessionOptions{
+		ClusterName:        c.clusterName,
+		TaskARN:            taskARN.String(),
+		ContainerRuntimeID: containerRuntimeID,
+		PortNumber:         portNumber,
+		LocalPortNumber:    localPortNumber,
+	}); err != nil {
+		return fmt.Errorf("starting port forwarding session: %w", err)
+	}
+
+	return nil
+}
+
+// AttachShellSession attaches to a running container and executes a command in a shell session.
+func (c *Cluster) AttachShellSession(ctx context.Context, taskARN arn.ARN, containerName string, command []string) error {
+	containerRuntimeID, err := c.getContainerRuntimeID(ctx, taskARN, containerName)
+	if err != nil {
+		return err
+	}
+
+	if err := c.executor.ShellSession(ctx, &executor.ShellSessionOptions{
 		ClusterName:        c.clusterName,
 		TaskARN:            taskARN.String(),
 		ContainerName:      containerName,
 		ContainerRuntimeID: containerRuntimeID,
 		Command:            strings.Join(command, " "),
 	}); err != nil {
-		return fmt.Errorf("executing command: %w", err)
+		return fmt.Errorf("starting shell session: %w", err)
 	}
 
 	return nil
@@ -381,8 +389,20 @@ func (c *Cluster) describeService(ctx context.Context, serviceName string) (*typ
 	return &describe.Services[0], nil
 }
 
-func detectContainerRuntimeID(tasks []types.Task, containerName string) (string, error) {
-	for _, t := range tasks {
+func (c *Cluster) getContainerRuntimeID(ctx context.Context, taskARN arn.ARN, containerName string) (string, error) {
+	describe, err := c.ecsClient.DescribeTasks(ctx, &ecs.DescribeTasksInput{
+		Cluster: aws.String(c.clusterName),
+		Tasks:   []string{taskARN.String()},
+	})
+	if err != nil {
+		return "", fmt.Errorf("describing tasks: %w", err)
+	}
+
+	if len(describe.Tasks) == 0 {
+		return "", ErrTaskNotFound
+	}
+
+	for _, t := range describe.Tasks {
 		for _, c := range t.Containers {
 			if c.Name == nil || c.RuntimeId == nil {
 				continue
