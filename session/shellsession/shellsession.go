@@ -26,9 +26,13 @@ import (
 const (
 	// ResizeSleepInterval defines the interval between terminal size checks.
 	ResizeSleepInterval = time.Millisecond * 500
+
 	// StdinBufferLimit defines the maximum size of the standard input buffer.
 	StdinBufferLimit = 1024
 )
+
+// ErrZeroWidthOrHeight is returned when the terminal width or height is zero.
+var ErrZeroWidthOrHeight = errors.New("terminal width or height is zero")
 
 // ShellSession represents a shell session that handles terminal interactions.
 type ShellSession struct {
@@ -149,12 +153,23 @@ func (s *ShellSession) HandleControlSignals(ctx context.Context) error {
 
 // handleTerminalResize checks size of terminal every 500ms and sends size data.
 func (s *ShellSession) handleTerminalResize(ctx context.Context) error {
+	const (
+		defaultWidth  = 300
+		defaultHeight = 100
+	)
+
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
 		default:
-			width, height := s.getTerminalSize()
+			width, height, err := s.getTerminalSize()
+			if err != nil {
+				s.logger.Error("Error getting size of terminal", "error", err)
+
+				width = defaultWidth
+				height = defaultHeight
+			}
 
 			if s.SizeData.Rows != height || s.SizeData.Cols != width {
 				sizeData := message.SizeData{
@@ -182,40 +197,27 @@ func (s *ShellSession) handleTerminalResize(ctx context.Context) error {
 }
 
 // If running from IDE GetTerminalSizeCall will not work. Supply a fixed width and height value.
-func (s *ShellSession) getTerminalSize() (uint32, uint32) {
-	const (
-		defaultWidth  = 300
-		defaultHeight = 100
-	)
-
+func (s *ShellSession) getTerminalSize() (uint32, uint32, error) {
 	width, height, err := s.terminalSizer(int(os.Stdin.Fd()))
 	if err != nil {
-		s.logger.Error("Could not get size of terminal", "error", err, "width", width, "height", height)
-
-		return defaultWidth, defaultHeight
+		return 0, 0, fmt.Errorf("getting terminal size: %w", err)
 	}
 
 	safeWidth, err := util.SafeUint32(width)
 	if err != nil {
-		s.logger.Error("Could not convert width to uint32", "error", err, "width", width)
-
-		return defaultWidth, defaultHeight
+		return 0, 0, fmt.Errorf("converting width to uint32: %w", err)
 	}
 
 	safeHeight, err := util.SafeUint32(height)
 	if err != nil {
-		s.logger.Error("Could not convert height to uint32", "error", err, "height", height)
-
-		return defaultWidth, defaultHeight
+		return 0, 0, fmt.Errorf("converting height to uint32: %w", err)
 	}
 
 	if safeWidth == 0 || safeHeight == 0 {
-		s.logger.Error("Terminal size is zero", "width", safeWidth, "height", safeHeight)
-
-		return defaultWidth, defaultHeight
+		return 0, 0, ErrZeroWidthOrHeight
 	}
 
-	return safeWidth, safeHeight
+	return safeWidth, safeHeight, nil
 }
 
 // disableEchoAndInputBuffering disables echo to avoid double echo and disable input buffering.
