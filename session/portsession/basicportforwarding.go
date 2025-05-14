@@ -131,8 +131,6 @@ func (p *BasicPortForwarding) ReadStream(_ context.Context) error {
 		p.logger.Trace("Received message from stdin", "size", numBytes)
 
 		if err := p.session.SendInputDataMessage(message.Output, msg[:numBytes]); err != nil {
-			p.logger.Error("sending packet", "error", err)
-
 			return fmt.Errorf("sending input data message: %w", err)
 		}
 		// Sleep to process more data
@@ -193,19 +191,15 @@ func (p *BasicPortForwarding) startLocalConn() error {
 
 	listener, err := p.startLocalListener(localPortNumber)
 	if err != nil {
-		p.logger.Error("Unable to open tcp connection to port", "error", err)
-
 		return fmt.Errorf("starting local listener: %w", err)
 	}
 
 	tcpConn, err := p.acceptConnection(listener)
 	if err != nil {
-		p.logger.Error("accepting connection", "error", err)
-
 		return fmt.Errorf("accepting connection: %w", err)
 	}
 
-	p.logger.Debug("Connection accepted", "sessionID", p.sessionID)
+	p.logger.Trace("Connection accepted", "sessionID", p.sessionID)
 
 	p.listener = listener
 	p.stream = tcpConn

@@ -159,7 +159,7 @@ func (c *WebSocketChannel) startPings(pingInterval time.Duration) {
 		}
 
 		if err := c.ping(); err != nil {
-			c.logger.Error(err.Error())
+			c.logger.Error("Error sending ping", "error", err)
 		}
 
 		time.Sleep(pingInterval)

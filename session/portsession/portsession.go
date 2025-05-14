@@ -61,11 +61,14 @@ func NewPortSession(logger log.T, sess session.ISessionSupport) (*PortSession, e
 
 	if s.portParameters.Type == LocalPortForwardingType {
 		if version.DoesAgentSupportTCPMultiplexing(logger, sess.GetAgentVersion()) {
+			logger.Debug("Using TCP multiplexing port session")
 			s.portSessionType = NewMuxPortForwarding(sess, s.portParameters, logger)
 		} else {
+			logger.Debug("Using basic port session")
 			s.portSessionType = NewBasicPortForwarding(sess, s.portParameters, logger)
 		}
 	} else {
+		logger.Debug("Using standard port session")
 		s.portSessionType = NewStandardStreamForwarding(sess, s.portParameters, logger)
 	}
 
@@ -138,7 +141,7 @@ func (s *PortSession) SetSessionHandlers(ctx context.Context) error {
 	})
 
 	if err := eg.Wait(); err != nil {
-		return fmt.Errorf("waiting for goroutines: %w", err)
+		return fmt.Errorf("waiting for goroutine group: %w", err)
 	}
 
 	return nil

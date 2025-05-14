@@ -147,19 +147,17 @@ func (c *DataChannel) Open(ctx context.Context, refreshTokenHandler RefreshToken
 	}
 
 	if err := c.open(); err != nil {
-		c.logger.Warn("Retrying connection failed", "sessionID", c.sessionID, "error", err)
+		c.logger.Warn("Error opening data channel, retrying", "sessionID", c.sessionID, "error", err)
 
 		if err := openRetrier.Call(); err != nil {
 			return "", fmt.Errorf("retrying open data channel: %w", err)
 		}
 	}
 
-	// Listen for errors from the websocket channel and handle reconnection
 	go func() {
 		if err := c.listen(ctx, refreshTokenHandler); err != nil {
 			if !errors.Is(err, io.EOF) {
-				c.logger.Error("Listening for messages error", "error", err)
-				panic("what now?")
+				c.logger.Error("Error listening to channel", "error", err)
 			}
 		}
 	}()
@@ -167,7 +165,7 @@ func (c *DataChannel) Open(ctx context.Context, refreshTokenHandler RefreshToken
 	// Scheduler for resending of data
 	go func() {
 		if err := c.resendStreamDataMessageScheduler(); err != nil {
-			c.logger.Error("Resend stream data message scheduler error", "error", err)
+			c.logger.Error("Error in stream data message resender", "error", err)
 
 			c.isStreamMessageResendTimeout <- true
 		}
@@ -317,6 +315,21 @@ func (c *DataChannel) ProcessSessionTypeHandshakeAction(actionParams json.RawMes
 	if err := json.Unmarshal(actionParams, &sessTypeReq); err != nil {
 		return fmt.Errorf("failed to unmarshal session type request: %w", err)
 	}
+
+	args := []any{
+		"sessionType", sessTypeReq.SessionType,
+	}
+
+	props, ok := sessTypeReq.Properties.(map[string]any)
+	if ok {
+		for k, v := range props {
+			args = append(args, k, v)
+		}
+	} else {
+		args = append(args, "properties", sessTypeReq.Properties)
+	}
+
+	c.logger.Debug("Session type request", args...)
 
 	switch sessTypeReq.SessionType {
 	// This switch-case is just so that we can fail early if an unknown session type is passed in.
@@ -510,6 +523,8 @@ func (c *DataChannel) establishSessionType(ctx context.Context, timeoutHandler T
 
 		return "", ErrUnknownSessionType
 	case set := <-c.isSessionTypeSet:
+		c.logger.Debug("Session type set", "sessionType", c.sessionType)
+
 		// The session type is set either by handshake or the first packet received.
 		if !set {
 			return "", ErrUnknownSessionType
@@ -660,17 +675,16 @@ func (c *DataChannel) sendAcknowledgeMessage(streamDataMessage message.ClientMes
 		IsSequentialMessage: true,
 	}
 
-	var msg []byte
-
-	var err error
-
-	if msg, err = message.SerializeClientMessageWithAcknowledgeContent(dataStreamAcknowledgeContent); err != nil {
+	msg, err := message.SerializeClientMessageWithAcknowledgeContent(dataStreamAcknowledgeContent)
+	if err != nil {
 		return fmt.Errorf("serializing acknowledge message: %w", err)
 	}
 
-	if err = c.SendMessage(msg, websocket.BinaryMessage); err != nil {
+	if err := c.SendMessage(msg, websocket.BinaryMessage); err != nil {
 		return fmt.Errorf("sending acknowledge message: %w", err)
 	}
+
+	c.logger.Trace("Sent acknowledge message", "sequenceNumber", streamDataMessage.SequenceNumber)
 
 	return nil
 }
@@ -698,7 +712,7 @@ func (c *DataChannel) calculateRetransmissionTimeout(streamingMessage RoundTripT
 func (c *DataChannel) outputMessageHandler(ctx context.Context, rawMessage []byte) error {
 	var outputMessage message.ClientMessage
 	if err := outputMessage.DeserializeClientMessage(rawMessage); err != nil {
-		return fmt.Errorf("could not deserialize rawMessage, %s : %w", rawMessage, err)
+		return fmt.Errorf("could not deserialize rawMessage: %w: '%s'", err, rawMessage)
 	}
 
 	if err := outputMessage.Validate(); err != nil {
@@ -738,11 +752,15 @@ func (c *DataChannel) handleHandshakeRequest(ctx context.Context, clientMessage 
 	handshakeResponse.ClientVersion = version.Version
 	handshakeResponse.ProcessedClientActions = []message.ProcessedClientAction{}
 
+	c.logger.Debug("Handshake request", "agentVersion", handshakeRequest.AgentVersion)
+
 	for _, action := range handshakeRequest.RequestedClientActions {
 		var processedAction message.ProcessedClientAction
 
 		switch action.ActionType {
 		case message.KMSEncryption:
+			c.logger.Debug("Processing KMS encryption action", "actionType", action.ActionType)
+
 			processedAction.ActionType = action.ActionType
 
 			err := c.ProcessKMSEncryptionHandshakeAction(ctx, action.ActionParameters)
@@ -758,9 +776,11 @@ func (c *DataChannel) handleHandshakeRequest(ctx context.Context, clientMessage 
 				c.encryptionEnabled = true
 			}
 		case message.SessionType:
-			processedAction.ActionType = action.ActionType
-			err := c.ProcessSessionTypeHandshakeAction(action.ActionParameters)
+			c.logger.Debug("Processing session type action", "actionType", action.ActionType)
 
+			processedAction.ActionType = action.ActionType
+
+			err := c.ProcessSessionTypeHandshakeAction(action.ActionParameters)
 			if err != nil {
 				processedAction.ActionStatus = message.Failed
 				processedAction.Error = fmt.Sprintf("processing action %s: %s",
@@ -772,6 +792,8 @@ func (c *DataChannel) handleHandshakeRequest(ctx context.Context, clientMessage 
 			}
 
 		default:
+			c.logger.Debug("Processing unsupported action", "actionType", action.ActionType)
+
 			err = fmt.Errorf("%w: %s", ErrUnsupportedAction, action.ActionType)
 			processedAction.ActionType = action.ActionType
 			processedAction.ActionResult = message.Unsupported
@@ -804,11 +826,7 @@ func (c *DataChannel) handleHandshakeComplete(clientMessage message.ClientMessag
 		c.isSessionTypeSet <- false
 	}
 
-	c.logger.Debug("Handshake Complete", "timeToComplete", handshakeComplete.HandshakeTimeToComplete.Seconds())
-
-	if handshakeComplete.CustomerMessage != "" {
-		c.logger.Debug("Session message", "sessionID", c.sessionID, "message", handshakeComplete.CustomerMessage)
-	}
+	c.logger.Debug("Handshake Complete", "sessionType", c.sessionType, "timeToComplete", handshakeComplete.HandshakeTimeToComplete, "message", handshakeComplete.CustomerMessage)
 
 	return nil
 }
@@ -907,7 +925,6 @@ func (c *DataChannel) handleHandshakeRequestOutputMessage(ctx context.Context, o
 		"id", outputMessage.MessageID,
 		"flags", outputMessage.Flags,
 		"payloadType", outputMessage.PayloadType,
-		"payloadDigest", hex.EncodeToString(outputMessage.PayloadDigest),
 		"payload", hex.EncodeToString(outputMessage.Payload))
 
 	if err := c.handleHandshakeRequest(ctx, outputMessage); err != nil {

@@ -28,6 +28,6 @@ func (d *DisplayMode) DisplayMessage(message message.ClientMessage) {
 	var out io.Writer = os.Stdout
 
 	if _, err := fmt.Fprint(out, string(message.Payload)); err != nil {
-		d.logger.Error("Failed to write message to output", "error", err)
+		d.logger.Error("Error writing message to output", "error", err)
 	}
 }

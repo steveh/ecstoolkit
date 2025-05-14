@@ -54,7 +54,7 @@ func (u *WebsocketUtil) OpenConnection(url string) (*websocket.Conn, error) {
 		return nil, fmt.Errorf("dialing websocket: %w", err)
 	}
 
-	u.log.Debug("Successfully opened websocket connection", "url", url)
+	u.log.Debug("Websocket connection opened")
 
 	return conn, nil
 }

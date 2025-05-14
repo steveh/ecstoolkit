@@ -144,7 +144,7 @@ func (s *Session) getResumeSessionParams(ctx context.Context) (string, error) {
 		SessionId: aws.String(s.sessionID),
 	}
 
-	s.logger.Debug("Resume Session input parameters", "input", resumeSessionInput)
+	s.logger.Debug("Resume Session input parameters", "sessionId", s.sessionID)
 
 	resumeSessionOutput, err := s.ssmClient.ResumeSession(ctx, &resumeSessionInput)
 	if err != nil {

@@ -59,6 +59,8 @@ func NewShellSession(logger log.T, sess session.ISessionSupport) (*ShellSession,
 		terminalSizer: term.GetSize,
 	}
 
+	logger.Debug("Using shell session")
+
 	sess.RegisterOutputStreamHandler(s.ProcessStreamMessagePayload, true)
 
 	sess.RegisterStopHandler(s.Stop)
@@ -107,7 +109,7 @@ func (s *ShellSession) SetSessionHandlers(ctx context.Context) (err error) {
 	})
 
 	if err := eg.Wait(); err != nil {
-		return fmt.Errorf("waiting for goroutines: %w", err)
+		return fmt.Errorf("waiting for goroutine group: %w", err)
 	}
 
 	return nil
