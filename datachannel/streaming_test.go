@@ -832,7 +832,7 @@ func TestOpenWithRetryWithError(t *testing.T) {
 		func(_ context.Context) (string, error) { return "", nil },
 		func(_ context.Context) error { return nil },
 	)
-	require.ErrorAs(t, err, &ErrUnknownSessionType)
+	require.ErrorIs(t, err, ErrUnknownSessionType)
 }
 
 func buildHandshakeRequest(t *testing.T) message.HandshakeRequestPayload {

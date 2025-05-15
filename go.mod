@@ -4,6 +4,8 @@ go 1.23.4
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.36.3
+	github.com/aws/aws-sdk-go-v2/config v1.29.14
+	github.com/aws/aws-sdk-go-v2/service/applicationautoscaling v1.36.0
 	github.com/aws/aws-sdk-go-v2/service/ecs v1.55.0
 	github.com/aws/aws-sdk-go-v2/service/kms v1.38.1
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.58.0
@@ -17,7 +19,6 @@ require (
 )
 
 require (
-	github.com/aws/aws-sdk-go-v2/config v1.29.14 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.67 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.30 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.34 // indirect

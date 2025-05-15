@@ -65,5 +65,5 @@ func ExampleAttachPortForwardingSession() {
 	taskARN, _ := arn.Parse("arn:aws:ecs:us-east-1:123456789012:task/mycluster/1234567890abcdef")
 	containerName := "mycontainer"
 
-	_ = clus.AttachPortForwardingSession(ctx, taskARN, containerName, 8080, 8080)
+	_ = clus.AttachPortForwardingSession(ctx, taskARN, containerName, "", 8080, 8080)
 }

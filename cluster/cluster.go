@@ -6,14 +6,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
+	"github.com/aws/aws-sdk-go-v2/service/applicationautoscaling"
+	autoscalingtypes "github.com/aws/aws-sdk-go-v2/service/applicationautoscaling/types"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
-	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
+	ecstypes "github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
@@ -34,24 +37,27 @@ var (
 	ErrInvalidImage = errors.New("invalid image format")
 	// ErrInvalidTaskDefinition is returned when the task definition ARN format is not valid.
 	ErrInvalidTaskDefinition = errors.New("invalid task definition ARN")
+	// ErrInvalidOption is returned when an invalid option is provided.
+	ErrInvalidOption = errors.New("invalid option")
 )
 
 const maxWaitTime = 5 * time.Minute
 
 // ServiceTaskDefinition represents a service and its associated task definition.
 type ServiceTaskDefinition struct {
-	Service        types.Service
-	TaskDefinition types.TaskDefinition
+	Service        ecstypes.Service
+	TaskDefinition ecstypes.TaskDefinition
 }
 
 // Cluster represents an AWS ECS cluster with methods for managing services and tasks.
 type Cluster struct {
-	ecsClient   *ecs.Client
-	stsClient   *sts.Client
-	clusterName string
-	userID      string
-	executor    *executor.Executor
-	logger      log.T
+	ecsClient         *ecs.Client
+	stsClient         *sts.Client
+	autoscalingClient *applicationautoscaling.Client
+	clusterName       string
+	userID            string
+	executor          *executor.Executor
+	logger            log.T
 }
 
 // NewCluster creates a new Cluster instance with the provided AWS configuration and cluster name.
@@ -60,15 +66,17 @@ func NewCluster(awsCfg aws.Config, clusterName string, logger log.T) *Cluster {
 	kmsClient := kms.NewFromConfig(awsCfg)
 	ssmClient := ssm.NewFromConfig(awsCfg)
 	stsClient := sts.NewFromConfig(awsCfg)
+	autoscalingClient := applicationautoscaling.NewFromConfig(awsCfg)
 
 	exec := executor.NewExecutor(ecsClient, kmsClient, ssmClient, logger)
 
 	return &Cluster{
-		ecsClient:   ecsClient,
-		stsClient:   stsClient,
-		clusterName: clusterName,
-		executor:    exec,
-		logger:      logger.With("subsystem", "Cluster"),
+		ecsClient:         ecsClient,
+		stsClient:         stsClient,
+		autoscalingClient: autoscalingClient,
+		clusterName:       clusterName,
+		executor:          exec,
+		logger:            logger.With("subsystem", "Cluster"),
 	}
 }
 
@@ -89,7 +97,7 @@ func chunk[T any](slice []T, size int) [][]T {
 }
 
 // DescribeAllServices returns a list of all services in the cluster.
-func (c *Cluster) DescribeAllServices(ctx context.Context) ([]types.Service, error) {
+func (c *Cluster) DescribeAllServices(ctx context.Context) ([]ecstypes.Service, error) {
 	const (
 		MaxListServices     = 100
 		MaxDescribeServices = 10
@@ -97,11 +105,11 @@ func (c *Cluster) DescribeAllServices(ctx context.Context) ([]types.Service, err
 
 	p := ecs.NewListServicesPaginator(c.ecsClient, &ecs.ListServicesInput{
 		Cluster:            aws.String(c.clusterName),
-		SchedulingStrategy: types.SchedulingStrategyReplica,
+		SchedulingStrategy: ecstypes.SchedulingStrategyReplica,
 		MaxResults:         aws.Int32(MaxListServices),
 	})
 
-	var services []types.Service
+	var services []ecstypes.Service
 
 	for p.HasMorePages() {
 		page, err := p.NextPage(ctx)
@@ -111,6 +119,8 @@ func (c *Cluster) DescribeAllServices(ctx context.Context) ([]types.Service, err
 
 		chunks := chunk(page.ServiceArns, MaxDescribeServices)
 		for _, chunk := range chunks {
+			slog.Debug("Describing services", "len", len(chunk))
+
 			describe, err := c.ecsClient.DescribeServices(ctx, &ecs.DescribeServicesInput{
 				Cluster:  aws.String(c.clusterName),
 				Services: chunk,
@@ -128,7 +138,7 @@ func (c *Cluster) DescribeAllServices(ctx context.Context) ([]types.Service, err
 
 // RunConsole starts a new task with an interactive console session.
 func (c *Cluster) RunConsole(ctx context.Context, serviceName string, containerName string) (arn.ARN, error) {
-	service, err := c.describeService(ctx, serviceName)
+	service, err := c.DescribeService(ctx, serviceName)
 	if err != nil {
 		return arn.ARN{}, err
 	}
@@ -138,6 +148,8 @@ func (c *Cluster) RunConsole(ctx context.Context, serviceName string, containerN
 		return arn.ARN{}, fmt.Errorf("get caller identity: %w", err)
 	}
 
+	slog.Debug("Running task", "service", serviceName, "container", containerName)
+
 	res, err := c.ecsClient.RunTask(ctx, &ecs.RunTaskInput{
 		Cluster:                  aws.String(c.clusterName),
 		TaskDefinition:           service.TaskDefinition,
@@ -145,25 +157,25 @@ func (c *Cluster) RunConsole(ctx context.Context, serviceName string, containerN
 		Count:                    aws.Int32(1),
 		EnableECSManagedTags:     true,
 		EnableExecuteCommand:     true,
-		LaunchType:               types.LaunchTypeFargate,
-		NetworkConfiguration: &types.NetworkConfiguration{
-			AwsvpcConfiguration: &types.AwsVpcConfiguration{
+		LaunchType:               ecstypes.LaunchTypeFargate,
+		NetworkConfiguration: &ecstypes.NetworkConfiguration{
+			AwsvpcConfiguration: &ecstypes.AwsVpcConfiguration{
 				Subnets:        service.NetworkConfiguration.AwsvpcConfiguration.Subnets,
 				AssignPublicIp: service.NetworkConfiguration.AwsvpcConfiguration.AssignPublicIp,
 				SecurityGroups: service.NetworkConfiguration.AwsvpcConfiguration.SecurityGroups,
 			},
 		},
-		Overrides: &types.TaskOverride{
-			ContainerOverrides: []types.ContainerOverride{
+		Overrides: &ecstypes.TaskOverride{
+			ContainerOverrides: []ecstypes.ContainerOverride{
 				{
 					Name:    aws.String(containerName),
 					Command: []string{"sleep", "86400"}, // Sleep for 24 hours to keep container running
 				},
 			},
 		},
-		PropagateTags: types.PropagateTagsService,
+		PropagateTags: ecstypes.PropagateTagsService,
 		StartedBy:     aws.String(userID),
-		Tags: []types.Tag{
+		Tags: []ecstypes.Tag{
 			{
 				Key:   aws.String("StartedBy"),
 				Value: aws.String(userID),
@@ -194,6 +206,21 @@ func (c *Cluster) RunConsole(ctx context.Context, serviceName string, containerN
 	return taskARN, nil
 }
 
+// DescribeTaskDefinition retrieves the task definition for a given family.
+func (c *Cluster) DescribeTaskDefinition(ctx context.Context, family string) (*ecs.DescribeTaskDefinitionOutput, error) {
+	slog.Debug("Describing task definition", "family", family)
+
+	describe, err := c.ecsClient.DescribeTaskDefinition(ctx, &ecs.DescribeTaskDefinitionInput{
+		TaskDefinition: aws.String(family),
+		Include:        []ecstypes.TaskDefinitionField{ecstypes.TaskDefinitionFieldTags},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("describing task definition: %w", err)
+	}
+
+	return describe, nil
+}
+
 // ReplaceTaskDefinitionTag updates the image tag in a task definition.
 func (c *Cluster) ReplaceTaskDefinitionTag(ctx context.Context, taskDefinitionARN arn.ARN, replacer func(repo, image, tag string) string) (arn.ARN, error) {
 	family, _, err := splitTaskDefinitionARN(taskDefinitionARN)
@@ -201,12 +228,9 @@ func (c *Cluster) ReplaceTaskDefinitionTag(ctx context.Context, taskDefinitionAR
 		return arn.ARN{}, fmt.Errorf("split task definition arn: %w", err)
 	}
 
-	describe, err := c.ecsClient.DescribeTaskDefinition(ctx, &ecs.DescribeTaskDefinitionInput{
-		TaskDefinition: aws.String(family),
-		Include:        []types.TaskDefinitionField{types.TaskDefinitionFieldTags},
-	})
+	describe, err := c.DescribeTaskDefinition(ctx, family)
 	if err != nil {
-		return arn.ARN{}, fmt.Errorf("describe task definition: %w", err)
+		return arn.ARN{}, err
 	}
 
 	taskDefinition := describe.TaskDefinition
@@ -222,6 +246,8 @@ func (c *Cluster) ReplaceTaskDefinitionTag(ctx context.Context, taskDefinitionAR
 
 		containerDefinitions[i].Image = aws.String(fmt.Sprintf("%s/%s:%s", repo, image, replacement))
 	}
+
+	slog.Debug("Registering task definition", "family", family)
 
 	register, err := c.ecsClient.RegisterTaskDefinition(ctx, &ecs.RegisterTaskDefinitionInput{
 		Family:                  taskDefinition.Family,
@@ -255,7 +281,7 @@ func (c *Cluster) ReplaceTaskDefinitionTag(ctx context.Context, taskDefinitionAR
 }
 
 // AttachPortForwardingSession attaches to a running container and forwards a port to the local machine.
-func (c *Cluster) AttachPortForwardingSession(ctx context.Context, taskARN arn.ARN, containerName string, portNumber int, localPortNumber int) error {
+func (c *Cluster) AttachPortForwardingSession(ctx context.Context, taskARN arn.ARN, containerName string, host string, portNumber int, localPortNumber int) error {
 	containerRuntimeID, err := c.getContainerRuntimeID(ctx, taskARN, containerName)
 	if err != nil {
 		return err
@@ -265,6 +291,7 @@ func (c *Cluster) AttachPortForwardingSession(ctx context.Context, taskARN arn.A
 		ClusterName:        c.clusterName,
 		TaskARN:            taskARN.String(),
 		ContainerRuntimeID: containerRuntimeID,
+		Host:               host,
 		PortNumber:         portNumber,
 		LocalPortNumber:    localPortNumber,
 	}); err != nil {
@@ -296,6 +323,8 @@ func (c *Cluster) AttachShellSession(ctx context.Context, taskARN arn.ARN, conta
 
 // Deploy updates a service with a new task definition.
 func (c *Cluster) Deploy(ctx context.Context, serviceName string, taskDefinitionARN arn.ARN) error {
+	slog.Debug("Updating service", "service", serviceName, "taskDefinitionARN", taskDefinitionARN.String())
+
 	_, err := c.ecsClient.UpdateService(ctx, &ecs.UpdateServiceInput{
 		Cluster:            aws.String(c.clusterName),
 		Service:            aws.String(serviceName),
@@ -311,10 +340,12 @@ func (c *Cluster) Deploy(ctx context.Context, serviceName string, taskDefinition
 
 // GetFirstTaskARN returns the ARN of the first running task for a service.
 func (c *Cluster) GetFirstTaskARN(ctx context.Context, serviceName string) (arn.ARN, error) {
+	slog.Debug("Listing tasks", "service", serviceName)
+
 	listTasks, err := c.ecsClient.ListTasks(ctx, &ecs.ListTasksInput{
 		Cluster:       aws.String(c.clusterName),
 		ServiceName:   aws.String(serviceName),
-		DesiredStatus: types.DesiredStatusRunning,
+		DesiredStatus: ecstypes.DesiredStatusRunning,
 	})
 	if err != nil {
 		return arn.ARN{}, fmt.Errorf("listing tasks: %w", err)
@@ -342,38 +373,24 @@ func (c *Cluster) DescribeServiceTaskDefinitions(ctx context.Context) ([]Service
 	results := make([]ServiceTaskDefinition, 0, len(services))
 
 	for _, service := range services {
-		res, err := c.ecsClient.DescribeTaskDefinition(ctx, &ecs.DescribeTaskDefinitionInput{
-			TaskDefinition: service.TaskDefinition,
-		})
+		describe, err := c.DescribeTaskDefinition(ctx, *service.TaskDefinition)
 		if err != nil {
-			return nil, fmt.Errorf("describe task definition: %w", err)
+			return nil, err
 		}
 
 		results = append(results, ServiceTaskDefinition{
 			Service:        service,
-			TaskDefinition: *res.TaskDefinition,
+			TaskDefinition: *describe.TaskDefinition,
 		})
 	}
 
 	return results, nil
 }
 
-func (c *Cluster) getUserID(ctx context.Context) (string, error) {
-	if c.userID != "" {
-		return c.userID, nil
-	}
+// DescribeService retrieves the details of a specific service in the cluster.
+func (c *Cluster) DescribeService(ctx context.Context, serviceName string) (*ecstypes.Service, error) {
+	slog.Debug("Describing service", "service", serviceName)
 
-	res, err := c.stsClient.GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
-	if err != nil {
-		return "", fmt.Errorf("get caller identity: %w", err)
-	}
-
-	c.userID = *res.UserId
-
-	return c.userID, nil
-}
-
-func (c *Cluster) describeService(ctx context.Context, serviceName string) (*types.Service, error) {
 	describe, err := c.ecsClient.DescribeServices(ctx, &ecs.DescribeServicesInput{
 		Cluster:  &c.clusterName,
 		Services: []string{serviceName},
@@ -389,7 +406,63 @@ func (c *Cluster) describeService(ctx context.Context, serviceName string) (*typ
 	return &describe.Services[0], nil
 }
 
+// Start starts a service by enabling autoscaling.
+func (c *Cluster) Start(ctx context.Context, serviceName string) error {
+	return c.Autoscale(ctx, serviceName, &AutoscalingOptions{
+		ScaleIn:          aws.Bool(true),
+		ScaleOut:         aws.Bool(true),
+		ScheduledScaling: aws.Bool(true),
+	})
+}
+
+// Stop stops a service by disabling autoscaling and setting the desired count to zero.
+func (c *Cluster) Stop(ctx context.Context, serviceName string) error {
+	if err := c.Autoscale(ctx, serviceName, &AutoscalingOptions{
+		ScaleIn:          aws.Bool(false),
+		ScaleOut:         aws.Bool(false),
+		ScheduledScaling: aws.Bool(false),
+	}); err != nil {
+		return err
+	}
+
+	return c.setDesiredCount(ctx, serviceName, 0)
+}
+
+// Restart restarts a service by forcing a new deployment.
+func (c *Cluster) Restart(ctx context.Context, serviceName string) error {
+	slog.Debug("Updating service", "service", serviceName)
+
+	if _, err := c.ecsClient.UpdateService(ctx, &ecs.UpdateServiceInput{
+		Cluster:            &c.clusterName,
+		Service:            &serviceName,
+		ForceNewDeployment: true,
+	}); err != nil {
+		return fmt.Errorf("forcing new deployment: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Cluster) getUserID(ctx context.Context) (string, error) {
+	if c.userID != "" {
+		return c.userID, nil
+	}
+
+	slog.Debug("Getting caller identity")
+
+	res, err := c.stsClient.GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
+	if err != nil {
+		return "", fmt.Errorf("get caller identity: %w", err)
+	}
+
+	c.userID = *res.UserId
+
+	return c.userID, nil
+}
+
 func (c *Cluster) getContainerRuntimeID(ctx context.Context, taskARN arn.ARN, containerName string) (string, error) {
+	slog.Debug("Describing task", "taskARN", taskARN.String())
+
 	describe, err := c.ecsClient.DescribeTasks(ctx, &ecs.DescribeTasksInput{
 		Cluster: aws.String(c.clusterName),
 		Tasks:   []string{taskARN.String()},
@@ -415,6 +488,37 @@ func (c *Cluster) getContainerRuntimeID(ctx context.Context, taskARN arn.ARN, co
 	}
 
 	return "", ErrContainerNotFound
+}
+
+func (c *Cluster) describeScalableTargets(ctx context.Context, serviceName string) ([]autoscalingtypes.ScalableTarget, error) {
+	resourceID := fmt.Sprintf("service/%s/%s", c.clusterName, serviceName)
+
+	slog.Debug("Describing scalable targets", "service", serviceName, "cluster", c.clusterName)
+
+	res, err := c.autoscalingClient.DescribeScalableTargets(ctx, &applicationautoscaling.DescribeScalableTargetsInput{
+		ServiceNamespace:  autoscalingtypes.ServiceNamespaceEcs,
+		ScalableDimension: autoscalingtypes.ScalableDimensionECSServiceDesiredCount,
+		ResourceIds:       []string{resourceID},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("describing scalable targets: %w", err)
+	}
+
+	return res.ScalableTargets, nil
+}
+
+func (c *Cluster) setDesiredCount(ctx context.Context, serviceName string, desiredCount int32) error {
+	slog.Debug("Setting desired count", "service", serviceName, "desiredCount", desiredCount)
+
+	if _, err := c.ecsClient.UpdateService(ctx, &ecs.UpdateServiceInput{
+		Cluster:      &c.clusterName,
+		Service:      &serviceName,
+		DesiredCount: aws.Int32(desiredCount),
+	}); err != nil {
+		return fmt.Errorf("updating desired count: %w", err)
+	}
+
+	return nil
 }
 
 func splitImage(uri string) (string, string, string, error) {

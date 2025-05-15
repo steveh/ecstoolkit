@@ -37,6 +37,7 @@ type PortForwardSessionOptions struct {
 	ClusterName        string
 	TaskARN            string
 	ContainerRuntimeID string
+	Host               string
 	PortNumber         int
 	LocalPortNumber    int
 }
@@ -84,14 +85,21 @@ func (e *Executor) PortForwardSession(ctx context.Context, options *PortForwardS
 		return err
 	}
 
+	documentName := "AWS-StartPortForwardingSession"
+
 	params := map[string][]string{
 		"portNumber":      {strconv.Itoa(options.PortNumber)},
 		"localPortNumber": {strconv.Itoa(options.LocalPortNumber)},
 	}
 
+	if options.Host != "" {
+		documentName = "AWS-StartPortForwardingSessionToRemoteHost"
+		params["host"] = []string{options.Host}
+	}
+
 	ss, err := e.ssmClient.StartSession(ctx, &ssm.StartSessionInput{
 		Target:       aws.String(targetID),
-		DocumentName: aws.String("AWS-StartPortForwardingSession"),
+		DocumentName: aws.String(documentName),
 		Parameters:   params,
 	})
 	if err != nil {
