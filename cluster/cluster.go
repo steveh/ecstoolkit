@@ -172,7 +172,7 @@ func (c *Cluster) RunConsole(ctx context.Context, serviceName string, containerN
 				},
 			},
 		},
-		PropagateTags: ecstypes.PropagateTagsService,
+		PropagateTags: ecstypes.PropagateTagsTaskDefinition,
 		StartedBy:     aws.String(userID),
 		Tags: []ecstypes.Tag{
 			{
