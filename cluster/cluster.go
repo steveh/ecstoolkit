@@ -54,7 +54,9 @@ type Cluster struct {
 	stsClient         *sts.Client
 	autoscalingClient *applicationautoscaling.Client
 	clusterName       string
+	region            string
 	userID            string
+	accountID         string
 	executor          *executor.Executor
 	logger            log.T
 }
@@ -70,6 +72,7 @@ func NewCluster(awsCfg aws.Config, clusterName string, logger log.T) *Cluster {
 	exec := executor.NewExecutor(ecsClient, kmsClient, ssmClient, logger)
 
 	return &Cluster{
+		region:            awsCfg.Region,
 		ecsClient:         ecsClient,
 		stsClient:         stsClient,
 		autoscalingClient: autoscalingClient,
@@ -444,21 +447,88 @@ func (c *Cluster) Restart(ctx context.Context, serviceName string) error {
 	return nil
 }
 
+// AggregateLogGroupARNs aggregates the log group ARNs from the task definitions of the provided services.
+func (c *Cluster) AggregateLogGroupARNs(ctx context.Context, services []ecstypes.Service) ([]string, error) {
+	logGroupNames := make(map[string]struct{})
+
+	for _, service := range services {
+		taskDef, err := c.DescribeTaskDefinition(ctx, *service.TaskDefinition)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, container := range taskDef.TaskDefinition.ContainerDefinitions {
+			if container.LogConfiguration == nil {
+				continue
+			}
+
+			if container.LogConfiguration.LogDriver != ecstypes.LogDriverAwslogs {
+				continue
+			}
+
+			for k, v := range container.LogConfiguration.Options {
+				if k != "awslogs-group" {
+					continue
+				}
+
+				logGroupNames[v] = struct{}{}
+			}
+		}
+	}
+
+	accountID, err := c.getAccountID(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get account ID: %w", err)
+	}
+
+	logGroupARNs := make([]string, 0, len(logGroupNames))
+
+	for logGroupName := range logGroupNames {
+		c.logger.Debug("Found log group", "logGroupName", logGroupName)
+
+		logGroupARN := fmt.Sprintf("arn:aws:logs:%s:%s:log-group:%s", c.region, accountID, logGroupName)
+		logGroupARNs = append(logGroupARNs, logGroupARN)
+	}
+
+	return logGroupARNs, nil
+}
+
 func (c *Cluster) getUserID(ctx context.Context) (string, error) {
 	if c.userID != "" {
 		return c.userID, nil
 	}
 
+	if err := c.getCallerIdentity(ctx); err != nil {
+		return "", err
+	}
+
+	return c.userID, nil
+}
+
+func (c *Cluster) getAccountID(ctx context.Context) (string, error) {
+	if c.accountID != "" {
+		return c.accountID, nil
+	}
+
+	if err := c.getCallerIdentity(ctx); err != nil {
+		return "", err
+	}
+
+	return c.accountID, nil
+}
+
+func (c *Cluster) getCallerIdentity(ctx context.Context) error {
 	c.logger.Debug("Getting caller identity")
 
 	res, err := c.stsClient.GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
 	if err != nil {
-		return "", fmt.Errorf("get caller identity: %w", err)
+		return fmt.Errorf("get caller identity: %w", err)
 	}
 
 	c.userID = *res.UserId
+	c.accountID = *res.Account
 
-	return c.userID, nil
+	return nil
 }
 
 func (c *Cluster) getContainerRuntimeID(ctx context.Context, taskARN arn.ARN, containerName string) (string, error) {
