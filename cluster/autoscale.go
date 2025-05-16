@@ -3,7 +3,6 @@ package cluster
 import (
 	"context"
 	"fmt"
-	"log/slog"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/applicationautoscaling"
@@ -40,7 +39,7 @@ func (c *Cluster) Autoscale(ctx context.Context, serviceName string, options *Au
 		args = append(args, "scheduled", *options.ScheduledScaling)
 	}
 
-	slog.Debug("Registering scalable target", args...)
+	c.logger.Debug("Registering scalable target", args...)
 
 	if _, err := c.autoscalingClient.RegisterScalableTarget(ctx, &applicationautoscaling.RegisterScalableTargetInput{
 		ServiceNamespace:  autoscalingtypes.ServiceNamespaceEcs,

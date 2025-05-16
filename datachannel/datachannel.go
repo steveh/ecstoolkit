@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"math"
 	"math/rand"
 	"reflect"
@@ -423,7 +422,7 @@ func (c *DataChannel) listen(ctx context.Context, refreshTokenHandler RefreshTok
 				c.logger.Warn("Reconnect error", "error", err)
 
 				if closeErr := c.Close(); closeErr != nil {
-					slog.Error("Closing data channel failed", "error", closeErr)
+					c.logger.Error("Closing data channel failed", "error", closeErr)
 				}
 
 				return fmt.Errorf("reconnecting websocket channel: %w", err)
@@ -434,7 +433,7 @@ func (c *DataChannel) listen(ctx context.Context, refreshTokenHandler RefreshTok
 
 		if err := c.outputMessageHandler(ctx, rawMessage); err != nil {
 			if closeErr := c.Close(); closeErr != nil {
-				slog.Error("Closing data channel failed", "error", closeErr)
+				c.logger.Error("Closing data channel failed", "error", closeErr)
 			}
 
 			return err

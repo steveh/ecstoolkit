@@ -97,6 +97,8 @@ func (e *Executor) PortForwardSession(ctx context.Context, options *PortForwardS
 		params["host"] = []string{options.Host}
 	}
 
+	e.logger.Debug("Starting port forwarding session", "taskARN", options.TaskARN, "containerRuntimeID", options.ContainerRuntimeID, "documentName", documentName, "port", options.PortNumber, "localPort", options.LocalPortNumber, "host", options.Host)
+
 	ss, err := e.ssmClient.StartSession(ctx, &ssm.StartSessionInput{
 		Target:       aws.String(targetID),
 		DocumentName: aws.String(documentName),
@@ -124,6 +126,8 @@ func (e *Executor) ShellSession(ctx context.Context, options *ShellSessionOption
 	if err != nil {
 		return err
 	}
+
+	e.logger.Debug("Executing ECS command", "taskARN", options.TaskARN, "containerName", options.ContainerName, "command", options.Command)
 
 	ex, err := e.ecsClient.ExecuteCommand(ctx, &ecs.ExecuteCommandInput{
 		Cluster:     aws.String(options.ClusterName),
