@@ -5,8 +5,14 @@ import (
 	"log/slog"
 )
 
-// LevelTrace represents the Trace log level.
-const LevelTrace = slog.Level(-8)
+// Log levels.
+const (
+	LevelTrace = slog.Level(-8)
+	LevelDebug = slog.LevelDebug
+	LevelInfo  = slog.LevelInfo
+	LevelWarn  = slog.LevelWarn
+	LevelError = slog.LevelError
+)
 
 // T represents structs capable of logging messages.
 type T interface {

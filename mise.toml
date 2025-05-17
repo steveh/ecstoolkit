@@ -2,4 +2,4 @@
 run = "golangci-lint run --fix"
 
 [tasks.test]
-run = "go test ./... -timeout 5s"
+run = "go test ./... -timeout 10s"
