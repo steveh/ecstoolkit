@@ -162,7 +162,12 @@ func (p *BasicPortForwarding) HandleControlSignals(ctx context.Context) error {
 		case <-signals:
 			p.logger.Debug("Terminate signal received, exiting.")
 
-			if version.DoesAgentSupportTerminateSessionFlag(p.logger, p.session.GetAgentVersion()) {
+			terminateSessionSupported, err := version.DoesAgentSupportTerminateSessionFlag(p.session.GetAgentVersion())
+			if err != nil {
+				p.logger.Error("Checking if agent supports terminate session flag", "error", err)
+			}
+
+			if terminateSessionSupported {
 				if err := p.session.SendFlag(message.TerminateSession); err != nil {
 					return fmt.Errorf("sending terminate session flag: %w", err)
 				}

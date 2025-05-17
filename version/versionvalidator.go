@@ -2,56 +2,43 @@
 package version
 
 import (
+	"fmt"
+
 	"github.com/steveh/ecstoolkit/config"
-	"github.com/steveh/ecstoolkit/log"
 )
 
 // DoesAgentSupportTCPMultiplexing returns true if given agentVersion supports TCP multiplexing in port plugin, false otherwise.
-func DoesAgentSupportTCPMultiplexing(logger log.T, agentVersion string) bool {
-	return isAgentVersionGreaterThanSupportedVersion(logger, agentVersion, config.TCPMultiplexingSupportedAfterThisAgentVersion)
+func DoesAgentSupportTCPMultiplexing(agentVersion string) (bool, error) {
+	return isAgentVersionGreaterThanSupportedVersion(agentVersion, config.TCPMultiplexingSupportedAfterThisAgentVersion)
 }
 
 // DoesAgentSupportDisableSmuxKeepAlive returns true if given agentVersion disables smux KeepAlive in TCP multiplexing in port plugin, false otherwise.
-func DoesAgentSupportDisableSmuxKeepAlive(logger log.T, agentVersion string) bool {
-	return isAgentVersionGreaterThanSupportedVersion(logger, agentVersion, config.TCPMultiplexingWithSmuxKeepAliveDisabledAfterThisAgentVersion)
+func DoesAgentSupportDisableSmuxKeepAlive(agentVersion string) (bool, error) {
+	return isAgentVersionGreaterThanSupportedVersion(agentVersion, config.TCPMultiplexingWithSmuxKeepAliveDisabledAfterThisAgentVersion)
 }
 
 // DoesAgentSupportTerminateSessionFlag returns true if given agentVersion supports TerminateSession flag, false otherwise.
-func DoesAgentSupportTerminateSessionFlag(logger log.T, agentVersion string) bool {
-	return isAgentVersionGreaterThanSupportedVersion(logger, agentVersion, config.TerminateSessionFlagSupportedAfterThisAgentVersion)
+func DoesAgentSupportTerminateSessionFlag(agentVersion string) (bool, error) {
+	return isAgentVersionGreaterThanSupportedVersion(agentVersion, config.TerminateSessionFlagSupportedAfterThisAgentVersion)
 }
 
 // isAgentVersionGreaterThanSupportedVersion returns true if agentVersion is greater than supportedVersion,
 // false in case of any error and agentVersion is equalTo or less than supportedVersion.
-func isAgentVersionGreaterThanSupportedVersion(logger log.T, agentVersionString string, supportedVersionString string) bool {
-	var (
-		supportedVersion Number
-		agentVersion     Number
-		compareResult    int
-		err              error
-	)
-
-	if supportedVersion, err = NewVersion(supportedVersionString); err != nil {
-		logger.Warn("Supported version initialization failed", "error", err)
-
-		return false
+func isAgentVersionGreaterThanSupportedVersion(agentVersionString string, supportedVersionString string) (bool, error) {
+	supportedVersion, err := NewVersion(supportedVersionString)
+	if err != nil {
+		return false, fmt.Errorf("initializing supported version: %w", err)
 	}
 
-	if agentVersion, err = NewVersion(agentVersionString); err != nil {
-		logger.Warn("Agent version initialization failed", "error", err)
-
-		return false
+	agentVersion, err := NewVersion(agentVersionString)
+	if err != nil {
+		return false, fmt.Errorf("initializing agent version: %w", err)
 	}
 
-	if compareResult, err = agentVersion.compare(supportedVersion); err != nil {
-		logger.Warn("Version comparison failed", "error", err)
-
-		return false
+	compareResult, err := agentVersion.compare(supportedVersion)
+	if err != nil {
+		return false, fmt.Errorf("comparing agent version with supported version: %w", err)
 	}
 
-	if compareResult == 1 {
-		return true
-	}
-
-	return false
+	return (compareResult == 1), nil
 }

@@ -60,7 +60,12 @@ func NewPortSession(logger log.T, sess session.ISessionSupport) (*PortSession, e
 	}
 
 	if s.portParameters.Type == LocalPortForwardingType {
-		if version.DoesAgentSupportTCPMultiplexing(logger, sess.GetAgentVersion()) {
+		muxSupported, err := version.DoesAgentSupportTCPMultiplexing(sess.GetAgentVersion())
+		if err != nil {
+			logger.Error("Checking agent version for TCP multiplexing support", "error", err)
+		}
+
+		if muxSupported {
 			logger.Debug("Using TCP multiplexing port session")
 			s.portSessionType = NewMuxPortForwarding(sess, s.portParameters, logger)
 		} else {
